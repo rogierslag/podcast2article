@@ -18,6 +18,12 @@ describe("article source validation", () => {
     expect(validateArticleSources(structuredClone(article), new Set(["t-00001", "t-00002"])).sections[0]?.paragraphs[0]?.sources).toEqual(["t-00001"]);
   });
 
+  it("normalizes common source-id formatting variations", () => {
+    const formatted = structuredClone(article);
+    formatted.sections[0]!.paragraphs[0]!.sources = ["[T-1]"];
+    expect(validateArticleSources(formatted, new Set(["t-00001", "t-00002"])).sections[0]!.paragraphs[0]!.sources).toEqual(["t-00001"]);
+  });
+
   it("rejects unsupported paragraphs", () => {
     const invalid = structuredClone(article);
     invalid.takeaways[0]!.sources = ["missing"];

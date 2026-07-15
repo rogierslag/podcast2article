@@ -1,7 +1,7 @@
 import express from "express";
 import path from "node:path";
 import { z } from "zod";
-import { createJob, getJob, resumeIncompleteJobs, shutdownJobs } from "./services/jobs.js";
+import { createJob, getJob, resumeIncompleteJobs, retryArticle, shutdownJobs } from "./services/jobs.js";
 import { validateSpotifyUrl } from "./services/resolver.js";
 
 const app = express();
@@ -33,6 +33,16 @@ app.post("/api/jobs", async (request, response) => {
 app.get("/api/jobs/:id", async (request, response) => {
   const job = await getJob(request.params.id);
   return job ? response.json(job) : response.status(404).json({ error: "Opdracht niet gevonden" });
+});
+
+app.post("/api/jobs/:id/retry-article", async (request, response) => {
+  try {
+    const job = await retryArticle(request.params.id);
+    return response.status(202).json(job);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Artikelretry kon niet starten.";
+    return response.status(message === "Opdracht niet gevonden." ? 404 : 409).json({ error: message });
+  }
 });
 
 app.use((_request, response) => response.sendFile(path.join(publicDirectory, "index.html")));

@@ -105,11 +105,34 @@ const articleSchema = {
   },
 } as const;
 
+function articleSchemaFor(validIds: string[]): Record<string, unknown> {
+  const schema = structuredClone(articleSchema) as unknown as {
+    $defs: { paragraph: { properties: { sources: { items: Record<string, unknown> } } } };
+  };
+  schema.$defs.paragraph.properties.sources.items = {
+    type: "string",
+    enum: validIds,
+  };
+  return schema as unknown as Record<string, unknown>;
+}
+
+function normalizeSourceId(value: string): string | undefined {
+  const match = value.trim().match(/^\[?t?[-_ ]?0*(\d{1,5})\]?$/i);
+  if (!match?.[1]) return undefined;
+  return `t-${String(Number(match[1])).padStart(5, "0")}`;
+}
+
 export function validateArticleSources(article: Article, validIds: Set<string>): Article {
   const paragraphs = [...article.sections.flatMap((section) => section.paragraphs), ...article.takeaways];
   for (const paragraph of paragraphs) {
-    paragraph.sources = [...new Set(paragraph.sources)].filter((id) => validIds.has(id));
-    if (!paragraph.sources.length) throw new Error("Het gegenereerde artikel bevat een alinea zonder geldige transcriptbron.");
+    const received = paragraph.sources;
+    paragraph.sources = [...new Set(received
+      .map((id) => validIds.has(id) ? id : normalizeSourceId(id))
+      .filter((id): id is string => Boolean(id && validIds.has(id))))];
+    if (!paragraph.sources.length) {
+      const sample = received.slice(0, 5).join(", ") || "geen bron-ID ontvangen";
+      throw new Error(`Het gegenereerde artikel bevat een alinea zonder geldige transcriptbron (ontvangen: ${sample}).`);
+    }
   }
   return article;
 }
@@ -122,6 +145,7 @@ export async function writeArticle(
 ): Promise<Article> {
   signal?.throwIfAborted();
   const openai = client();
+  const validIds = transcript.map(({ id }) => id);
   const transcriptText = transcript
     .map((part) => `[${part.id}] ${part.speaker} ${part.start.toFixed(1)}-${part.end.toFixed(1)}: ${part.text}`)
     .join("\n");
@@ -146,7 +170,7 @@ Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea
         type: "json_schema",
         name: "source_linked_podcast_article",
         strict: true,
-        schema: articleSchema,
+        schema: articleSchemaFor(validIds),
       },
     },
     }, { timeout: timeoutMs, signal });
@@ -156,5 +180,5 @@ Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea
   if (!response.output_text) throw new Error("OpenAI gaf geen artikel terug.");
   const article = JSON.parse(response.output_text) as Article;
   onStatus("OpenAI-artikel ontvangen", { elapsedSeconds: Math.round((Date.now() - startedAt) / 1000), sections: article.sections.length });
-  return validateArticleSources(article, new Set(transcript.map(({ id }) => id)));
+  return validateArticleSources(article, new Set(validIds));
 }

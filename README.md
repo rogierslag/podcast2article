@@ -69,6 +69,14 @@ De CLI toont per job de bronresolutie, download- en FFmpeg-duur, chunkgroottes,
 OpenAI-start- en eindmomenten en iedere 30 seconden een heartbeat zolang een
 OpenAI-request nog loopt. API-keys en transcriptinhoud worden niet gelogd.
 
+Als alleen de artikelgeneratie faalt terwijl het transcript al compleet is, kan
+de bestaande transcriptie zonder nieuwe audio- of transcriptiekosten worden
+hergebruikt:
+
+```bash
+curl -X POST http://localhost:3000/api/jobs/<job-id>/retry-article
+```
+
 ## Beperkingen
 
 - Alleen specifieke publieke `open.spotify.com/episode/...`-links worden geaccepteerd.

@@ -52,6 +52,25 @@ export async function getJob(id: string): Promise<Job | undefined> {
   } catch { return undefined; }
 }
 
+export async function retryArticle(id: string): Promise<Job> {
+  const job = await getJob(id);
+  if (!job) throw new Error("Opdracht niet gevonden.");
+  if (activeRuns.has(id)) throw new Error("Deze opdracht wordt al verwerkt.");
+  if (!job.transcript?.length || !job.episode) {
+    throw new Error("Deze opdracht heeft geen complete transcriptie om te hergebruiken.");
+  }
+  await update(job, {
+    stage: "writing",
+    progress: 82,
+    message: "Artikel opnieuw genereren met bestaand transcript",
+    error: undefined,
+    article: undefined,
+  });
+  jobLog(job.id, "writing", "Artikel-only retry gestart", { transcriptSegments: job.transcript.length });
+  queueMicrotask(() => launchArticleRetry(job));
+  return job;
+}
+
 export async function resumeIncompleteJobs(): Promise<void> {
   await mkdir(jobDirectory, { recursive: true });
   const files = (await readdir(jobDirectory)).filter((name) => /^[0-9a-f-]{36}\.json$/i.test(name));
@@ -82,6 +101,31 @@ function launchJob(job: Job): void {
     .catch((error) => jobError(job.id, job.stage, error))
     .finally(() => activeRuns.delete(job.id));
   activeRuns.set(job.id, { controller, promise });
+}
+
+function launchArticleRetry(job: Job): void {
+  if (activeRuns.has(job.id) || !job.transcript || !job.episode) return;
+  const controller = new AbortController();
+  const promise = processArticleRetry(job, controller.signal)
+    .catch((error) => jobError(job.id, job.stage, error))
+    .finally(() => activeRuns.delete(job.id));
+  activeRuns.set(job.id, { controller, promise });
+}
+
+async function processArticleRetry(job: Job, signal: AbortSignal): Promise<void> {
+  try {
+    const article = await generateArticle(job, job.transcript!, job.episode!, signal);
+    await update(job, { article, stage: "complete", progress: 100, message: "Artikel en transcript zijn klaar" });
+    jobLog(job.id, "complete", "Artikel-only retry afgerond", { articleTitle: article.title });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Onbekende fout";
+    if (signal.aborted) {
+      await update(job, { stage: "queued", progress: 82, message: "Server afgesloten; artikelretry kan worden hervat", error: undefined });
+    } else {
+      jobError(job.id, job.stage, error);
+      await update(job, { stage: "failed", error: message, message, progress: job.progress });
+    }
+  }
 }
 
 export async function shutdownJobs(reason = "Server wordt afgesloten"): Promise<void> {
@@ -134,14 +178,7 @@ async function processJob(job: Job, signal: AbortSignal): Promise<void> {
     jobLog(job.id, "transcribing", "Volledige transcriptie gereed", { segments: transcript.length });
     await update(job, { transcript, progress: 78, message: "Transcript compleet" });
 
-    await update(job, { stage: "writing", progress: 82, message: "Brongebonden blogartikel schrijven" });
-    jobLog(job.id, "writing", "Brongebonden artikel genereren", { transcriptSegments: transcript.length });
-    const article = await writeArticle(transcript, {
-      title: episode.title, podcast: episode.podcast, language: job.language, length: job.articleLength,
-    }, (message, data) => {
-      jobLog(job.id, "writing", message, data);
-      if (message.startsWith("Nog in afwachting")) void update(job, { message: `Artikel wordt geschreven · ${Math.max(1, Math.round(Number(data.waitingSeconds ?? 0) / 60))} min. wachten` });
-    }, signal);
+    const article = await generateArticle(job, transcript, episode, signal);
     await update(job, { article, stage: "complete", progress: 100, message: "Artikel en transcript zijn klaar" });
     jobLog(job.id, "complete", "Opdracht afgerond", { elapsedSeconds: Math.round((Date.now() - jobStartedAt) / 1000), articleTitle: article.title });
   } catch (error) {
@@ -157,4 +194,15 @@ async function processJob(job: Job, signal: AbortSignal): Promise<void> {
     await rm(workspace, { recursive: true, force: true }).catch(() => undefined);
     jobLog(job.id, job.stage, "Tijdelijke audiobestanden opgeruimd");
   }
+}
+
+async function generateArticle(job: Job, transcript: NonNullable<Job["transcript"]>, episode: NonNullable<Job["episode"]>, signal: AbortSignal) {
+  await update(job, { stage: "writing", progress: 82, message: "Brongebonden blogartikel schrijven" });
+  jobLog(job.id, "writing", "Brongebonden artikel genereren", { transcriptSegments: transcript.length });
+  return writeArticle(transcript, {
+    title: episode.title, podcast: episode.podcast, language: job.language, length: job.articleLength,
+  }, (message, data) => {
+    jobLog(job.id, "writing", message, data);
+    if (message.startsWith("Nog in afwachting")) void update(job, { message: `Artikel wordt geschreven · ${Math.max(1, Math.round(Number(data.waitingSeconds ?? 0) / 60))} min. wachten` });
+  }, signal);
 }
