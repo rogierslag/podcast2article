@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Maak van een publieke Spotify-podcast een brongebonden blogartikel.">
+  <title>Podcast2Article — van stem naar verhaal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/" aria-label="Podcast2Article home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span>Podcast<span>2</span>Article</span>
+    </a>
+    <span class="github">Open source · MIT</span>
+  </header>
+
+  <main>
+    <section id="landing" class="landing">
+      <div class="eyebrow"><span></span> Van podcast naar publicatie</div>
+      <h1>Laat het gesprek<br><em>doorleven.</em></h1>
+      <p class="intro">Plak een publieke Spotify-aflevering. Wij vinden de originele bron, maken een transcript en schrijven een helder artikel dat trouw blijft aan de stem van de podcast.</p>
+
+      <form id="job-form" class="composer">
+        <label for="spotify-url">Spotify-aflevering</label>
+        <div class="url-row">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.58 14.42a.75.75 0 0 1-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.15a.75.75 0 1 1-.34-1.46c4.58-1.05 8.51-.61 11.67 1.32.35.22.47.68.25 1.04Zm1.47-3.27a.94.94 0 0 1-1.29.31c-3.23-1.98-8.15-2.55-11.97-1.4a.94.94 0 1 1-.54-1.8c4.37-1.32 9.8-.68 13.49 1.58.44.27.58.86.31 1.31Zm.13-3.4C14.3 7.45 7.9 7.23 4.2 8.35a1.12 1.12 0 1 1-.65-2.15c4.25-1.29 11.32-1.02 15.77 1.62a1.12 1.12 0 0 1-1.14 1.93Z"/></svg>
+          <input id="spotify-url" name="spotifyUrl" type="url" required autocomplete="url" placeholder="https://open.spotify.com/episode/…">
+          <button type="submit">Maak artikel <span aria-hidden="true">→</span></button>
+        </div>
+        <div class="options">
+          <label>Taal
+            <select name="language">
+              <option value="auto">Automatisch</option><option value="nl">Nederlands</option><option value="en">Engels</option><option value="de">Duits</option><option value="fr">Frans</option><option value="es">Spaans</option>
+            </select>
+          </label>
+          <label>Lengte
+            <select name="articleLength">
+              <option value="compact">Compact</option><option value="standard" selected>Standaard</option><option value="long">Uitgebreid</option>
+            </select>
+          </label>
+          <span class="privacy"><span></span> Alleen publieke bronnen</span>
+        </div>
+        <p id="form-error" class="error" role="alert"></p>
+      </form>
+
+      <div class="promise-grid">
+        <article><strong>01</strong><h2>Brongetrouw</h2><p>Geen externe feiten. Elke alinea verwijst naar het transcript.</p></article>
+        <article><strong>02</strong><h2>Eigen stem</h2><p>De cadans, humor en argumentatie van de podcast blijven herkenbaar.</p></article>
+        <article><strong>03</strong><h2>Controleerbaar</h2><p>Klik vanuit het artikel direct naar het juiste audio- en transcriptmoment.</p></article>
+      </div>
+    </section>
+
+    <section id="progress-view" class="progress-view hidden" aria-live="polite">
+      <div class="record"><div class="record-center"></div></div>
+      <p class="eyebrow"><span></span> Bezig met verwerken</p>
+      <h1 id="progress-title">We luisteren mee…</h1>
+      <p id="progress-message">Openbare podcastbron zoeken</p>
+      <div class="progress-track"><div id="progress-bar"></div></div>
+      <span id="progress-percent" class="mono">0%</span>
+    </section>
+
+    <section id="result-view" class="result-view hidden">
+      <div id="episode-hero" class="episode-hero"></div>
+      <div class="content-layout">
+        <article id="article" class="article"></article>
+        <aside class="side-nav"><div><span>In dit artikel</span><nav id="toc"></nav></div></aside>
+      </div>
+      <section class="transcript-wrap">
+        <div class="transcript-head">
+          <div><span class="kicker">Oorspronkelijke bron</span><h2>Transcriptie</h2></div>
+          <div class="transcript-actions"><input id="transcript-search" type="search" placeholder="Zoek in transcript…"><button id="toggle-transcript">Verberg</button></div>
+        </div>
+        <audio id="audio" controls preload="metadata"></audio>
+        <div id="transcript" class="transcript"></div>
+      </section>
+    </section>
+  </main>
+  <footer><span>Podcast2Article</span><span>Open source · publieke podcasts · jouw API-key</span></footer>
+</body>
+</html>
