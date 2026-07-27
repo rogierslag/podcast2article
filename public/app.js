@@ -82,8 +82,15 @@ function sourceClick(event) {
   if(timestamp) seek(Number(timestamp.dataset.time));
 }
 function seek(seconds){const audio=$("#audio");audio.currentTime=seconds;audio.play().catch(()=>undefined);}
+function exportToPdf(){
+  if(!currentJob)return;
+  const originalTitle=document.title;
+  document.title=`${currentJob.article.title} — ${currentJob.episode.podcast}`;
+  try{window.print();}finally{document.title=originalTitle;}
+}
 $("#transcript").addEventListener("click", sourceClick);
 $("#transcript-search").addEventListener("input",(event)=>currentJob&&renderTranscript(currentJob.transcript,event.target.value));
 $("#toggle-transcript").addEventListener("click",()=>{const transcript=$("#transcript");transcript.classList.toggle("hidden");$("#toggle-transcript").textContent=transcript.classList.contains("hidden")?"Toon":"Verberg";});
+$("#export-pdf").addEventListener("click",exportToPdf);
 
 const hashMatch=location.hash.match(/^#job=([0-9a-f-]{36})$/i); if(hashMatch) poll(hashMatch[1]);

@@ -68,7 +68,17 @@
     <section id="result-view" class="result-view hidden">
       <div id="episode-hero" class="episode-hero"></div>
       <div class="content-layout">
-        <article id="article" class="article"></article>
+        <div class="article-column">
+          <div class="article-actions">
+            <button id="export-pdf" type="button" aria-label="Export article to PDF">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v4h14v-4"/>
+              </svg>
+              Export to PDF
+            </button>
+          </div>
+          <article id="article" class="article"></article>
+        </div>
         <aside class="side-nav"><div><span>In dit artikel</span><nav id="toc"></nav></div></aside>
       </div>
       <section class="transcript-wrap">
