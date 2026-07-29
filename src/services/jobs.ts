@@ -5,6 +5,7 @@ import { jobError, jobLog } from "../lib/logger.js";
 import { audioChunkSeconds, downloadMedia, normalizeAudio, splitAudio } from "./audio.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource } from "./resolver.js";
+import { downloadYouTubeAudio } from "./youtube.js";
 import type { Job } from "../types.js";
 
 const root = path.resolve("data");
@@ -19,6 +20,8 @@ function mediaLimit(sourceType: NonNullable<Job["episode"]>["sourceType"]): numb
   const value = Number(
     sourceType === "google-drive"
       ? process.env.MAX_RECORDING_MB ?? process.env.MAX_MEDIA_MB ?? fallback
+      : sourceType === "youtube"
+        ? process.env.MAX_YOUTUBE_MB ?? process.env.MAX_AUDIO_MB ?? process.env.MAX_MEDIA_MB ?? fallback
       : process.env.MAX_AUDIO_MB ?? process.env.MAX_MEDIA_MB ?? fallback,
   );
   return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -180,7 +183,7 @@ async function processJob(job: Job, signal: AbortSignal): Promise<void> {
     await mkdir(workspace, { recursive: true });
     jobLog(job.id, "resolving", "Publieke bron zoeken");
     await update(job, { stage: "resolving", progress: 8, message: "Openbare opnamebron controleren" });
-    const episode = await resolveSource(job.sourceUrl);
+    const episode = await resolveSource(job.sourceUrl, signal);
     episode.playbackUrl = `/api/jobs/${job.id}/audio`;
     jobLog(job.id, "resolving", "Opname gekoppeld", { title: episode.title, source: episode.sourceName, sourceType: episode.sourceType, durationSeconds: episode.durationSeconds });
     await update(job, { episode, progress: 18, message: "Opname gevonden" });
@@ -189,9 +192,12 @@ async function processJob(job: Job, signal: AbortSignal): Promise<void> {
     const downloadStartedAt = Date.now();
     jobLog(job.id, "downloading", "Media downloaden");
     await update(job, { stage: "downloading", progress: 22, message: "Opname veilig downloaden" });
-    await downloadMedia(episode.mediaUrl, input, signal, {
-      maxMegabytes: mediaLimit(episode.sourceType),
-    });
+    const maxMegabytes = mediaLimit(episode.sourceType);
+    if (episode.sourceType === "youtube") {
+      await downloadYouTubeAudio(episode.sourceUrl, input, signal, { maxMegabytes });
+    } else {
+      await downloadMedia(episode.mediaUrl, input, signal, { maxMegabytes });
+    }
     const mediaBytes = (await stat(input)).size;
     jobLog(job.id, "downloading", "Media gedownload", { megabytes: (mediaBytes / 1024 / 1024).toFixed(1), elapsedSeconds: Math.round((Date.now() - downloadStartedAt) / 1000) });
     await update(job, { progress: 28, message: "Audio uit opname halen" });

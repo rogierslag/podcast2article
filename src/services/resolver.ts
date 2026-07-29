@@ -1,6 +1,13 @@
 import { similarity } from "../lib/format.js";
 import { safeFetch } from "../lib/network.js";
 import type { Episode } from "../types.js";
+import {
+  isYouTubeHost,
+  resolveYouTubeVideo,
+  validateYouTubeUrl,
+} from "./youtube.js";
+
+export { validateYouTubeUrl, youtubeVideoId } from "./youtube.js";
 
 interface SpotifyEmbed { title?: string; thumbnail_url?: string; }
 interface DriveMetadata { title: string; imageUrl?: string; mimeType?: string; }
@@ -67,7 +74,8 @@ export function validateSourceUrl(value: string): URL {
   if (host === "open.spotify.com" || host === "spotify.com" || host === "www.spotify.com") {
     return validateSpotifyUrl(value);
   }
-  throw new Error("Alleen publieke Spotify-afleveringen en Google Drive-opnames worden ondersteund.");
+  if (isYouTubeHost(host)) return validateYouTubeUrl(value);
+  throw new Error("Alleen publieke Spotify-afleveringen, YouTube-video's en Google Drive-opnames worden ondersteund.");
 }
 
 function decodeHtml(value: string): string {
@@ -196,9 +204,10 @@ export async function resolveGoogleDriveRecording(value: string): Promise<Episod
   };
 }
 
-export async function resolveSource(value: string): Promise<Episode> {
+export async function resolveSource(value: string, signal?: AbortSignal): Promise<Episode> {
   const url = validateSourceUrl(value);
-  return DRIVE_HOSTS.has(url.hostname.toLowerCase())
-    ? resolveGoogleDriveRecording(url.toString())
-    : resolveSpotifyEpisode(url.toString());
+  const host = url.hostname.toLowerCase();
+  if (DRIVE_HOSTS.has(host)) return resolveGoogleDriveRecording(url.toString());
+  if (isYouTubeHost(host)) return resolveYouTubeVideo(url.toString(), signal);
+  return resolveSpotifyEpisode(url.toString());
 }

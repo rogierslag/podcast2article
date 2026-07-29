@@ -22,7 +22,7 @@ const requestSchema = z.object({
 }).superRefine((value, context) => {
   const sourceUrl = value.sourceUrl ?? value.spotifyUrl;
   if (!sourceUrl) {
-    context.addIssue({ code: "custom", path: ["sourceUrl"], message: "Plak een publieke Spotify- of Google Drive-link." });
+    context.addIssue({ code: "custom", path: ["sourceUrl"], message: "Plak een publieke Spotify-, YouTube- of Google Drive-link." });
     return;
   }
   try {

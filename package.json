@@ -2,7 +2,7 @@
   "name": "podcast2article",
   "version": "0.1.0",
   "private": true,
-  "description": "Turn public Spotify episodes and Google Meet recordings into source-linked blog articles.",
+  "description": "Turn public Spotify episodes, YouTube videos, and Google Meet recordings into source-linked blog articles.",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -12,13 +12,14 @@
     "check": "npm run build && npm test"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "express": "^5.1.0",
     "fast-xml-parser": "^5.2.5",
     "ffmpeg-static": "^5.2.0",
     "openai": "^5.12.2",
+    "youtube-dl-exec": "^3.1.9",
     "zod": "^3.25.76"
   },
   "devDependencies": {

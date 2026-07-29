@@ -7,7 +7,7 @@ export type JobStage =
   | "complete"
   | "failed";
 
-export type SourceType = "spotify" | "google-drive";
+export type SourceType = "spotify" | "google-drive" | "youtube";
 
 export interface Episode {
   sourceType: SourceType;

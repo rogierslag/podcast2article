@@ -57,7 +57,7 @@ function renderResult(job) {
   const episode=job.episode, article=job.article, transcript=job.transcript;
   const sourceName=episode.sourceName||episode.podcast||"Oorspronkelijke bron";
   const sourceUrl=episode.sourceUrl||episode.spotifyUrl;
-  const sourceLinkLabel=episode.sourceType==="google-drive"?"Bekijk in Google Drive ↗":"Bekijk op Spotify ↗";
+  const sourceLinkLabel=episode.sourceType==="google-drive"?"Bekijk in Google Drive ↗":episode.sourceType==="youtube"?"Bekijk op YouTube ↗":"Bekijk op Spotify ↗";
   const details=[episode.publishedAt?new Date(episode.publishedAt).toLocaleDateString("nl-NL",{dateStyle:"long"}):"",episode.durationSeconds?`${Math.round(episode.durationSeconds/60)} minuten`:""].filter(Boolean);
   $("#episode-hero").innerHTML = `${episode.imageUrl?`<img src="${escapeHtml(episode.imageUrl)}" alt="Afbeelding van ${escapeHtml(sourceName)}">`:""}<div><span class="kicker">${escapeHtml(sourceName)}</span><h1>${escapeHtml(episode.title)}</h1><p>${escapeHtml(details.join(" · "))}${details.length?" · ":""}<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer" style="color:inherit">${sourceLinkLabel}</a></p></div>`;
   const sections=article.sections.map((section,index)=>{const id=slug(section.heading,index);return `<section><h2 id="${id}">${escapeHtml(section.heading)}</h2>${section.paragraphs.map((paragraph)=>`<p>${escapeHtml(paragraph.text)} ${sourceButtons(paragraph.sources,transcript)}</p>`).join("")}</section>`}).join("");

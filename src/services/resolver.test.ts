@@ -7,6 +7,7 @@ import {
   validateGoogleDriveUrl,
   validateSourceUrl,
   validateSpotifyUrl,
+  validateYouTubeUrl,
 } from "./resolver.js";
 
 describe("Spotify resolver", () => {
@@ -72,11 +73,13 @@ describe("Google Drive resolver", () => {
     expect(() => parseGoogleDriveMetadata(`<meta property="og:title" content="Notes.pdf">`)).toThrow();
   });
 
-  it("builds the public media URL and dispatches both supported sources", () => {
+  it("builds the public media URL and dispatches all supported sources", () => {
     expect(googleDriveDownloadUrl(fileId)).toContain(`id=${fileId}`);
     expect(googleDriveDownloadUrl(fileId, "0-example_key")).toContain("resourcekey=0-example_key");
     expect(validateSourceUrl(`https://drive.google.com/file/d/${fileId}/view`).hostname).toBe("drive.google.com");
     expect(validateSourceUrl("https://open.spotify.com/episode/abc123").hostname).toBe("open.spotify.com");
+    expect(validateSourceUrl("https://youtu.be/jNQXAC9IVRw").toString())
+      .toBe(validateYouTubeUrl("https://youtu.be/jNQXAC9IVRw").toString());
   });
 
   it("explains that a Meet room URL is not a recording", () => {
