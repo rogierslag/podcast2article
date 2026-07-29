@@ -3,6 +3,7 @@ import { safeFetch } from "../lib/network.js";
 import type { Episode } from "../types.js";
 
 interface SpotifyEmbed { title?: string; thumbnail_url?: string; }
+interface DriveMetadata { title: string; imageUrl?: string; mimeType?: string; }
 interface ItunesResult {
   trackName?: string;
   collectionName?: string;
@@ -16,6 +17,9 @@ interface ItunesResult {
   trackTimeMillis?: number;
 }
 
+const DRIVE_HOSTS = new Set(["drive.google.com", "www.drive.google.com"]);
+const MEDIA_EXTENSION = /\.(?:aac|flac|m4a|m4v|mov|mp3|mp4|mpeg|mpg|ogg|opus|wav|webm)$/i;
+
 export function validateSpotifyUrl(value: string): URL {
   const url = new URL(value);
   const host = url.hostname.toLowerCase();
@@ -27,6 +31,85 @@ export function validateSpotifyUrl(value: string): URL {
   }
   url.search = "";
   return url;
+}
+
+export function googleDriveFileId(value: string): string {
+  const url = new URL(value);
+  if (!DRIVE_HOSTS.has(url.hostname.toLowerCase())) {
+    throw new Error("Plak een publieke Google Drive-link naar de Meet-opname.");
+  }
+  const pathMatch = url.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]{10,})/);
+  const fileId = pathMatch?.[1] ?? (url.pathname === "/open" || url.pathname === "/uc" ? url.searchParams.get("id") : undefined);
+  if (!fileId || !/^[A-Za-z0-9_-]{10,}$/.test(fileId)) {
+    throw new Error("Gebruik een Google Drive-link naar één opnamebestand, niet naar een map of Meet-ruimte.");
+  }
+  return fileId;
+}
+
+export function validateGoogleDriveUrl(value: string): URL {
+  const fileId = googleDriveFileId(value);
+  const input = new URL(value);
+  const normalized = new URL(`https://drive.google.com/file/d/${fileId}/view`);
+  const resourceKey = input.searchParams.get("resourcekey");
+  if (resourceKey && /^[A-Za-z0-9_-]+$/.test(resourceKey)) {
+    normalized.searchParams.set("resourcekey", resourceKey);
+  }
+  return normalized;
+}
+
+export function validateSourceUrl(value: string): URL {
+  const url = new URL(value);
+  const host = url.hostname.toLowerCase();
+  if (DRIVE_HOSTS.has(host)) return validateGoogleDriveUrl(value);
+  if (host === "meet.google.com") {
+    throw new Error("Plak de Google Drive-link naar de opname, niet de link naar de Meet-ruimte.");
+  }
+  if (host === "open.spotify.com" || host === "spotify.com" || host === "www.spotify.com") {
+    return validateSpotifyUrl(value);
+  }
+  throw new Error("Alleen publieke Spotify-afleveringen en Google Drive-opnames worden ondersteund.");
+}
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_match, code: string) => String.fromCodePoint(Number(code)));
+}
+
+function metaContent(html: string, property: string): string | undefined {
+  for (const tag of html.match(/<meta\s+[^>]*>/gi) ?? []) {
+    const propertyMatch = tag.match(/\bproperty\s*=\s*(["'])(.*?)\1/i);
+    if (propertyMatch?.[2]?.toLowerCase() !== property.toLowerCase()) continue;
+    const contentMatch = tag.match(/\bcontent\s*=\s*(["'])(.*?)\1/i);
+    if (contentMatch?.[2]) return decodeHtml(contentMatch[2]).trim();
+  }
+  return undefined;
+}
+
+export function parseGoogleDriveMetadata(html: string): DriveMetadata {
+  const title = metaContent(html, "og:title");
+  if (!title) {
+    throw new Error("Google Drive gaf geen bestandsgegevens terug. Controleer of iedereen met de link toegang heeft.");
+  }
+  const mimeType = html.match(/"docs-dm"\s*:\s*"([^"]+)"/i)?.[1];
+  const supportedMimeType = Boolean(mimeType && (
+    mimeType.toLowerCase().startsWith("audio/") ||
+    mimeType.toLowerCase().startsWith("video/")
+  ));
+  if (!MEDIA_EXTENSION.test(title) && !supportedMimeType) {
+    throw new Error("De Google Drive-link verwijst niet naar een ondersteund audio- of videobestand.");
+  }
+  return { title, imageUrl: metaContent(html, "og:image"), mimeType };
+}
+
+export function googleDriveDownloadUrl(fileId: string, resourceKey?: string): string {
+  const params = new URLSearchParams({ id: fileId, export: "download", authuser: "0", confirm: "t" });
+  if (resourceKey) params.set("resourcekey", resourceKey);
+  return `https://drive.usercontent.google.com/download?${params}`;
 }
 
 async function getSpotifyMetadata(url: string): Promise<SpotifyEmbed> {
@@ -71,13 +154,51 @@ export async function resolveSpotifyEpisode(value: string): Promise<Episode> {
   }
 
   return {
+    sourceType: "spotify",
+    sourceUrl: spotifyUrl,
+    sourceName: match.collectionName ?? "Onbekende podcast",
     spotifyUrl,
     title: match.trackName ?? spotify.title,
     podcast: match.collectionName ?? "Onbekende podcast",
     description: match.description ?? match.shortDescription,
     imageUrl: match.artworkUrl600 ?? match.artworkUrl100 ?? spotify.thumbnail_url,
+    mediaUrl: match.episodeUrl,
     audioUrl: match.episodeUrl,
     durationSeconds: match.trackTimeMillis ? Math.round(match.trackTimeMillis / 1000) : undefined,
     publishedAt: match.releaseDate,
   };
+}
+
+export async function resolveGoogleDriveRecording(value: string): Promise<Episode> {
+  const sourceUrl = validateGoogleDriveUrl(value).toString();
+  const response = await safeFetch(sourceUrl, { headers: { Accept: "text/html" } });
+  if (!response.ok) {
+    throw new Error(
+      response.status === 401 || response.status === 403
+        ? "Deze Google Meet-opname is niet openbaar. Kies in Drive voor ‘Iedereen met de link’."
+        : `Google Drive kon deze opname niet openen (${response.status}).`,
+    );
+  }
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("text/html")) {
+    throw new Error("Google Drive gaf geen geldige opnamepagina terug.");
+  }
+  const metadata = parseGoogleDriveMetadata(await response.text());
+  const fileId = googleDriveFileId(sourceUrl);
+  const resourceKey = new URL(sourceUrl).searchParams.get("resourcekey") ?? undefined;
+  return {
+    sourceType: "google-drive",
+    sourceUrl,
+    sourceName: "Google Meet-opname",
+    title: metadata.title.replace(MEDIA_EXTENSION, ""),
+    imageUrl: metadata.imageUrl,
+    mediaUrl: googleDriveDownloadUrl(fileId, resourceKey),
+  };
+}
+
+export async function resolveSource(value: string): Promise<Episode> {
+  const url = validateSourceUrl(value);
+  return DRIVE_HOSTS.has(url.hostname.toLowerCase())
+    ? resolveGoogleDriveRecording(url.toString())
+    : resolveSpotifyEpisode(url.toString());
 }

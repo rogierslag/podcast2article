@@ -139,7 +139,7 @@ export function validateArticleSources(article: Article, validIds: Set<string>):
 
 export async function writeArticle(
   transcript: TranscriptSegment[],
-  metadata: { title: string; podcast: string; language: string; length: string },
+  metadata: { title: string; sourceName: string; language: string; length: string },
   onStatus: (message: string, data: Record<string, string | number>) => void = () => undefined,
   signal?: AbortSignal,
 ): Promise<Article> {
@@ -161,14 +161,14 @@ export async function writeArticle(
   try {
     response = await openai.responses.create({
     model: process.env.ARTICLE_MODEL ?? "gpt-5.6-terra",
-    instructions: `Je bent een zorgvuldige Nederlandse podcastredacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
-Behoud de herkenbare stijl van de podcast: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
-Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea direct ondersteunen. Kies de nauwkeurigste fragmenten. Vermijd meta-commentaar zoals 'in de podcast'. Geef in styleNote in één korte zin aan welke stijleigenschappen je hebt behouden. Schrijf circa ${targetWords} woorden.`,
-    input: `Podcast: ${metadata.podcast}\nAflevering: ${metadata.title}\nGewenste taal: ${metadata.language}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
+    instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
+Behoud de herkenbare stijl van de opname: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
+Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea direct ondersteunen. Kies de nauwkeurigste fragmenten. Vermijd meta-commentaar zoals 'in de podcast' of 'in de opname'. Geef in styleNote in één korte zin aan welke stijleigenschappen je hebt behouden. Schrijf circa ${targetWords} woorden.`,
+    input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nGewenste taal: ${metadata.language}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
     text: {
       format: {
         type: "json_schema",
-        name: "source_linked_podcast_article",
+        name: "source_linked_article",
         strict: true,
         schema: articleSchemaFor(validIds),
       },

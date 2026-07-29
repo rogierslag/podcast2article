@@ -7,15 +7,23 @@ export type JobStage =
   | "complete"
   | "failed";
 
+export type SourceType = "spotify" | "google-drive";
+
 export interface Episode {
-  spotifyUrl: string;
+  sourceType: SourceType;
+  sourceUrl: string;
+  sourceName: string;
   title: string;
-  podcast: string;
   description?: string;
   imageUrl?: string;
-  audioUrl: string;
+  mediaUrl: string;
+  playbackUrl?: string;
   durationSeconds?: number;
   publishedAt?: string;
+  /** Legacy fields retained while loading jobs created before generic sources. */
+  spotifyUrl?: string;
+  podcast?: string;
+  audioUrl?: string;
 }
 
 export interface TranscriptSegment {
@@ -42,7 +50,9 @@ export interface Article {
 
 export interface Job {
   id: string;
-  spotifyUrl: string;
+  sourceUrl: string;
+  /** Legacy field retained while loading jobs created before generic sources. */
+  spotifyUrl?: string;
   language: string;
   articleLength: "compact" | "standard" | "long";
   stage: JobStage;

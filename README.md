@@ -1,12 +1,22 @@
 # Podcast2Article
 
-Podcast2Article is een open-source Node.js-app die een **publieke Spotify-podcastaflevering** omzet in:
+Podcast2Article is een open-source Node.js-app die een **publieke
+Spotify-podcastaflevering of Google Meet-opname** omzet in:
 
 1. een transcript met sprekers en tijdcodes;
-2. een helder blogartikel in de herkenbare stijl van de podcast;
+2. een helder blogartikel in de herkenbare stijl van de opname;
 3. controleerbare bronlinks van iedere artikelalinea naar het juiste transcript- en audiomoment.
 
 De audio wordt niet uit Spotify gedownload. De app gebruikt de Spotify-link alleen om de aflevering te herkennen en zoekt vervolgens dezelfde aflevering via de openbare Apple Podcasts-index en de oorspronkelijke publieke audiobron.
+Google Meet-opnames worden opgehaald via de publieke Google Drive-link. De app
+maakt daarvan een compacte lokale audioversie voor betrouwbare weergave en
+tijdcodelinks; het oorspronkelijke videobestand wordt na verwerking verwijderd.
+
+Voor een Meet-opname plak je de Drive-link van het opnamebestand, bijvoorbeeld
+`https://drive.google.com/file/d/.../view`. Zet in Drive de algemene toegang op
+**Iedereen met de link** en zorg dat kijkers het bestand mogen downloaden. Een
+`meet.google.com/...`-link naar een vergaderruimte bevat geen opnamebestand en
+wordt daarom niet geaccepteerd.
 
 ## Snel starten
 
@@ -29,17 +39,21 @@ OPENAI_API_KEY='jouw-sleutel' npm start
 ## Hoe het werkt
 
 ```text
-Spotify-afleveringslink
-  → Spotify oEmbed-metadata
-  → overeenkomst zoeken in de publieke Apple Podcasts-index
-  → audio van de originele podcasthost downloaden
+Spotify-afleveringslink                           publieke Drive-opnamelink
+  → Spotify oEmbed + Apple Podcasts/RSS             → Drive-bestandsmetadata
+  └──────────────────────┬───────────────────────────┘
+                         → audio of video downloaden
+  → compacte afspeelaudio maken en tijdelijk videobeeld verwijderen
   → comprimeren en opdelen met FFmpeg
   → gpt-4o-transcribe-diarize (sprekers + tijdcodes)
   → brongebonden artikel via de Responses API
   → artikel met aanklikbare transcriptbronnen
 ```
 
-Jobs worden lokaal als JSON opgeslagen in `data/jobs/`. Tijdelijke audio wordt na voltooiing of een fout verwijderd. De app heeft bewust geen accountsysteem; zet hem niet zonder authenticatie en rate limiting open op het publieke internet.
+Jobs worden lokaal als JSON opgeslagen in `data/jobs/`. Compacte afspeelaudio
+wordt opgeslagen in `data/media/`; gedownloade bronbestanden en
+transcriptiechunks worden verwijderd. De app heeft bewust geen accountsysteem;
+zet hem niet zonder authenticatie en rate limiting open op het publieke internet.
 Onvoltooide jobs worden na een serverherstart automatisch opnieuw gestart met
 hetzelfde job-ID. De actieve verwerkingsstap begint daarbij opnieuw, zodat er
 nooit stilzwijgend een job in een oude status blijft hangen.
@@ -59,7 +73,9 @@ voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
 | `PORT` | `3000` | HTTP-poort |
 | `ARTICLE_MODEL` | `gpt-5.6-terra` | Model voor het artikel |
 | `TRANSCRIPTION_MODEL` | `gpt-4o-transcribe-diarize` | Transcriptiemodel |
-| `MAX_AUDIO_MB` | `500` | Maximale downloadgrootte |
+| `MAX_AUDIO_MB` | `500` | Maximale Spotify-audiodownload |
+| `MAX_RECORDING_MB` | `1500` | Maximale Google Drive-opnamedownload |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS` | `900000` | Timeout voor het downloaden van media (15 minuten) |
 | `AUDIO_CHUNK_SECONDS` | `300` | Lengte van ieder audiofragment (5 minuten; toegestaan: 60–1200) |
 | `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000` | Timeout per transcriptiefragment (10 minuten) |
 | `OPENAI_ARTICLE_TIMEOUT_MS` | `600000` | Timeout voor artikelgeneratie (10 minuten) |
@@ -79,15 +95,25 @@ curl -X POST http://localhost:3000/api/jobs/<job-id>/retry-article
 
 ## Beperkingen
 
-- Alleen specifieke publieke `open.spotify.com/episode/...`-links worden geaccepteerd.
+- Publieke `open.spotify.com/episode/...`-links en Google Drive-links naar één
+  publiek audio- of videobestand worden geaccepteerd.
 - De aflevering moet ook in een openbare podcastindex/RSS-bron staan. Spotify-exclusives werken niet.
 - Titels die sterk afwijken tussen Spotify en de RSS-bron kunnen niet automatisch worden gekoppeld; de app kiest bij twijfel bewust geen bron.
+- Een Drive-opname moet toegankelijk zijn voor iedereen met de link en
+  downloadrechten hebben. Door Workspace-beleid afgeschermde opnames werken
+  zonder Google-authenticatie bewust niet.
+- Meet-ruimte-, Drive-map- en Google Calendar-links bevatten niet rechtstreeks
+  het opnamebestand en werken daarom niet.
 - Sprekerlabels kunnen tussen lange audiochunks wisselen. De tekst en tijdcodes blijven wel gekoppeld.
 - Transcriptie en herschrijven kunnen fouten bevatten. De tijdcodelinks zijn bedoeld om publicaties eenvoudig te controleren.
 
 ## Verantwoord gebruik
 
-Gebruik alleen audio die je rechtmatig mag verwerken. Een publieke feed betekent niet automatisch dat je een volledige transcriptie of afgeleid artikel commercieel mag herpubliceren. Respecteer auteursrecht, portretrecht, privacy, licenties en de voorwaarden van de podcasthost. Vermeld de oorspronkelijke podcast en link ernaar.
+Gebruik alleen opnames die je rechtmatig mag verwerken. Een publieke link
+betekent niet automatisch dat je een volledige transcriptie of afgeleid artikel
+commercieel mag herpubliceren. Respecteer auteursrecht, portretrecht, privacy,
+licenties en de voorwaarden van de bron. Vermeld en link de oorspronkelijke
+opname.
 
 ## Ontwikkelen
 

@@ -1,17 +1,44 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { jobError, jobLog } from "../lib/logger.js";
-import { audioChunkSeconds, downloadAudio, splitAudio } from "./audio.js";
+import { audioChunkSeconds, downloadMedia, normalizeAudio, splitAudio } from "./audio.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
-import { resolveSpotifyEpisode } from "./resolver.js";
+import { resolveSource } from "./resolver.js";
 import type { Job } from "../types.js";
 
 const root = path.resolve("data");
 const jobDirectory = path.join(root, "jobs");
 const workDirectory = path.join(root, "work");
+const mediaDirectory = path.join(root, "media");
 const memory = new Map<string, Job>();
 const activeRuns = new Map<string, { controller: AbortController; promise: Promise<void> }>();
+
+function mediaLimit(sourceType: NonNullable<Job["episode"]>["sourceType"]): number {
+  const fallback = sourceType === "google-drive" ? 1_500 : 500;
+  const value = Number(
+    sourceType === "google-drive"
+      ? process.env.MAX_RECORDING_MB ?? process.env.MAX_MEDIA_MB ?? fallback
+      : process.env.MAX_AUDIO_MB ?? process.env.MAX_MEDIA_MB ?? fallback,
+  );
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+export function normalizeStoredJob(job: Job): Job {
+  job.sourceUrl ??= job.spotifyUrl ?? "";
+  if (job.episode) {
+    job.episode.sourceUrl ??= job.episode.spotifyUrl ?? job.sourceUrl;
+    job.episode.sourceType ??= "spotify";
+    job.episode.sourceName ??= job.episode.podcast ?? "Onbekende podcast";
+    job.episode.mediaUrl ??= job.episode.audioUrl ?? "";
+    job.episode.playbackUrl ??= job.episode.audioUrl;
+  }
+  return job;
+}
+
+export function playbackFileForJob(id: string): string | undefined {
+  return /^[0-9a-f-]{36}$/i.test(id) ? path.join(mediaDirectory, `${id}.mp3`) : undefined;
+}
 
 async function persist(job: Job): Promise<void> {
   await mkdir(jobDirectory, { recursive: true });
@@ -25,10 +52,14 @@ async function update(job: Job, patch: Partial<Job>): Promise<void> {
   await persist(job);
 }
 
-export async function createJob(input: Pick<Job, "spotifyUrl" | "language" | "articleLength">): Promise<Job> {
+export async function createJob(input: Pick<Job, "sourceUrl" | "language" | "articleLength">): Promise<Job> {
   const now = new Date().toISOString();
+  const sourceHost = new URL(input.sourceUrl).hostname.toLowerCase();
   const job: Job = {
     ...input,
+    ...(sourceHost === "open.spotify.com" || sourceHost === "spotify.com" || sourceHost === "www.spotify.com"
+      ? { spotifyUrl: input.sourceUrl }
+      : {}),
     id: randomUUID(),
     stage: "queued",
     progress: 2,
@@ -46,7 +77,7 @@ export async function getJob(id: string): Promise<Job | undefined> {
   if (memory.has(id)) return memory.get(id);
   if (!/^[0-9a-f-]{36}$/i.test(id)) return undefined;
   try {
-    const job = JSON.parse(await readFile(path.join(jobDirectory, `${id}.json`), "utf8")) as Job;
+    const job = normalizeStoredJob(JSON.parse(await readFile(path.join(jobDirectory, `${id}.json`), "utf8")) as Job);
     memory.set(id, job);
     return job;
   } catch { return undefined; }
@@ -76,7 +107,7 @@ export async function resumeIncompleteJobs(): Promise<void> {
   const files = (await readdir(jobDirectory)).filter((name) => /^[0-9a-f-]{36}\.json$/i.test(name));
   for (const file of files) {
     try {
-      const job = JSON.parse(await readFile(path.join(jobDirectory, file), "utf8")) as Job;
+      const job = normalizeStoredJob(JSON.parse(await readFile(path.join(jobDirectory, file), "utf8")) as Job);
       memory.set(job.id, job);
       if (job.stage === "complete" || job.stage === "failed") continue;
       const previousStage = job.stage;
@@ -141,27 +172,36 @@ export async function shutdownJobs(reason = "Server wordt afgesloten"): Promise<
 
 async function processJob(job: Job, signal: AbortSignal): Promise<void> {
   const workspace = path.join(workDirectory, job.id);
+  const mediaTarget = playbackFileForJob(job.id)!;
   const jobStartedAt = Date.now();
   try {
     await rm(workspace, { recursive: true, force: true });
+    await rm(mediaTarget, { force: true });
     await mkdir(workspace, { recursive: true });
     jobLog(job.id, "resolving", "Publieke bron zoeken");
-    await update(job, { stage: "resolving", progress: 8, message: "Openbare podcastbron zoeken" });
-    const episode = await resolveSpotifyEpisode(job.spotifyUrl);
-    jobLog(job.id, "resolving", "Aflevering gekoppeld", { title: episode.title, podcast: episode.podcast, durationSeconds: episode.durationSeconds });
-    await update(job, { episode, progress: 18, message: "Aflevering gevonden" });
+    await update(job, { stage: "resolving", progress: 8, message: "Openbare opnamebron controleren" });
+    const episode = await resolveSource(job.sourceUrl);
+    episode.playbackUrl = `/api/jobs/${job.id}/audio`;
+    jobLog(job.id, "resolving", "Opname gekoppeld", { title: episode.title, source: episode.sourceName, sourceType: episode.sourceType, durationSeconds: episode.durationSeconds });
+    await update(job, { episode, progress: 18, message: "Opname gevonden" });
 
-    const input = path.join(workspace, "episode.audio");
+    const input = path.join(workspace, "source.media");
     const downloadStartedAt = Date.now();
-    jobLog(job.id, "downloading", "Audio downloaden");
-    await update(job, { stage: "downloading", progress: 22, message: "Audio veilig downloaden" });
-    await downloadAudio(episode.audioUrl, input, signal);
-    const audioBytes = (await stat(input)).size;
-    jobLog(job.id, "downloading", "Audio gedownload", { megabytes: (audioBytes / 1024 / 1024).toFixed(1), elapsedSeconds: Math.round((Date.now() - downloadStartedAt) / 1000) });
+    jobLog(job.id, "downloading", "Media downloaden");
+    await update(job, { stage: "downloading", progress: 22, message: "Opname veilig downloaden" });
+    await downloadMedia(episode.mediaUrl, input, signal, {
+      maxMegabytes: mediaLimit(episode.sourceType),
+    });
+    const mediaBytes = (await stat(input)).size;
+    jobLog(job.id, "downloading", "Media gedownload", { megabytes: (mediaBytes / 1024 / 1024).toFixed(1), elapsedSeconds: Math.round((Date.now() - downloadStartedAt) / 1000) });
+    await update(job, { progress: 28, message: "Audio uit opname halen" });
+    const playbackAudio = path.join(workspace, "playback.mp3");
+    await normalizeAudio(input, playbackAudio, signal);
     await update(job, { progress: 32, message: "Audio opdelen voor transcriptie" });
     const splitStartedAt = Date.now();
     jobLog(job.id, "downloading", "FFmpeg maakt transcriptiefragmenten", { chunkSeconds: audioChunkSeconds() });
-    const chunks = await splitAudio(input, workspace, signal);
+    const chunks = await splitAudio(playbackAudio, workspace, signal);
+    await rm(input, { force: true });
     const chunkSizes = await Promise.all(chunks.map(async (file) => ((await stat(file)).size / 1024 / 1024).toFixed(1)));
     jobLog(job.id, "downloading", "Audiofragmenten gereed", { chunks: chunks.length, sizesMb: chunkSizes.join(","), elapsedSeconds: Math.round((Date.now() - splitStartedAt) / 1000) });
 
@@ -176,6 +216,8 @@ async function processJob(job: Job, signal: AbortSignal): Promise<void> {
       }
     }, signal);
     jobLog(job.id, "transcribing", "Volledige transcriptie gereed", { segments: transcript.length });
+    await mkdir(mediaDirectory, { recursive: true });
+    await rename(playbackAudio, mediaTarget);
     await update(job, { transcript, progress: 78, message: "Transcript compleet" });
 
     const article = await generateArticle(job, transcript, episode, signal);
@@ -200,7 +242,7 @@ async function generateArticle(job: Job, transcript: NonNullable<Job["transcript
   await update(job, { stage: "writing", progress: 82, message: "Brongebonden blogartikel schrijven" });
   jobLog(job.id, "writing", "Brongebonden artikel genereren", { transcriptSegments: transcript.length });
   return writeArticle(transcript, {
-    title: episode.title, podcast: episode.podcast, language: job.language, length: job.articleLength,
+    title: episode.title, sourceName: episode.sourceName, language: job.language, length: job.articleLength,
   }, (message, data) => {
     jobLog(job.id, "writing", message, data);
     if (message.startsWith("Nog in afwachting")) void update(job, { message: `Artikel wordt geschreven · ${Math.max(1, Math.round(Number(data.waitingSeconds ?? 0) / 60))} min. wachten` });

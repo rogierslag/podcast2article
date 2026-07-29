@@ -4,6 +4,7 @@ dist/
 .env.*
 !.env.example
 data/jobs/*.json
+data/media/
 data/work/
 .DS_Store
 npm-debug.log*

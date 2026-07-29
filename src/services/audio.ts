@@ -16,19 +16,46 @@ export function audioChunkSeconds(): number {
 const require = createRequire(import.meta.url);
 const ffmpegPath = require("ffmpeg-static") as string | null;
 
-export async function downloadAudio(url: string, target: string, signal?: AbortSignal): Promise<void> {
-  const timeoutSignal = AbortSignal.timeout(120_000);
+interface DownloadOptions {
+  maxMegabytes?: number;
+  timeoutMs?: number;
+}
+
+export async function downloadMedia(
+  url: string,
+  target: string,
+  signal?: AbortSignal,
+  options: DownloadOptions = {},
+): Promise<void> {
+  const configuredTimeout = options.timeoutMs ?? Number(process.env.MEDIA_DOWNLOAD_TIMEOUT_MS ?? 900_000);
+  const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout > 0
+    ? Math.floor(configuredTimeout)
+    : 900_000;
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
   const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
   const response = await safeFetch(url, { headers: { "User-Agent": "Podcast2Article/0.1 (+open-source)" }, signal: requestSignal });
-  if (!response.ok || !response.body) throw new Error(`Audio downloaden mislukt (${response.status}).`);
-  const maxBytes = Number(process.env.MAX_AUDIO_MB ?? 500) * 1024 * 1024;
+  if (!response.ok || !response.body) {
+    const permissionHint = response.status === 401 || response.status === 403
+      ? " Controleer of iedereen met de link toegang heeft en downloaden is toegestaan."
+      : "";
+    throw new Error(`Media downloaden mislukt (${response.status}).${permissionHint}`);
+  }
+  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+  if (contentType.includes("text/html")) {
+    throw new Error("De bron gaf een webpagina terug in plaats van media. Controleer de deel- en downloadrechten.");
+  }
+  const configuredMaximum = options.maxMegabytes ?? Number(process.env.MAX_MEDIA_MB ?? process.env.MAX_AUDIO_MB ?? 1_500);
+  const maxMegabytes = Number.isFinite(configuredMaximum) && configuredMaximum > 0
+    ? configuredMaximum
+    : 1_500;
+  const maxBytes = maxMegabytes * 1024 * 1024;
   const announcedSize = Number(response.headers.get("content-length") ?? 0);
-  if (announcedSize > maxBytes) throw new Error(`Audiobestand is groter dan ${process.env.MAX_AUDIO_MB ?? 500} MB.`);
+  if (announcedSize > maxBytes) throw new Error(`Mediabestand is groter dan ${maxMegabytes} MB.`);
   let received = 0;
   const limited = response.body.pipeThrough(new TransformStream({
     transform(chunk, controller) {
       received += chunk.byteLength;
-      if (received > maxBytes) return controller.error(new Error("Audiobestand overschrijdt de ingestelde limiet."));
+      if (received > maxBytes) return controller.error(new Error("Mediabestand overschrijdt de ingestelde limiet."));
       controller.enqueue(chunk);
     }
   }));
@@ -51,6 +78,13 @@ function runFfmpeg(args: string[], signal?: AbortSignal): Promise<void> {
       return code === 0 ? resolve() : reject(new Error(`Audio verwerken mislukt: ${stderr.split("\n").at(-2) ?? `FFmpeg-code ${code}`}`));
     });
   });
+}
+
+export async function normalizeAudio(input: string, target: string, signal?: AbortSignal): Promise<void> {
+  await runFfmpeg([
+    "-hide_banner", "-loglevel", "error", "-y", "-i", input,
+    "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", target,
+  ], signal);
 }
 
 export async function splitAudio(input: string, directory: string, signal?: AbortSignal): Promise<string[]> {

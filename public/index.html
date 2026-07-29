@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Maak van een publieke Spotify-podcast een brongebonden blogartikel.">
+  <meta name="description" content="Maak van een publieke podcast of Google Meet-opname een brongebonden blogartikel.">
   <title>Podcast2Article — van stem naar verhaal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,15 +22,15 @@
 
   <main>
     <section id="landing" class="landing">
-      <div class="eyebrow"><span></span> Van podcast naar publicatie</div>
+      <div class="eyebrow"><span></span> Van opname naar publicatie</div>
       <h1>Laat het gesprek<br><em>doorleven.</em></h1>
-      <p class="intro">Plak een publieke Spotify-aflevering. Wij vinden de originele bron, maken een transcript en schrijven een helder artikel dat trouw blijft aan de stem van de podcast.</p>
+      <p class="intro">Plak een publieke Spotify-aflevering of Google Meet-opname uit Drive. Wij halen de audio op, maken een transcript en schrijven een helder artikel dat trouw blijft aan de oorspronkelijke stem.</p>
 
       <form id="job-form" class="composer">
-        <label for="spotify-url">Spotify-aflevering</label>
+        <label for="source-url">Publieke opname</label>
         <div class="url-row">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.58 14.42a.75.75 0 0 1-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.15a.75.75 0 1 1-.34-1.46c4.58-1.05 8.51-.61 11.67 1.32.35.22.47.68.25 1.04Zm1.47-3.27a.94.94 0 0 1-1.29.31c-3.23-1.98-8.15-2.55-11.97-1.4a.94.94 0 1 1-.54-1.8c4.37-1.32 9.8-.68 13.49 1.58.44.27.58.86.31 1.31Zm.13-3.4C14.3 7.45 7.9 7.23 4.2 8.35a1.12 1.12 0 1 1-.65-2.15c4.25-1.29 11.32-1.02 15.77 1.62a1.12 1.12 0 0 1-1.14 1.93Z"/></svg>
-          <input id="spotify-url" name="spotifyUrl" type="url" required autocomplete="url" placeholder="https://open.spotify.com/episode/…">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.4-3.4a3 3 0 1 1 4.2 4.2l-2.4 2.4a3 3 0 0 1-4.2 0 1 1 0 1 1 1.4-1.4 1 1 0 0 0 1.4 0l2.4-2.4a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0Zm2.8-2.8a1 1 0 0 1 0 1.4L10 15.4a3 3 0 1 1-4.2-4.2l2.4-2.4a3 3 0 0 1 4.2 0 1 1 0 0 1-1.4 1.4 1 1 0 0 0-1.4 0l-2.4 2.4A1 1 0 0 0 8.6 14l3.4-3.4a1 1 0 0 1 1.4 0Z"/></svg>
+          <input id="source-url" name="sourceUrl" type="url" required autocomplete="url" placeholder="Spotify- of Google Drive-link">
           <button type="submit">Maak artikel <span aria-hidden="true">→</span></button>
         </div>
         <div class="options">
@@ -51,7 +51,7 @@
 
       <div class="promise-grid">
         <article><strong>01</strong><h2>Brongetrouw</h2><p>Geen externe feiten. Elke alinea verwijst naar het transcript.</p></article>
-        <article><strong>02</strong><h2>Eigen stem</h2><p>De cadans, humor en argumentatie van de podcast blijven herkenbaar.</p></article>
+        <article><strong>02</strong><h2>Eigen stem</h2><p>De cadans, humor en argumentatie van de opname blijven herkenbaar.</p></article>
         <article><strong>03</strong><h2>Controleerbaar</h2><p>Klik vanuit het artikel direct naar het juiste audio- en transcriptmoment.</p></article>
       </div>
     </section>
@@ -60,7 +60,7 @@
       <div class="record"><div class="record-center"></div></div>
       <p class="eyebrow"><span></span> Bezig met verwerken</p>
       <h1 id="progress-title">We luisteren mee…</h1>
-      <p id="progress-message">Openbare podcastbron zoeken</p>
+      <p id="progress-message">Openbare opnamebron controleren</p>
       <div class="progress-track"><div id="progress-bar"></div></div>
       <span id="progress-percent" class="mono">0%</span>
     </section>
@@ -91,6 +91,6 @@
       </section>
     </section>
   </main>
-  <footer><span>Podcast2Article</span><span>Open source · publieke podcasts · jouw API-key</span></footer>
+  <footer><span>Podcast2Article</span><span>Open source · publieke opnames · jouw API-key</span></footer>
 </body>
 </html>

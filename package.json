@@ -2,7 +2,7 @@
   "name": "podcast2article",
   "version": "0.1.0",
   "private": true,
-  "description": "Turn public Spotify podcast episodes into source-linked blog articles.",
+  "description": "Turn public Spotify episodes and Google Meet recordings into source-linked blog articles.",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",

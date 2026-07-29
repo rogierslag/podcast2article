@@ -55,11 +55,15 @@ function renderResult(job) {
   currentJob = job;
   progressView.classList.add("hidden"); landing.classList.add("hidden"); resultView.classList.remove("hidden");
   const episode=job.episode, article=job.article, transcript=job.transcript;
-  $("#episode-hero").innerHTML = `${episode.imageUrl?`<img src="${escapeHtml(episode.imageUrl)}" alt="Cover van ${escapeHtml(episode.podcast)}">`:""}<div><span class="kicker">${escapeHtml(episode.podcast)}</span><h1>${escapeHtml(episode.title)}</h1><p>${episode.publishedAt?new Date(episode.publishedAt).toLocaleDateString("nl-NL",{dateStyle:"long"}):""}${episode.durationSeconds?` · ${Math.round(episode.durationSeconds/60)} minuten`:""} · <a href="${escapeHtml(episode.spotifyUrl)}" target="_blank" rel="noreferrer" style="color:inherit">Bekijk op Spotify ↗</a></p></div>`;
+  const sourceName=episode.sourceName||episode.podcast||"Oorspronkelijke bron";
+  const sourceUrl=episode.sourceUrl||episode.spotifyUrl;
+  const sourceLinkLabel=episode.sourceType==="google-drive"?"Bekijk in Google Drive ↗":"Bekijk op Spotify ↗";
+  const details=[episode.publishedAt?new Date(episode.publishedAt).toLocaleDateString("nl-NL",{dateStyle:"long"}):"",episode.durationSeconds?`${Math.round(episode.durationSeconds/60)} minuten`:""].filter(Boolean);
+  $("#episode-hero").innerHTML = `${episode.imageUrl?`<img src="${escapeHtml(episode.imageUrl)}" alt="Afbeelding van ${escapeHtml(sourceName)}">`:""}<div><span class="kicker">${escapeHtml(sourceName)}</span><h1>${escapeHtml(episode.title)}</h1><p>${escapeHtml(details.join(" · "))}${details.length?" · ":""}<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer" style="color:inherit">${sourceLinkLabel}</a></p></div>`;
   const sections=article.sections.map((section,index)=>{const id=slug(section.heading,index);return `<section><h2 id="${id}">${escapeHtml(section.heading)}</h2>${section.paragraphs.map((paragraph)=>`<p>${escapeHtml(paragraph.text)} ${sourceButtons(paragraph.sources,transcript)}</p>`).join("")}</section>`}).join("");
   $("#article").innerHTML = `<h1>${escapeHtml(article.title)}</h1><p class="dek">${escapeHtml(article.dek)}</p><p class="byline">${article.readingTimeMinutes} minuten leestijd · gebaseerd op ${transcript.length} bronfragmenten</p><p class="style-note">${escapeHtml(article.styleNote)}</p>${sections}<div class="takeaways"><h2>Kernpunten</h2><ul>${article.takeaways.map((item)=>`<li>${escapeHtml(item.text)} ${sourceButtons(item.sources,transcript)}</li>`).join("")}</ul></div>`;
   $("#toc").innerHTML = article.sections.map((section,index)=>`<a href="#${slug(section.heading,index)}">${escapeHtml(section.heading)}</a>`).join("");
-  $("#audio").src = episode.audioUrl;
+  $("#audio").src = episode.playbackUrl||episode.audioUrl||episode.mediaUrl;
   renderTranscript(transcript, "");
   document.addEventListener("click", sourceClick);
   window.scrollTo({top:0});
@@ -85,7 +89,7 @@ function seek(seconds){const audio=$("#audio");audio.currentTime=seconds;audio.p
 function exportToPdf(){
   if(!currentJob)return;
   const originalTitle=document.title;
-  document.title=`${currentJob.article.title} — ${currentJob.episode.podcast}`;
+  document.title=`${currentJob.article.title} — ${currentJob.episode.sourceName||currentJob.episode.podcast}`;
   try{window.print();}finally{document.title=originalTitle;}
 }
 $("#transcript").addEventListener("click", sourceClick);

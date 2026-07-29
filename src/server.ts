@@ -1,8 +1,9 @@
 import express from "express";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { createJob, getJob, resumeIncompleteJobs, retryArticle, shutdownJobs } from "./services/jobs.js";
-import { validateSpotifyUrl } from "./services/resolver.js";
+import { createJob, getJob, playbackFileForJob, resumeIncompleteJobs, retryArticle, shutdownJobs } from "./services/jobs.js";
+import { validateSourceUrl } from "./services/resolver.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -13,10 +14,31 @@ app.use(express.json({ limit: "32kb" }));
 app.use(express.static(publicDirectory, { extensions: ["html"] }));
 
 const requestSchema = z.object({
-  spotifyUrl: z.string().url().max(500).refine((value) => { try { validateSpotifyUrl(value); return true; } catch { return false; } }, "Ongeldige Spotify-afleveringslink"),
+  sourceUrl: z.string().url().max(500).optional(),
+  /** Accepted for API compatibility with clients from before generic sources. */
+  spotifyUrl: z.string().url().max(500).optional(),
   language: z.enum(["auto", "nl", "en", "de", "fr", "es"]).default("auto"),
   articleLength: z.enum(["compact", "standard", "long"]).default("standard"),
-});
+}).superRefine((value, context) => {
+  const sourceUrl = value.sourceUrl ?? value.spotifyUrl;
+  if (!sourceUrl) {
+    context.addIssue({ code: "custom", path: ["sourceUrl"], message: "Plak een publieke Spotify- of Google Drive-link." });
+    return;
+  }
+  try {
+    validateSourceUrl(sourceUrl);
+  } catch (error) {
+    context.addIssue({
+      code: "custom",
+      path: ["sourceUrl"],
+      message: error instanceof Error ? error.message : "Ongeldige bronlink",
+    });
+  }
+}).transform(({ sourceUrl, spotifyUrl, language, articleLength }) => ({
+  sourceUrl: sourceUrl ?? spotifyUrl!,
+  language,
+  articleLength,
+}));
 
 app.get("/api/health", (_request, response) => {
   response.json({ ok: true, openaiConfigured: Boolean(process.env.OPENAI_API_KEY) });
@@ -33,6 +55,19 @@ app.post("/api/jobs", async (request, response) => {
 app.get("/api/jobs/:id", async (request, response) => {
   const job = await getJob(request.params.id);
   return job ? response.json(job) : response.status(404).json({ error: "Opdracht niet gevonden" });
+});
+
+app.get("/api/jobs/:id/audio", async (request, response) => {
+  const job = await getJob(request.params.id);
+  const file = playbackFileForJob(request.params.id);
+  if (!job || !file) return response.status(404).json({ error: "Audio niet gevonden" });
+  try {
+    await stat(file);
+    response.setHeader("Cache-Control", "private, max-age=3600");
+    return response.sendFile(file);
+  } catch {
+    return response.status(404).json({ error: "Audio is nog niet beschikbaar" });
+  }
 });
 
 app.post("/api/jobs/:id/retry-article", async (request, response) => {
