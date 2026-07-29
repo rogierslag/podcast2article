@@ -36,6 +36,13 @@ npm run build
 OPENAI_API_KEY='jouw-sleutel' npm start
 ```
 
+Gebruik voor regionale OpenAI-verwerking in de EU of de VS respectievelijk
+`OPENAI_REGION=eu` of `OPENAI_REGION=us`:
+
+```bash
+OPENAI_REGION=eu OPENAI_API_KEY='jouw-sleutel' npm start
+```
+
 ## Hoe het werkt
 
 ```text
@@ -70,6 +77,7 @@ voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
 | Variabele | Standaard | Betekenis |
 |---|---|---|
 | `OPENAI_API_KEY` | vereist | Via de CLI meegegeven OpenAI API-key |
+| `OPENAI_REGION` | `global` | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us` |
 | `PORT` | `3000` | HTTP-poort |
 | `ARTICLE_MODEL` | `gpt-5.6-terra` | Model voor het artikel |
 | `TRANSCRIPTION_MODEL` | `gpt-4o-transcribe-diarize` | Transcriptiemodel |
@@ -84,6 +92,11 @@ voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
 De CLI toont per job de bronresolutie, download- en FFmpeg-duur, chunkgroottes,
 OpenAI-start- en eindmomenten en iedere 30 seconden een heartbeat zolang een
 OpenAI-request nog loopt. API-keys en transcriptinhoud worden niet gelogd.
+
+`OPENAI_REGION` selecteert het OpenAI API-endpoint voor zowel transcriptie als
+artikelgeneratie. Regionale dataresidentie moet daarnaast voor het gebruikte
+OpenAI-project zijn ingericht en is afhankelijk van de gekozen modellen en
+features.
 
 Als alleen de artikelgeneratie faalt terwijl het transcript al compleet is, kan
 de bestaande transcriptie zonder nieuwe audio- of transcriptiekosten worden

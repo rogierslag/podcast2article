@@ -3,11 +3,30 @@ import OpenAI from "openai";
 import { audioChunkSeconds } from "./audio.js";
 import type { Article, TranscriptSegment } from "../types.js";
 
+const OPENAI_REGION_BASE_URLS = {
+  eu: "https://eu.api.openai.com/v1",
+  us: "https://us.api.openai.com/v1",
+} as const;
+
+export function openAIBaseURL(region = process.env.OPENAI_REGION): string | undefined {
+  const normalizedRegion = region?.trim().toLowerCase() || "global";
+  if (normalizedRegion === "global") return undefined;
+  if (normalizedRegion === "eu" || normalizedRegion === "us") {
+    return OPENAI_REGION_BASE_URLS[normalizedRegion];
+  }
+  throw new Error(
+    `Ongeldige OPENAI_REGION "${region}". Gebruik "global", "eu" of "us".`,
+  );
+}
+
 function client(): OpenAI {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY ontbreekt. Geef de sleutel mee via de CLI-omgeving.");
   }
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL || openAIBaseURL(),
+  });
 }
 
 interface DiarizedSegment { start?: number; end?: number; speaker?: string; text?: string; }

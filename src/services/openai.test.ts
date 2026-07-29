@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { transcribeChunks, validateArticleSources } from "./openai.js";
+import { openAIBaseURL, transcribeChunks, validateArticleSources } from "./openai.js";
 import type { Article } from "../types.js";
 
 const article: Article = {
@@ -28,6 +28,25 @@ describe("article source validation", () => {
     const invalid = structuredClone(article);
     invalid.takeaways[0]!.sources = ["missing"];
     expect(() => validateArticleSources(invalid, new Set(["t-00001"]))).toThrow(/zonder geldige transcriptbron/);
+  });
+});
+
+describe("OpenAI region", () => {
+  it.each([
+    [undefined, undefined],
+    ["", undefined],
+    ["global", undefined],
+    ["eu", "https://eu.api.openai.com/v1"],
+    ["us", "https://us.api.openai.com/v1"],
+    [" EU ", "https://eu.api.openai.com/v1"],
+  ])("maps %s to the expected API base URL", (region, expected) => {
+    expect(openAIBaseURL(region)).toBe(expected);
+  });
+
+  it("rejects unknown regions instead of silently using the global endpoint", () => {
+    expect(() => openAIBaseURL("europe")).toThrow(
+      'Ongeldige OPENAI_REGION "europe". Gebruik "global", "eu" of "us".',
+    );
   });
 });
 
