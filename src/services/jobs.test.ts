@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeStoredJob, toArticleSummary } from "./jobs.js";
+import { normalizeStoredJob, toArticleSummary, toProcessingJobSummary } from "./jobs.js";
 import type { Job } from "../types.js";
 
 describe("stored job compatibility", () => {
@@ -25,6 +25,7 @@ describe("stored job compatibility", () => {
     const job = normalizeStoredJob(legacy);
 
     expect(job.sourceUrl).toBe(legacy.spotifyUrl);
+    expect(job.completedAt).toBe(legacy.updatedAt);
     expect(job.episode).toMatchObject({
       sourceType: "spotify",
       sourceUrl: legacy.spotifyUrl,
@@ -46,7 +47,9 @@ describe("article summaries", () => {
       progress: 100,
       message: "Klaar",
       createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-02T00:00:00.000Z",
+      updatedAt: "2026-01-03T00:00:00.000Z",
+      completedAt: "2026-01-02T00:00:00.000Z",
+      readAt: "2026-01-03T00:00:00.000Z",
       episode: {
         sourceType: "youtube",
         sourceUrl: "https://youtube.com/watch?v=abc123",
@@ -77,6 +80,7 @@ describe("article summaries", () => {
       imageUrl: "https://example.com/cover.jpg",
       publishedAt: "2025-12-20T00:00:00.000Z",
       completedAt: "2026-01-02T00:00:00.000Z",
+      readAt: "2026-01-03T00:00:00.000Z",
     });
   });
 
@@ -94,5 +98,56 @@ describe("article summaries", () => {
     } satisfies Job;
 
     expect(toArticleSummary(job)).toBeUndefined();
+  });
+});
+
+describe("processing summaries", () => {
+  it("exposes progress without transcript or source URLs", () => {
+    const job = {
+      id: "11111111-1111-1111-1111-111111111111",
+      sourceUrl: "https://youtube.com/watch?v=abc123",
+      language: "nl",
+      articleLength: "standard",
+      stage: "transcribing",
+      progress: 54,
+      message: "Transcriptie 2/4",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:05:00.000Z",
+      episode: {
+        sourceType: "youtube",
+        sourceUrl: "https://youtube.com/watch?v=abc123",
+        sourceName: "Voorbeeldkanaal",
+        title: "De opname",
+        mediaUrl: "https://example.com/audio.mp3",
+      },
+      transcript: [{ id: "s1", start: 0, end: 1, speaker: "A", text: "Private transcript text" }],
+    } satisfies Job;
+
+    expect(toProcessingJobSummary(job)).toEqual({
+      id: job.id,
+      title: "De opname",
+      sourceName: "Voorbeeldkanaal",
+      imageUrl: undefined,
+      stage: "transcribing",
+      progress: 54,
+      message: "Transcriptie 2/4",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+  });
+
+  it("does not include completed or failed jobs", () => {
+    const base = {
+      id: "11111111-1111-1111-1111-111111111111",
+      sourceUrl: "https://youtube.com/watch?v=abc123",
+      language: "nl",
+      articleLength: "standard",
+      progress: 100,
+      message: "Klaar",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:05:00.000Z",
+    } satisfies Omit<Job, "stage">;
+
+    expect(toProcessingJobSummary({ ...base, stage: "complete" })).toBeUndefined();
+    expect(toProcessingJobSummary({ ...base, stage: "failed" })).toBeUndefined();
   });
 });

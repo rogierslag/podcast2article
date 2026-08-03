@@ -2,7 +2,7 @@ import express from "express";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { createJob, getJob, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, shutdownJobs } from "./services/jobs.js";
+import { createJob, getJob, listProcessingJobs, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, setArticleRead, shutdownJobs } from "./services/jobs.js";
 import { validateSourceUrl } from "./services/resolver.js";
 
 const app = express();
@@ -40,12 +40,31 @@ const requestSchema = z.object({
   articleLength,
 }));
 
+const readingStateSchema = z.object({ read: z.boolean() });
+
 app.get("/api/health", (_request, response) => {
   response.json({ ok: true, openaiConfigured: Boolean(process.env.OPENAI_API_KEY) });
 });
 
 app.get("/api/articles", (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
   response.json(listReadyArticles());
+});
+
+app.get("/api/jobs", (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  response.json(listProcessingJobs());
+});
+
+app.patch("/api/articles/:id", async (request, response) => {
+  const parsed = readingStateSchema.safeParse(request.body);
+  if (!parsed.success) return response.status(400).json({ error: "Geef een geldige leesstatus op." });
+  try {
+    return response.json(await setArticleRead(request.params.id, parsed.data.read));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Leesstatus kon niet worden opgeslagen.";
+    return response.status(message === "Opdracht niet gevonden." ? 404 : 409).json({ error: message });
+  }
 });
 
 app.post("/api/jobs", async (request, response) => {

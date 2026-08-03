@@ -5,8 +5,12 @@ const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const form = $("#job-form");
 let currentJob;
+let articlesState=[];
+let processingState=[];
+let overviewRefreshTimer;
 
 const sourceLabels = { spotify:"Spotify", youtube:"YouTube", "google-drive":"Google Drive" };
+const processingStageLabels = { queued:"In wachtrij", resolving:"Bron controleren", downloading:"Downloaden", transcribing:"Transcriberen", writing:"Artikel schrijven" };
 
 const escapeHtml = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const time = (seconds) => { const value=Math.max(0,Math.floor(seconds)); const h=Math.floor(value/3600); const m=Math.floor(value%3600/60); const s=value%60; return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`; };
@@ -67,6 +71,7 @@ function renderResult(job) {
   $("#article").innerHTML = `<h1>${escapeHtml(article.title)}</h1><p class="dek">${escapeHtml(article.dek)}</p><p class="byline">${article.readingTimeMinutes} minuten leestijd · gebaseerd op ${transcript.length} bronfragmenten</p><p class="style-note">${escapeHtml(article.styleNote)}</p>${sections}<div class="takeaways"><h2>Kernpunten</h2><ul>${article.takeaways.map((item)=>`<li>${escapeHtml(item.text)} ${sourceButtons(item.sources,transcript)}</li>`).join("")}</ul></div>`;
   $("#toc").innerHTML = article.sections.map((section,index)=>`<a href="#${slug(section.heading,index)}">${escapeHtml(section.heading)}</a>`).join("");
   $("#audio").src = episode.playbackUrl||episode.audioUrl||episode.mediaUrl;
+  updateReadButton();
   renderTranscript(transcript, "");
   document.addEventListener("click", sourceClick);
   window.scrollTo({top:0});
@@ -100,34 +105,140 @@ $("#transcript-search").addEventListener("input",(event)=>currentJob&&renderTran
 $("#toggle-transcript").addEventListener("click",()=>{const transcript=$("#transcript");transcript.classList.toggle("hidden");$("#toggle-transcript").textContent=transcript.classList.contains("hidden")?"Toon":"Verberg";});
 $("#export-pdf").addEventListener("click",exportToPdf);
 
+async function updateArticleRead(id,read) {
+  const response=await fetch(`/api/articles/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({read})});
+  const body=await response.json();
+  if(!response.ok)throw new Error(body.error||"Leesstatus kon niet worden opgeslagen.");
+  return body;
+}
+
+function updateReadButton() {
+  const button=$("#toggle-read");
+  const isRead=Boolean(currentJob?.readAt);
+  button.classList.toggle("is-read",isRead);
+  button.setAttribute("aria-pressed",String(isRead));
+  button.setAttribute("aria-label",isRead?"Zet artikel terug op ongelezen":"Markeer artikel als gelezen");
+  button.querySelector("span").textContent=isRead?"Gelezen":"Markeer als gelezen";
+}
+
+$("#toggle-read").addEventListener("click",async()=>{
+  if(!currentJob)return;
+  const button=$("#toggle-read");
+  button.disabled=true;
+  $("#article-action-status").textContent="";
+  try {
+    const article=await updateArticleRead(currentJob.id,!currentJob.readAt);
+    currentJob.readAt=article.readAt;
+    updateReadButton();
+  } catch(error) {
+    $("#article-action-status").textContent=error.message;
+  } finally { button.disabled=false; }
+});
+
 function articleDate(article) {
   const value=article.publishedAt||article.completedAt;
   return new Date(value).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"});
 }
 
-async function showArticles() {
-  landing.classList.add("hidden"); progressView.classList.add("hidden"); resultView.classList.add("hidden"); articlesView.classList.remove("hidden");
-  $("#articles-grid").innerHTML='<p class="articles-loading">Artikelen ophalen…</p>';
+function articleCard(article) {
+  const articleId=escapeHtml(article.id);
+  const articleUrl=`/#job=${articleId}`;
+  const isRead=Boolean(article.readAt);
+  const number=String(articlesState.findIndex((item)=>item.id===article.id)+1).padStart(2,"0");
+  return `<article class="article-card ${isRead?"is-read":""}">
+    <a class="article-card-image ${article.imageUrl?"":"article-card-placeholder"}" href="${articleUrl}" aria-label="Lees ${escapeHtml(article.title)}">${article.imageUrl?`<img src="${escapeHtml(article.imageUrl)}" alt="">`:`<span>${number}</span>`}</a>
+    <div class="article-card-body">
+      <p class="article-card-meta"><span>${escapeHtml(sourceLabels[article.sourceType]||article.sourceType)}</span> ${escapeHtml(articleDate(article))} · ${article.readingTimeMinutes} min.</p>
+      <a class="article-card-title" href="${articleUrl}"><h3>${escapeHtml(article.title)}</h3></a>
+      <p class="article-card-dek">${escapeHtml(article.dek)}</p>
+      <div class="article-card-footer">
+        <span>${escapeHtml(article.sourceName)}</span>
+        <div class="article-card-actions">
+          <a href="${articleUrl}">Lees <span aria-hidden="true">→</span></a>
+          <button type="button" data-read-toggle data-article-id="${articleId}" data-read="${isRead}" aria-label="${isRead?"Zet op ongelezen":"Markeer als gelezen"}" aria-pressed="${isRead}">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>
+            ${isRead?"Gelezen":"Markeer gelezen"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </article>`;
+}
+
+function articleShelf(title,articles,emptyText) {
+  return `<section class="article-shelf">
+    <div class="article-shelf-heading"><h2>${title}</h2><span>${articles.length}</span></div>
+    ${articles.length?`<div class="articles-grid">${articles.map(articleCard).join("")}</div>`:`<p class="article-shelf-empty">${emptyText}</p>`}
+  </section>`;
+}
+
+function processingCard(job) {
+  const jobId=escapeHtml(job.id);
+  const jobUrl=`/#job=${jobId}`;
+  return `<a class="processing-card" href="${jobUrl}">
+    <div class="processing-card-visual">${job.imageUrl?`<img src="${escapeHtml(job.imageUrl)}" alt="">`:'<span class="processing-wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span>'}</div>
+    <div class="processing-card-body">
+      <p><span>${escapeHtml(processingStageLabels[job.stage]||job.stage)}</span>${escapeHtml(job.sourceName)}</p>
+      <h3>${escapeHtml(job.title)}</h3>
+      <div class="processing-status"><span>${escapeHtml(job.message)}</span><strong>${Math.round(job.progress)}%</strong></div>
+      <div class="processing-track" aria-label="${Math.round(job.progress)} procent voltooid"><i style="width:${Math.max(0,Math.min(100,job.progress))}%"></i></div>
+    </div>
+  </a>`;
+}
+
+function processingShelf() {
+  return `<section class="article-shelf processing-shelf">
+    <div class="article-shelf-heading"><h2>In verwerking</h2><span>${processingState.length}</span></div>
+    ${processingState.length?`<div class="processing-grid">${processingState.map(processingCard).join("")}</div>`:'<p class="article-shelf-empty">Er wordt op dit moment niets verwerkt.</p>'}
+  </section>`;
+}
+
+function renderArticlesOverview() {
+  const unread=articlesState.filter((article)=>!article.readAt);
+  const read=articlesState.filter((article)=>article.readAt);
+  if(articlesState.length===0&&processingState.length===0) {
+    $("#articles-count").textContent="0 artikelen";
+    $("#articles-content").innerHTML=processingShelf();
+    $("#articles-empty").classList.remove("hidden");
+    return;
+  }
+  $("#articles-count").textContent=`${processingState.length} in verwerking · ${unread.length} nog te lezen · ${read.length} gelezen`;
+  $("#articles-content").innerHTML=processingShelf()+articleShelf("Nog te lezen",unread,"Je bent helemaal bij.")+articleShelf("Gelezen",read,"Nog geen artikelen afgevinkt.");
   $("#articles-empty").classList.add("hidden");
+}
+
+function scheduleOverviewRefresh() {
+  clearTimeout(overviewRefreshTimer);
+  if(processingState.length>0)overviewRefreshTimer=setTimeout(()=>showArticles(false),3000);
+}
+
+articlesView.addEventListener("click",async(event)=>{
+  const button=event.target.closest("[data-read-toggle]");
+  if(!button)return;
+  button.disabled=true;
   $("#articles-error").textContent="";
   try {
-    const response=await fetch("/api/articles");
-    if(!response.ok)throw new Error("De artikelen konden niet worden opgehaald.");
-    const articles=await response.json();
-    $("#articles-count").textContent=`${articles.length} ${articles.length===1?"artikel":"artikelen"}`;
-    $("#articles-grid").innerHTML=articles.map((article,index)=>`<a class="article-card" href="/#job=${article.id}">
-      <div class="article-card-image ${article.imageUrl?"":"article-card-placeholder"}">${article.imageUrl?`<img src="${escapeHtml(article.imageUrl)}" alt="">`:`<span>${String(index+1).padStart(2,"0")}</span>`}</div>
-      <div class="article-card-body">
-        <p class="article-card-meta"><span>${escapeHtml(sourceLabels[article.sourceType]||article.sourceType)}</span> ${escapeHtml(articleDate(article))} · ${article.readingTimeMinutes} min.</p>
-        <h2>${escapeHtml(article.title)}</h2>
-        <p class="article-card-dek">${escapeHtml(article.dek)}</p>
-        <div><span>${escapeHtml(article.sourceName)}</span><strong>Lees artikel <span aria-hidden="true">→</span></strong></div>
-      </div>
-    </a>`).join("");
-    $("#articles-empty").classList.toggle("hidden",articles.length!==0);
+    const updated=await updateArticleRead(button.dataset.articleId,button.dataset.read!=="true");
+    articlesState=articlesState.map((article)=>article.id===updated.id?updated:article);
+    renderArticlesOverview();
   } catch(error) {
-    $("#articles-grid").innerHTML="";
-    $("#articles-count").textContent="";
+    $("#articles-error").textContent=error.message;
+    button.disabled=false;
+  }
+});
+
+async function showArticles(showLoading=true) {
+  landing.classList.add("hidden"); progressView.classList.add("hidden"); resultView.classList.add("hidden"); articlesView.classList.remove("hidden");
+  if(showLoading){$("#articles-content").innerHTML='<p class="articles-loading">Artikelen ophalen…</p>';$("#articles-empty").classList.add("hidden");}
+  $("#articles-error").textContent="";
+  try {
+    const [articlesResponse,processingResponse]=await Promise.all([fetch("/api/articles"),fetch("/api/jobs")]);
+    if(!articlesResponse.ok||!processingResponse.ok)throw new Error("Het overzicht kon niet worden opgehaald.");
+    [articlesState,processingState]=await Promise.all([articlesResponse.json(),processingResponse.json()]);
+    renderArticlesOverview();
+    scheduleOverviewRefresh();
+  } catch(error) {
+    if(showLoading){$("#articles-content").innerHTML="";$("#articles-count").textContent="";}
     $("#articles-error").textContent=error.message;
   }
 }

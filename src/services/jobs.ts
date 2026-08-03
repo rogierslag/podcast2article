@@ -6,7 +6,7 @@ import { audioChunkSeconds, downloadMedia, normalizeAudio, splitAudio } from "./
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource } from "./resolver.js";
 import { downloadYouTubeAudio } from "./youtube.js";
-import type { ArticleSummary, Job } from "../types.js";
+import type { ArticleSummary, Job, ProcessingJobSummary } from "../types.js";
 
 const root = path.resolve("data");
 const jobDirectory = path.join(root, "jobs");
@@ -29,6 +29,7 @@ function mediaLimit(sourceType: NonNullable<Job["episode"]>["sourceType"]): numb
 
 export function normalizeStoredJob(job: Job): Job {
   job.sourceUrl ??= job.spotifyUrl ?? "";
+  if (job.stage === "complete") job.completedAt ??= job.updatedAt;
   if (job.episode) {
     job.episode.sourceUrl ??= job.episode.spotifyUrl ?? job.sourceUrl;
     job.episode.sourceType ??= "spotify";
@@ -97,7 +98,8 @@ export function toArticleSummary(job: Job): ArticleSummary | undefined {
     sourceType: job.episode.sourceType,
     imageUrl: job.episode.imageUrl,
     publishedAt: job.episode.publishedAt,
-    completedAt: job.updatedAt,
+    completedAt: job.completedAt ?? job.updatedAt,
+    ...(job.readAt ? { readAt: job.readAt } : {}),
   };
 }
 
@@ -106,6 +108,37 @@ export function listReadyArticles(): ArticleSummary[] {
     .map(toArticleSummary)
     .filter((article): article is ArticleSummary => Boolean(article))
     .sort((left, right) => right.completedAt.localeCompare(left.completedAt));
+}
+
+export function toProcessingJobSummary(job: Job): ProcessingJobSummary | undefined {
+  if (job.stage === "complete" || job.stage === "failed") return undefined;
+  return {
+    id: job.id,
+    title: job.episode?.title ?? "Nieuwe opname",
+    sourceName: job.episode?.sourceName ?? "Bron wordt opgehaald",
+    imageUrl: job.episode?.imageUrl,
+    stage: job.stage,
+    progress: job.progress,
+    message: job.message,
+    createdAt: job.createdAt,
+  };
+}
+
+export function listProcessingJobs(): ProcessingJobSummary[] {
+  return [...memory.values()]
+    .map(toProcessingJobSummary)
+    .filter((job): job is ProcessingJobSummary => Boolean(job))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+export async function setArticleRead(id: string, read: boolean): Promise<ArticleSummary> {
+  const job = await getJob(id);
+  if (!job) throw new Error("Opdracht niet gevonden.");
+  if (job.stage !== "complete" || !job.article || !job.episode) {
+    throw new Error("Dit artikel is nog niet klaar om te lezen.");
+  }
+  await update(job, { readAt: read ? new Date().toISOString() : undefined });
+  return toArticleSummary(job)!;
 }
 
 export async function retryArticle(id: string): Promise<Job> {
@@ -121,6 +154,7 @@ export async function retryArticle(id: string): Promise<Job> {
     message: "Artikel opnieuw genereren met bestaand transcript",
     error: undefined,
     article: undefined,
+    readAt: undefined,
   });
   jobLog(job.id, "writing", "Artikel-only retry gestart", { transcriptSegments: job.transcript.length });
   queueMicrotask(() => launchArticleRetry(job));
@@ -171,7 +205,7 @@ function launchArticleRetry(job: Job): void {
 async function processArticleRetry(job: Job, signal: AbortSignal): Promise<void> {
   try {
     const article = await generateArticle(job, job.transcript!, job.episode!, signal);
-    await update(job, { article, stage: "complete", progress: 100, message: "Artikel en transcript zijn klaar" });
+    await update(job, { article, stage: "complete", progress: 100, message: "Artikel en transcript zijn klaar", completedAt: new Date().toISOString() });
     jobLog(job.id, "complete", "Artikel-only retry afgerond", { articleTitle: article.title });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Onbekende fout";
@@ -249,7 +283,7 @@ async function processJob(job: Job, signal: AbortSignal): Promise<void> {
     await update(job, { transcript, progress: 78, message: "Transcript compleet" });
 
     const article = await generateArticle(job, transcript, episode, signal);
-    await update(job, { article, stage: "complete", progress: 100, message: "Artikel en transcript zijn klaar" });
+    await update(job, { article, stage: "complete", progress: 100, message: "Artikel en transcript zijn klaar", completedAt: new Date().toISOString() });
     jobLog(job.id, "complete", "Opdracht afgerond", { elapsedSeconds: Math.round((Date.now() - jobStartedAt) / 1000), articleTitle: article.title });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Onbekende fout";

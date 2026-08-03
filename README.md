@@ -8,7 +8,11 @@ Spotify-podcastaflevering, YouTube-video of Google Meet-opname** omzet in:
 3. controleerbare bronlinks van iedere artikelalinea naar het juiste transcript- en audiomoment.
 
 Afgeronde artikelen verschijnen automatisch op de overzichtspagina
-[`/articles`](http://localhost:3000/articles), met de nieuwste bovenaan.
+[`/articles`](http://localhost:3000/articles), met de nieuwste bovenaan. Daar kun
+je artikelen markeren als gelezen; die status wordt lokaal bij de opdracht
+opgeslagen en kan ook weer worden teruggedraaid. Opdrachten die nog in de
+wachtrij staan of worden verwerkt verschijnen bovenaan met hun actuele stap en
+voortgang; dit deel van het overzicht wordt automatisch ververst.
 
 De audio wordt niet uit Spotify gedownload. De app gebruikt de Spotify-link alleen om de aflevering te herkennen en zoekt vervolgens dezelfde aflevering via de openbare Apple Podcasts-index en de oorspronkelijke publieke audiobron.
 Van een publieke YouTube-video wordt alleen de beste beschikbare audiostream

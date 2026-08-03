@@ -7,6 +7,8 @@ export type JobStage =
   | "complete"
   | "failed";
 
+export type ProcessingStage = Exclude<JobStage, "complete" | "failed">;
+
 export type SourceType = "spotify" | "google-drive" | "youtube";
 
 export interface Episode {
@@ -60,6 +62,8 @@ export interface Job {
   message: string;
   createdAt: string;
   updatedAt: string;
+  completedAt?: string;
+  readAt?: string;
   episode?: Episode;
   transcript?: TranscriptSegment[];
   article?: Article;
@@ -76,4 +80,16 @@ export interface ArticleSummary {
   imageUrl?: string;
   publishedAt?: string;
   completedAt: string;
+  readAt?: string;
+}
+
+export interface ProcessingJobSummary {
+  id: string;
+  title: string;
+  sourceName: string;
+  imageUrl?: string;
+  stage: ProcessingStage;
+  progress: number;
+  message: string;
+  createdAt: string;
 }
