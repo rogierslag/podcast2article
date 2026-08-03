@@ -37,15 +37,18 @@ Open daarna [http://localhost:3000](http://localhost:3000). De sleutel blijft in
 Voor productie:
 
 ```bash
-npm run build
-OPENAI_API_KEY='jouw-sleutel' npm start
+cp .env.example .env
+# Vul OPENAI_API_KEY in binnen .env.
+yarn build
+yarn start
 ```
 
 Gebruik voor regionale OpenAI-verwerking in de EU of de VS respectievelijk
-`OPENAI_REGION=eu` of `OPENAI_REGION=us`:
+`OPENAI_REGION=eu` of `OPENAI_REGION=us` in `.env`. `yarn start` leest de
+variabelen uit dat bestand:
 
 ```bash
-OPENAI_REGION=eu OPENAI_API_KEY='jouw-sleutel' npm start
+OPENAI_REGION=eu
 ```
 
 ## Hoe het werkt
