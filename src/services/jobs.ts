@@ -6,7 +6,7 @@ import { audioChunkSeconds, downloadMedia, normalizeAudio, splitAudio } from "./
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource } from "./resolver.js";
 import { downloadYouTubeAudio } from "./youtube.js";
-import type { Job } from "../types.js";
+import type { ArticleSummary, Job } from "../types.js";
 
 const root = path.resolve("data");
 const jobDirectory = path.join(root, "jobs");
@@ -84,6 +84,28 @@ export async function getJob(id: string): Promise<Job | undefined> {
     memory.set(id, job);
     return job;
   } catch { return undefined; }
+}
+
+export function toArticleSummary(job: Job): ArticleSummary | undefined {
+  if (job.stage !== "complete" || !job.article || !job.episode) return undefined;
+  return {
+    id: job.id,
+    title: job.article.title,
+    dek: job.article.dek,
+    readingTimeMinutes: job.article.readingTimeMinutes,
+    sourceName: job.episode.sourceName,
+    sourceType: job.episode.sourceType,
+    imageUrl: job.episode.imageUrl,
+    publishedAt: job.episode.publishedAt,
+    completedAt: job.updatedAt,
+  };
+}
+
+export function listReadyArticles(): ArticleSummary[] {
+  return [...memory.values()]
+    .map(toArticleSummary)
+    .filter((article): article is ArticleSummary => Boolean(article))
+    .sort((left, right) => right.completedAt.localeCompare(left.completedAt));
 }
 
 export async function retryArticle(id: string): Promise<Job> {

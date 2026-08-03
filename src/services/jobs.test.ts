@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeStoredJob } from "./jobs.js";
+import { normalizeStoredJob, toArticleSummary } from "./jobs.js";
 import type { Job } from "../types.js";
 
 describe("stored job compatibility", () => {
@@ -32,5 +32,67 @@ describe("stored job compatibility", () => {
       mediaUrl: "https://cdn.example.com/episode.mp3",
       playbackUrl: "https://cdn.example.com/episode.mp3",
     });
+  });
+});
+
+describe("article summaries", () => {
+  it("only exposes the fields needed by the ready-to-read overview", () => {
+    const job = {
+      id: "11111111-1111-1111-1111-111111111111",
+      sourceUrl: "https://youtube.com/watch?v=abc123",
+      language: "nl",
+      articleLength: "standard",
+      stage: "complete",
+      progress: 100,
+      message: "Klaar",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
+      episode: {
+        sourceType: "youtube",
+        sourceUrl: "https://youtube.com/watch?v=abc123",
+        sourceName: "Voorbeeldkanaal",
+        title: "De opname",
+        imageUrl: "https://example.com/cover.jpg",
+        mediaUrl: "https://example.com/audio.mp3",
+        publishedAt: "2025-12-20T00:00:00.000Z",
+      },
+      article: {
+        title: "Een leesbaar artikel",
+        dek: "De korte introductie.",
+        readingTimeMinutes: 7,
+        styleNote: "Helder en bondig.",
+        sections: [],
+        takeaways: [],
+      },
+      transcript: [{ id: "s1", start: 0, end: 1, speaker: "A", text: "Private transcript text" }],
+    } satisfies Job;
+
+    expect(toArticleSummary(job)).toEqual({
+      id: job.id,
+      title: "Een leesbaar artikel",
+      dek: "De korte introductie.",
+      readingTimeMinutes: 7,
+      sourceName: "Voorbeeldkanaal",
+      sourceType: "youtube",
+      imageUrl: "https://example.com/cover.jpg",
+      publishedAt: "2025-12-20T00:00:00.000Z",
+      completedAt: "2026-01-02T00:00:00.000Z",
+    });
+  });
+
+  it("ignores jobs that are not ready to read", () => {
+    const job = {
+      id: "11111111-1111-1111-1111-111111111111",
+      sourceUrl: "https://youtube.com/watch?v=abc123",
+      language: "nl",
+      articleLength: "standard",
+      stage: "writing",
+      progress: 82,
+      message: "Schrijven",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    } satisfies Job;
+
+    expect(toArticleSummary(job)).toBeUndefined();
   });
 });

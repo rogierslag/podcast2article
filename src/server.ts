@@ -2,7 +2,7 @@ import express from "express";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { createJob, getJob, playbackFileForJob, resumeIncompleteJobs, retryArticle, shutdownJobs } from "./services/jobs.js";
+import { createJob, getJob, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, shutdownJobs } from "./services/jobs.js";
 import { validateSourceUrl } from "./services/resolver.js";
 
 const app = express();
@@ -42,6 +42,10 @@ const requestSchema = z.object({
 
 app.get("/api/health", (_request, response) => {
   response.json({ ok: true, openaiConfigured: Boolean(process.env.OPENAI_API_KEY) });
+});
+
+app.get("/api/articles", (_request, response) => {
+  response.json(listReadyArticles());
 });
 
 app.post("/api/jobs", async (request, response) => {

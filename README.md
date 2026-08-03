@@ -7,6 +7,9 @@ Spotify-podcastaflevering, YouTube-video of Google Meet-opname** omzet in:
 2. een helder blogartikel in de herkenbare stijl van de opname;
 3. controleerbare bronlinks van iedere artikelalinea naar het juiste transcript- en audiomoment.
 
+Afgeronde artikelen verschijnen automatisch op de overzichtspagina
+[`/articles`](http://localhost:3000/articles), met de nieuwste bovenaan.
+
 De audio wordt niet uit Spotify gedownload. De app gebruikt de Spotify-link alleen om de aflevering te herkennen en zoekt vervolgens dezelfde aflevering via de openbare Apple Podcasts-index en de oorspronkelijke publieke audiobron.
 Van een publieke YouTube-video wordt alleen de beste beschikbare audiostream
 opgehaald; afspeellijsten, actieve livestreams en video's waarvoor aanmelding

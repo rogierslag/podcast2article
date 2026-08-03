@@ -1,9 +1,12 @@
 const $ = (selector) => document.querySelector(selector);
 const landing = $("#landing");
+const articlesView = $("#articles-view");
 const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const form = $("#job-form");
 let currentJob;
+
+const sourceLabels = { spotify:"Spotify", youtube:"YouTube", "google-drive":"Google Drive" };
 
 const escapeHtml = (value = "") => String(value).replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const time = (seconds) => { const value=Math.max(0,Math.floor(seconds)); const h=Math.floor(value/3600); const m=Math.floor(value%3600/60); const s=value%60; return h?`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`:`${m}:${String(s).padStart(2,"0")}`; };
@@ -23,7 +26,7 @@ form.addEventListener("submit", async (event) => {
 });
 
 function showProgress(job) {
-  landing.classList.add("hidden"); resultView.classList.add("hidden"); progressView.classList.remove("hidden");
+  landing.classList.add("hidden"); articlesView.classList.add("hidden"); resultView.classList.add("hidden"); progressView.classList.remove("hidden");
   $("#progress-message").textContent = job.message;
   $("#progress-bar").style.width = `${job.progress}%`;
   $("#progress-percent").textContent = `${job.progress}%`;
@@ -53,7 +56,7 @@ function slug(value, index) { return `section-${index}-${value.toLowerCase().rep
 
 function renderResult(job) {
   currentJob = job;
-  progressView.classList.add("hidden"); landing.classList.add("hidden"); resultView.classList.remove("hidden");
+  progressView.classList.add("hidden"); landing.classList.add("hidden"); articlesView.classList.add("hidden"); resultView.classList.remove("hidden");
   const episode=job.episode, article=job.article, transcript=job.transcript;
   const sourceName=episode.sourceName||episode.podcast||"Oorspronkelijke bron";
   const sourceUrl=episode.sourceUrl||episode.spotifyUrl;
@@ -97,4 +100,37 @@ $("#transcript-search").addEventListener("input",(event)=>currentJob&&renderTran
 $("#toggle-transcript").addEventListener("click",()=>{const transcript=$("#transcript");transcript.classList.toggle("hidden");$("#toggle-transcript").textContent=transcript.classList.contains("hidden")?"Toon":"Verberg";});
 $("#export-pdf").addEventListener("click",exportToPdf);
 
-const hashMatch=location.hash.match(/^#job=([0-9a-f-]{36})$/i); if(hashMatch) poll(hashMatch[1]);
+function articleDate(article) {
+  const value=article.publishedAt||article.completedAt;
+  return new Date(value).toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"});
+}
+
+async function showArticles() {
+  landing.classList.add("hidden"); progressView.classList.add("hidden"); resultView.classList.add("hidden"); articlesView.classList.remove("hidden");
+  $("#articles-grid").innerHTML='<p class="articles-loading">Artikelen ophalen…</p>';
+  $("#articles-empty").classList.add("hidden");
+  $("#articles-error").textContent="";
+  try {
+    const response=await fetch("/api/articles");
+    if(!response.ok)throw new Error("De artikelen konden niet worden opgehaald.");
+    const articles=await response.json();
+    $("#articles-count").textContent=`${articles.length} ${articles.length===1?"artikel":"artikelen"}`;
+    $("#articles-grid").innerHTML=articles.map((article,index)=>`<a class="article-card" href="/#job=${article.id}">
+      <div class="article-card-image ${article.imageUrl?"":"article-card-placeholder"}">${article.imageUrl?`<img src="${escapeHtml(article.imageUrl)}" alt="">`:`<span>${String(index+1).padStart(2,"0")}</span>`}</div>
+      <div class="article-card-body">
+        <p class="article-card-meta"><span>${escapeHtml(sourceLabels[article.sourceType]||article.sourceType)}</span> ${escapeHtml(articleDate(article))} · ${article.readingTimeMinutes} min.</p>
+        <h2>${escapeHtml(article.title)}</h2>
+        <p class="article-card-dek">${escapeHtml(article.dek)}</p>
+        <div><span>${escapeHtml(article.sourceName)}</span><strong>Lees artikel <span aria-hidden="true">→</span></strong></div>
+      </div>
+    </a>`).join("");
+    $("#articles-empty").classList.toggle("hidden",articles.length!==0);
+  } catch(error) {
+    $("#articles-grid").innerHTML="";
+    $("#articles-count").textContent="";
+    $("#articles-error").textContent=error.message;
+  }
+}
+
+const hashMatch=location.hash.match(/^#job=([0-9a-f-]{36})$/i);
+if(hashMatch)poll(hashMatch[1]);else if(location.pathname.replace(/\/$/,"")==="/articles")showArticles();

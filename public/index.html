@@ -17,7 +17,10 @@
       <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       <span>Podcast<span>2</span>Article</span>
     </a>
-    <span class="github">Open source · MIT</span>
+    <nav class="main-nav" aria-label="Hoofdnavigatie">
+      <a href="/">Nieuw artikel</a>
+      <a href="/articles">Artikelen</a>
+    </nav>
   </header>
 
   <main>
@@ -54,6 +57,24 @@
         <article><strong>02</strong><h2>Eigen stem</h2><p>De cadans, humor en argumentatie van de opname blijven herkenbaar.</p></article>
         <article><strong>03</strong><h2>Controleerbaar</h2><p>Klik vanuit het artikel direct naar het juiste audio- en transcriptmoment.</p></article>
       </div>
+    </section>
+
+    <section id="articles-view" class="articles-view hidden">
+      <div class="articles-heading">
+        <div>
+          <p class="eyebrow"><span></span> Klaar om te lezen</p>
+          <h1>Alle artikelen.</h1>
+        </div>
+        <p id="articles-count" class="articles-count" aria-live="polite"></p>
+      </div>
+      <div id="articles-grid" class="articles-grid" aria-live="polite"></div>
+      <div id="articles-empty" class="articles-empty hidden">
+        <span class="kicker">Nog even geduld</span>
+        <h2>Er staan nog geen artikelen klaar.</h2>
+        <p>Maak je eerste artikel van een publieke opname; zodra het klaar is verschijnt het hier.</p>
+        <a href="/">Maak een artikel <span aria-hidden="true">→</span></a>
+      </div>
+      <p id="articles-error" class="error" role="alert"></p>
     </section>
 
     <section id="progress-view" class="progress-view hidden" aria-live="polite">

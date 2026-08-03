@@ -65,3 +65,15 @@ export interface Job {
   article?: Article;
   error?: string;
 }
+
+export interface ArticleSummary {
+  id: string;
+  title: string;
+  dek: string;
+  readingTimeMinutes: number;
+  sourceName: string;
+  sourceType: SourceType;
+  imageUrl?: string;
+  publishedAt?: string;
+  completedAt: string;
+}
