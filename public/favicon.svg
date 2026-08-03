@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Podcast2Article</title>
+  <rect class="tile" width="64" height="64" rx="14" fill="#e85e2a"/>
+  <circle cx="32" cy="32" r="23" fill="#1b201d"/>
+  <circle cx="32" cy="32" r="18.5" fill="none" stroke="#e85e2a" stroke-opacity=".42"/>
+  <g fill="#f4f0e7">
+    <rect x="19" y="27" width="4" height="10" rx="2"/>
+    <rect x="26" y="21" width="4" height="22" rx="2"/>
+    <rect x="33" y="16" width="4" height="32" rx="2"/>
+    <rect x="40" y="24" width="4" height="16" rx="2"/>
+  </g>
+</svg>
