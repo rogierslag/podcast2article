@@ -96,13 +96,13 @@
         <div class="article-column">
           <div class="article-actions">
             <span id="article-action-status" class="article-action-status" role="status"></span>
-            <button id="toggle-read" type="button" aria-label="Markeer artikel als gelezen">
+            <button id="toggle-read" data-article-read-toggle type="button" aria-label="Markeer artikel als gelezen">
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="m5 12 4 4L19 6"/>
               </svg>
               <span>Markeer als gelezen</span>
             </button>
-            <button id="export-pdf" type="button" aria-label="Download artikel als PDF">
+            <button id="export-pdf" data-pdf-export type="button" aria-label="Download artikel als PDF">
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v4h14v-4"/>
               </svg>
@@ -110,6 +110,27 @@
             </button>
           </div>
           <article id="article" class="article"></article>
+          <div class="article-read-footer">
+            <div>
+              <span class="kicker">Klaar met lezen?</span>
+              <p>Bewaar je voortgang en verplaats dit artikel naar je gelezen artikelen.</p>
+            </div>
+            <div class="article-read-footer-actions">
+              <button id="toggle-read-bottom" data-article-read-toggle type="button" aria-label="Markeer artikel als gelezen">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="m5 12 4 4L19 6"/>
+                </svg>
+                <span>Markeer als gelezen</span>
+              </button>
+              <button id="export-pdf-bottom" data-pdf-export type="button" aria-label="Download artikel als PDF">
+                <svg aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 16v4h14v-4"/>
+                </svg>
+                <span>Download PDF</span>
+              </button>
+            </div>
+            <span id="article-read-footer-status" class="article-read-footer-status"></span>
+          </div>
         </div>
         <aside class="side-nav"><div><span>In dit artikel</span><nav id="toc"></nav></div></aside>
       </div>

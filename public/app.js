@@ -71,9 +71,8 @@ function renderResult(job) {
   $("#article").innerHTML = `<h1>${escapeHtml(article.title)}</h1><p class="dek">${escapeHtml(article.dek)}</p><p class="byline">${article.readingTimeMinutes} minuten leestijd · gebaseerd op ${transcript.length} bronfragmenten</p><p class="style-note">${escapeHtml(article.styleNote)}</p>${sections}<div class="takeaways"><h2>Kernpunten</h2><ul>${article.takeaways.map((item)=>`<li>${escapeHtml(item.text)} ${sourceButtons(item.sources,transcript)}</li>`).join("")}</ul></div>`;
   $("#toc").innerHTML = article.sections.map((section,index)=>`<a href="#${slug(section.heading,index)}">${escapeHtml(section.heading)}</a>`).join("");
   $("#audio").src = episode.playbackUrl||episode.audioUrl||episode.mediaUrl;
-  $("#article-action-status").classList.remove("is-success");
-  $("#article-action-status").textContent="";
-  updateReadButton();
+  setArticleActionStatus("");
+  updateReadButtons();
   renderTranscript(transcript, "");
   document.addEventListener("click", sourceClick);
   window.scrollTo({top:0});
@@ -96,16 +95,18 @@ function sourceClick(event) {
   if(timestamp) seek(Number(timestamp.dataset.time));
 }
 function seek(seconds){const audio=$("#audio");audio.currentTime=seconds;audio.play().catch(()=>undefined);}
+function setArticleActionStatus(message,isSuccess=false){
+  [$("#article-action-status"),$("#article-read-footer-status")].forEach((status)=>{
+    status.classList.toggle("is-success",isSuccess);
+    status.textContent=message;
+  });
+}
 async function exportToPdf(){
   if(!currentJob)return;
   const job=currentJob;
-  const button=$("#export-pdf");
-  const label=button.querySelector("span");
-  const status=$("#article-action-status");
-  button.disabled=true;
-  label.textContent="PDF maken…";
-  status.classList.remove("is-success");
-  status.textContent="";
+  const buttons=document.querySelectorAll("[data-pdf-export]");
+  buttons.forEach((button)=>{button.disabled=true;button.querySelector("span").textContent="PDF maken…";});
+  setArticleActionStatus("");
   try {
     const response=await fetch(`/api/jobs/${job.id}/pdf`);
     if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.error||"PDF-export is mislukt.");}
@@ -119,19 +120,17 @@ async function exportToPdf(){
     link.click();
     link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    status.classList.add("is-success");
-    status.textContent="PDF gedownload.";
+    setArticleActionStatus("PDF gedownload.",true);
   } catch(error) {
-    status.textContent=error.message;
+    setArticleActionStatus(error.message);
   } finally {
-    button.disabled=false;
-    label.textContent="Download PDF";
+    buttons.forEach((button)=>{button.disabled=false;button.querySelector("span").textContent="Download PDF";});
   }
 }
 $("#transcript").addEventListener("click", sourceClick);
 $("#transcript-search").addEventListener("input",(event)=>currentJob&&renderTranscript(currentJob.transcript,event.target.value));
 $("#toggle-transcript").addEventListener("click",()=>{const transcript=$("#transcript");transcript.classList.toggle("hidden");$("#toggle-transcript").textContent=transcript.classList.contains("hidden")?"Toon":"Verberg";});
-$("#export-pdf").addEventListener("click",exportToPdf);
+document.querySelectorAll("[data-pdf-export]").forEach((button)=>button.addEventListener("click",exportToPdf));
 
 async function updateArticleRead(id,read) {
   const response=await fetch(`/api/articles/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({read})});
@@ -140,29 +139,31 @@ async function updateArticleRead(id,read) {
   return body;
 }
 
-function updateReadButton() {
-  const button=$("#toggle-read");
+function updateReadButtons() {
   const isRead=Boolean(currentJob?.readAt);
-  button.classList.toggle("is-read",isRead);
-  button.setAttribute("aria-pressed",String(isRead));
-  button.setAttribute("aria-label",isRead?"Zet artikel terug op ongelezen":"Markeer artikel als gelezen");
-  button.querySelector("span").textContent=isRead?"Gelezen":"Markeer als gelezen";
+  document.querySelectorAll("[data-article-read-toggle]").forEach((button)=>{
+    button.classList.toggle("is-read",isRead);
+    button.setAttribute("aria-pressed",String(isRead));
+    button.setAttribute("aria-label",isRead?"Zet artikel terug op ongelezen":"Markeer artikel als gelezen");
+    button.querySelector("span").textContent=isRead?"Gelezen":"Markeer als gelezen";
+  });
 }
 
-$("#toggle-read").addEventListener("click",async()=>{
+async function toggleCurrentArticleRead() {
   if(!currentJob)return;
-  const button=$("#toggle-read");
-  button.disabled=true;
-  $("#article-action-status").classList.remove("is-success");
-  $("#article-action-status").textContent="";
+  const buttons=document.querySelectorAll("[data-article-read-toggle]");
+  buttons.forEach((button)=>{button.disabled=true;});
+  setArticleActionStatus("");
   try {
     const article=await updateArticleRead(currentJob.id,!currentJob.readAt);
     currentJob.readAt=article.readAt;
-    updateReadButton();
+    updateReadButtons();
   } catch(error) {
-    $("#article-action-status").textContent=error.message;
-  } finally { button.disabled=false; }
-});
+    setArticleActionStatus(error.message);
+  } finally { buttons.forEach((button)=>{button.disabled=false;}); }
+}
+
+document.querySelectorAll("[data-article-read-toggle]").forEach((button)=>button.addEventListener("click",toggleCurrentArticleRead));
 
 function articleDate(article) {
   const value=article.publishedAt||article.completedAt;
