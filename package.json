@@ -19,6 +19,7 @@
     "fast-xml-parser": "^5.2.5",
     "ffmpeg-static": "^5.2.0",
     "openai": "^5.12.2",
+    "puppeteer-core": "^24.16.0",
     "youtube-dl-exec": "^3.1.9",
     "zod": "^3.25.76"
   },

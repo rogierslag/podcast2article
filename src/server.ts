@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { createJob, getJob, listProcessingJobs, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, setArticleRead, shutdownJobs } from "./services/jobs.js";
+import { generateArticlePdf, pdfDownloadName, shutdownPdfBrowser } from "./services/pdf.js";
 import { validateSourceUrl } from "./services/resolver.js";
 
 const app = express();
@@ -93,6 +94,24 @@ app.get("/api/jobs/:id/audio", async (request, response) => {
   }
 });
 
+app.get("/api/jobs/:id/pdf", async (request, response) => {
+  const job = await getJob(request.params.id);
+  if (!job) return response.status(404).json({ error: "Opdracht niet gevonden" });
+  if (job.stage !== "complete" || !job.article || !job.episode) {
+    return response.status(409).json({ error: "Dit artikel is nog niet klaar voor PDF-export." });
+  }
+  try {
+    const pdf = await generateArticlePdf(job.id, `http://127.0.0.1:${port}`);
+    response.attachment(pdfDownloadName(job.article.title));
+    response.setHeader("Cache-Control", "no-store");
+    response.setHeader("Content-Length", pdf.byteLength);
+    return response.send(Buffer.from(pdf));
+  } catch (error) {
+    console.error(`${new Date().toISOString()} ERROR PDF-export mislukt · job=${JSON.stringify(job.id)}`, error);
+    return response.status(503).json({ error: "PDF-export is niet beschikbaar. Controleer de browserconfiguratie van de server." });
+  }
+});
+
 app.post("/api/jobs/:id/retry-article", async (request, response) => {
   try {
     const job = await retryArticle(request.params.id);
@@ -126,6 +145,7 @@ async function shutdown(signal: "SIGINT" | "SIGTERM"): Promise<void> {
   }, 15_000);
   forcedExit.unref();
   await shutdownJobs(signal);
+  await shutdownPdfBrowser();
   clearTimeout(forcedExit);
   console.log(`${new Date().toISOString()} INFO  Graceful shutdown voltooid`);
   process.exit(0);

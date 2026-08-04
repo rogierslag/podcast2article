@@ -71,6 +71,8 @@ function renderResult(job) {
   $("#article").innerHTML = `<h1>${escapeHtml(article.title)}</h1><p class="dek">${escapeHtml(article.dek)}</p><p class="byline">${article.readingTimeMinutes} minuten leestijd · gebaseerd op ${transcript.length} bronfragmenten</p><p class="style-note">${escapeHtml(article.styleNote)}</p>${sections}<div class="takeaways"><h2>Kernpunten</h2><ul>${article.takeaways.map((item)=>`<li>${escapeHtml(item.text)} ${sourceButtons(item.sources,transcript)}</li>`).join("")}</ul></div>`;
   $("#toc").innerHTML = article.sections.map((section,index)=>`<a href="#${slug(section.heading,index)}">${escapeHtml(section.heading)}</a>`).join("");
   $("#audio").src = episode.playbackUrl||episode.audioUrl||episode.mediaUrl;
+  $("#article-action-status").classList.remove("is-success");
+  $("#article-action-status").textContent="";
   updateReadButton();
   renderTranscript(transcript, "");
   document.addEventListener("click", sourceClick);
@@ -94,11 +96,37 @@ function sourceClick(event) {
   if(timestamp) seek(Number(timestamp.dataset.time));
 }
 function seek(seconds){const audio=$("#audio");audio.currentTime=seconds;audio.play().catch(()=>undefined);}
-function exportToPdf(){
+async function exportToPdf(){
   if(!currentJob)return;
-  const originalTitle=document.title;
-  document.title=`${currentJob.article.title} — ${currentJob.episode.sourceName||currentJob.episode.podcast}`;
-  try{window.print();}finally{document.title=originalTitle;}
+  const job=currentJob;
+  const button=$("#export-pdf");
+  const label=button.querySelector("span");
+  const status=$("#article-action-status");
+  button.disabled=true;
+  label.textContent="PDF maken…";
+  status.classList.remove("is-success");
+  status.textContent="";
+  try {
+    const response=await fetch(`/api/jobs/${job.id}/pdf`);
+    if(!response.ok){const body=await response.json().catch(()=>({}));throw new Error(body.error||"PDF-export is mislukt.");}
+    const blob=await response.blob();
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    const title=job.article.title.replace(/[\\/:*?\"<>|]+/g," ").replace(/\s+/g," ").trim().slice(0,120)||"artikel";
+    link.href=url;
+    link.download=`${title}.pdf`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    status.classList.add("is-success");
+    status.textContent="PDF gedownload.";
+  } catch(error) {
+    status.textContent=error.message;
+  } finally {
+    button.disabled=false;
+    label.textContent="Download PDF";
+  }
 }
 $("#transcript").addEventListener("click", sourceClick);
 $("#transcript-search").addEventListener("input",(event)=>currentJob&&renderTranscript(currentJob.transcript,event.target.value));
@@ -125,6 +153,7 @@ $("#toggle-read").addEventListener("click",async()=>{
   if(!currentJob)return;
   const button=$("#toggle-read");
   button.disabled=true;
+  $("#article-action-status").classList.remove("is-success");
   $("#article-action-status").textContent="";
   try {
     const article=await updateArticleRead(currentJob.id,!currentJob.readAt);
