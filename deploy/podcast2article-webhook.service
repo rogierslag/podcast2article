@@ -1,0 +1,36 @@
+[Unit]
+Description=Podcast2Article GitHub webhook receiver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=podcast2article-webhook
+Group=podcast2article-webhook
+EnvironmentFile=/etc/podcast2article-webhook.env
+ExecStart=/usr/bin/node /usr/local/lib/podcast2article/github-webhook-server.mjs
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=podcast2article-webhook
+RuntimeDirectoryMode=0750
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=any
+IPAddressAllow=localhost
+ReadWritePaths=/run/podcast2article-webhook
+
+[Install]
+WantedBy=multi-user.target

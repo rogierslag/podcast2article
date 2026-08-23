@@ -1,0 +1,15 @@
+[Unit]
+Description=Validate and deploy Podcast2Article updates
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/bin/rm -f /run/podcast2article-webhook/trigger
+ExecStart=/usr/local/sbin/update-podcast2article
+TimeoutStartSec=30min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+StandardOutput=append:/var/log/podcast2article-update.log
+StandardError=append:/var/log/podcast2article-update.log

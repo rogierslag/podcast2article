@@ -1,0 +1,9 @@
+[Unit]
+Description=Trigger Podcast2Article update after a valid GitHub webhook
+
+[Path]
+PathExists=/run/podcast2article-webhook/trigger
+Unit=podcast2article-update.service
+
+[Install]
+WantedBy=multi-user.target

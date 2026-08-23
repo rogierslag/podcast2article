@@ -1,0 +1,11 @@
+reads.rogierslag.nl {
+	encode zstd gzip
+
+	handle /hooks/github {
+		reverse_proxy 127.0.0.1:9000
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}
