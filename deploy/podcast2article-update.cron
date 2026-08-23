@@ -1,0 +1,5 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+0 4 * * * root /usr/local/sbin/update-podcast2article >> /var/log/podcast2article-update.log 2>&1
