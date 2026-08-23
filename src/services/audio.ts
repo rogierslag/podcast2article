@@ -87,14 +87,18 @@ export async function normalizeAudio(input: string, target: string, signal?: Abo
   ], signal);
 }
 
+export function audioSplitArguments(input: string, outputPattern: string, chunkSeconds: number): string[] {
+  return [
+    "-hide_banner", "-loglevel", "error", "-i", input,
+    "-map", "0:a:0", "-vn", "-c:a", "copy",
+    "-f", "segment", "-segment_time", String(chunkSeconds), "-reset_timestamps", "1", outputPattern,
+  ];
+}
+
 export async function splitAudio(input: string, directory: string, signal?: AbortSignal): Promise<string[]> {
   const outputPattern = `${directory}/chunk-%03d.mp3`;
   const chunkSeconds = audioChunkSeconds();
-  await runFfmpeg([
-    "-hide_banner", "-loglevel", "error", "-i", input,
-    "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k",
-    "-f", "segment", "-segment_time", String(chunkSeconds), "-reset_timestamps", "1", outputPattern,
-  ], signal);
+  await runFfmpeg(audioSplitArguments(input, outputPattern, chunkSeconds), signal);
   const files = (await readdir(directory))
     .filter((name) => /^chunk-\d+\.mp3$/.test(name))
     .sort()

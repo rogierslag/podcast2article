@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { audioChunkSeconds } from "./audio.js";
+import { audioChunkSeconds, audioSplitArguments } from "./audio.js";
 
 const original = process.env.AUDIO_CHUNK_SECONDS;
 
@@ -24,5 +24,15 @@ describe("audio chunk duration", () => {
     expect(audioChunkSeconds()).toBe(60);
     process.env.AUDIO_CHUNK_SECONDS = "5000";
     expect(audioChunkSeconds()).toBe(1200);
+  });
+});
+
+describe("audio chunking", () => {
+  it("copies the normalized MP3 stream without encoding it again", () => {
+    const arguments_ = audioSplitArguments("playback.mp3", "chunk-%03d.mp3", 300);
+    expect(arguments_).toContain("copy");
+    expect(arguments_).toContain("0:a:0");
+    expect(arguments_).not.toContain("48k");
+    expect(arguments_).not.toContain("16000");
   });
 });
