@@ -1,9 +1,11 @@
 node_modules/
 dist/
 output/
+/PRODUCTION.md
 .env
 .env.*
 !.env.example
+data/users/
 data/jobs/*.json
 data/media/
 data/work/
