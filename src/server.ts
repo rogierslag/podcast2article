@@ -2,7 +2,7 @@ import express from "express";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { createPasswordAuth, expiredSessionCookie, readCookie, SESSION_COOKIE_NAME, sessionCookie } from "./services/auth.js";
+import { createUserAuth, expiredSessionCookie, readCookie, SESSION_COOKIE_NAME, sessionCookie } from "./services/auth.js";
 import { createJob, getJob, listProcessingJobs, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, setArticleRead, shutdownJobs } from "./services/jobs.js";
 import { generateArticlePdf, pdfDownloadName } from "./services/pdf.js";
 import { validateSourceUrl } from "./services/resolver.js";
@@ -11,7 +11,7 @@ const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST?.trim() || "127.0.0.1";
 const publicDirectory = path.resolve("public");
-const auth = createPasswordAuth();
+const auth = createUserAuth();
 const loginAttempts = new Map<string, { failures: number; blockedUntil: number }>();
 const maximumLoginFailures = 5;
 const loginBlockMs = 15 * 60 * 1_000;
@@ -21,8 +21,8 @@ app.set("trust proxy", "loopback");
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: false, limit: "2kb" }));
 
-function isAuthenticated(cookieHeader: string | undefined): boolean {
-  return !auth.enabled || auth.sessionIsValid(readCookie(cookieHeader, SESSION_COOKIE_NAME));
+function authenticatedUser(cookieHeader: string | undefined): string | undefined {
+  return auth.enabled ? auth.sessionUser(readCookie(cookieHeader, SESSION_COOKIE_NAME)) : "local";
 }
 
 app.get("/api/health", (_request, response) => {
@@ -31,7 +31,7 @@ app.get("/api/health", (_request, response) => {
 
 app.get("/login", (request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  if (isAuthenticated(request.headers.cookie)) return response.redirect(303, "/");
+  if (authenticatedUser(request.headers.cookie)) return response.redirect(303, "/");
   return response.sendFile(path.join(publicDirectory, "login.html"));
 });
 
@@ -48,8 +48,10 @@ app.post("/login", (request, response) => {
     response.setHeader("Retry-After", String(Math.ceil((attempt.blockedUntil - Date.now()) / 1_000)));
     return response.status(429).send("Te veel mislukte pogingen. Probeer het over een kwartier opnieuw.");
   }
+  const username = typeof request.body?.username === "string" ? request.body.username.trim().toLowerCase() : "";
   const password = typeof request.body?.password === "string" ? request.body.password : "";
-  if (!auth.passwordMatches(password)) {
+  const token = auth.authenticate(username, password);
+  if (!token) {
     const failures = (attempt?.failures ?? 0) + 1;
     loginAttempts.set(key, {
       failures,
@@ -58,12 +60,16 @@ app.post("/login", (request, response) => {
     return response.redirect(303, "/login?error=1");
   }
   loginAttempts.delete(key);
-  response.setHeader("Set-Cookie", sessionCookie(auth.createSession()!, request.secure));
+  response.setHeader("Set-Cookie", sessionCookie(token, request.secure));
   return response.redirect(303, "/");
 });
 
 app.use((request, response, next) => {
-  if (isAuthenticated(request.headers.cookie)) return next();
+  const username = authenticatedUser(request.headers.cookie);
+  if (username) {
+    response.locals.username = username;
+    return next();
+  }
   response.setHeader("Cache-Control", "no-store");
   if (request.path.startsWith("/api/")) return response.status(401).json({ error: "Log opnieuw in om verder te gaan." });
   return request.method === "GET"
@@ -78,7 +84,7 @@ app.post("/logout", (request, response) => {
 
 app.get("/api/auth", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  response.json({ enabled: auth.enabled });
+  response.json({ enabled: auth.enabled, username: response.locals.username });
 });
 
 app.use(express.static(publicDirectory, { extensions: ["html"] }));
@@ -114,19 +120,19 @@ const readingStateSchema = z.object({ read: z.boolean() });
 
 app.get("/api/articles", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  response.json(listReadyArticles());
+  response.json(listReadyArticles(response.locals.username));
 });
 
 app.get("/api/jobs", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  response.json(listProcessingJobs());
+  response.json(listProcessingJobs(response.locals.username));
 });
 
 app.patch("/api/articles/:id", async (request, response) => {
   const parsed = readingStateSchema.safeParse(request.body);
   if (!parsed.success) return response.status(400).json({ error: "Geef een geldige leesstatus op." });
   try {
-    return response.json(await setArticleRead(request.params.id, parsed.data.read));
+    return response.json(await setArticleRead(response.locals.username, request.params.id, parsed.data.read));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Leesstatus kon niet worden opgeslagen.";
     return response.status(message === "Opdracht niet gevonden." ? 404 : 409).json({ error: message });
@@ -137,18 +143,18 @@ app.post("/api/jobs", async (request, response) => {
   const parsed = requestSchema.safeParse(request.body);
   if (!parsed.success) return response.status(400).json({ error: parsed.error.issues[0]?.message ?? "Ongeldige invoer" });
   if (!process.env.OPENAI_API_KEY) return response.status(503).json({ error: "OPENAI_API_KEY ontbreekt in de CLI-omgeving." });
-  const job = await createJob(parsed.data);
+  const job = await createJob(response.locals.username, parsed.data);
   return response.status(202).json(job);
 });
 
 app.get("/api/jobs/:id", async (request, response) => {
-  const job = await getJob(request.params.id);
+  const job = await getJob(response.locals.username, request.params.id);
   return job ? response.json(job) : response.status(404).json({ error: "Opdracht niet gevonden" });
 });
 
 app.get("/api/jobs/:id/audio", async (request, response) => {
-  const job = await getJob(request.params.id);
-  const file = playbackFileForJob(request.params.id);
+  const job = await getJob(response.locals.username, request.params.id);
+  const file = playbackFileForJob(response.locals.username, request.params.id);
   if (!job || !file) return response.status(404).json({ error: "Audio niet gevonden" });
   try {
     await stat(file);
@@ -160,7 +166,7 @@ app.get("/api/jobs/:id/audio", async (request, response) => {
 });
 
 app.get("/api/jobs/:id/pdf", async (request, response) => {
-  const job = await getJob(request.params.id);
+  const job = await getJob(response.locals.username, request.params.id);
   if (!job) return response.status(404).json({ error: "Opdracht niet gevonden" });
   if (job.stage !== "complete" || !job.article || !job.episode) {
     return response.status(409).json({ error: "Dit artikel is nog niet klaar voor PDF-export." });
@@ -179,7 +185,7 @@ app.get("/api/jobs/:id/pdf", async (request, response) => {
 
 app.post("/api/jobs/:id/retry-article", async (request, response) => {
   try {
-    const job = await retryArticle(request.params.id);
+    const job = await retryArticle(response.locals.username, request.params.id);
     return response.status(202).json(job);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Artikelretry kon niet starten.";
@@ -189,13 +195,13 @@ app.post("/api/jobs/:id/retry-article", async (request, response) => {
 
 app.use((_request, response) => response.sendFile(path.join(publicDirectory, "index.html")));
 
-await resumeIncompleteJobs();
+await resumeIncompleteJobs(auth.enabled ? auth.usernames : ["local"]);
 
 const server = app.listen(port, host, () => {
   console.log(`${new Date().toISOString()} INFO  Podcast2Article luistert op http://${host}:${port}`);
   console.log(`${new Date().toISOString()} INFO  Modellen · transcriptie=${process.env.TRANSCRIPTION_MODEL ?? "gpt-4o-transcribe-diarize"} artikel=${process.env.ARTICLE_MODEL ?? "gpt-5.6-terra"}`);
   if (!process.env.OPENAI_API_KEY) console.warn("OPENAI_API_KEY ontbreekt; nieuwe opdrachten zijn uitgeschakeld.");
-  if (!auth.enabled) console.warn("APP_PASSWORD ontbreekt; de applicatie is zonder login bereikbaar.");
+  if (!auth.enabled) console.warn("APP_USERS en APP_PASSWORD ontbreken; de applicatie is zonder login bereikbaar.");
 });
 
 let shuttingDown = false;

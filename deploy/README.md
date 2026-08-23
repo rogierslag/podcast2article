@@ -59,7 +59,7 @@ At minimum configure:
 
 ```dotenv
 OPENAI_API_KEY=<secret>
-APP_PASSWORD=<long-random-secret>
+APP_USERS='{"rogier":"<long-random-secret>","melvin":"<different-long-random-secret>"}'
 OPENAI_REGION=eu
 HOST=127.0.0.1
 PORT=3000
@@ -189,6 +189,6 @@ also be updated.
 
 - `.env` or `/etc/podcast2article*.env`;
 - webhook secrets, API keys, or application passwords;
-- `data/jobs`, `data/media`, or backups;
+- `data/users`, user media, or backups;
 - Caddy certificate storage;
 - SSH private keys.

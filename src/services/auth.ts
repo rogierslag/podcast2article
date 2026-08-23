@@ -3,8 +3,9 @@ import { createHash, createHmac, scryptSync, timingSafeEqual } from "node:crypto
 export const SESSION_COOKIE_NAME = "p2a_session";
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 
-const SESSION_VERSION = "v1";
-const KEY_SALT = "podcast2article/session/v1";
+const SESSION_VERSION = "v2";
+const KEY_SALT = "podcast2article/session/v2";
+const USERNAME_PATTERN = /^[a-z][a-z0-9_-]{1,31}$/;
 
 function digest(value: string): Buffer {
   return createHash("sha256").update(value, "utf8").digest();
@@ -14,42 +15,88 @@ function equal(left: string, right: string): boolean {
   return timingSafeEqual(digest(left), digest(right));
 }
 
-export interface PasswordAuth {
-  enabled: boolean;
-  passwordMatches(candidate: string): boolean;
-  createSession(now?: number): string | undefined;
-  sessionIsValid(token: string | undefined, now?: number): boolean;
+function parseUsers(rawUsers: string | undefined, legacyPassword: string | undefined): Map<string, string> {
+  if (!rawUsers?.trim()) {
+    return legacyPassword?.trim() ? new Map([["rogier", legacyPassword]]) : new Map();
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawUsers);
+  } catch {
+    throw new Error("APP_USERS moet geldige JSON zijn, bijvoorbeeld {\"rogier\":\"wachtwoord\"}.");
+  }
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") {
+    throw new Error("APP_USERS moet een JSON-object met gebruikersnamen en wachtwoorden zijn.");
+  }
+
+  const users = new Map<string, string>();
+  for (const [username, password] of Object.entries(parsed)) {
+    if (!USERNAME_PATTERN.test(username)) throw new Error(`Ongeldige gebruikersnaam in APP_USERS: ${username}`);
+    if (typeof password !== "string" || password.length < 16) {
+      throw new Error(`Het wachtwoord voor ${username} moet minimaal 16 tekens lang zijn.`);
+    }
+    users.set(username, password);
+  }
+  if (!users.size) throw new Error("APP_USERS moet ten minste één gebruiker bevatten.");
+  return users;
 }
 
-export function createPasswordAuth(password = process.env.APP_PASSWORD): PasswordAuth {
-  const configuredPassword = password?.trim() ? password : undefined;
-  const signingKey = configuredPassword
-    ? scryptSync(configuredPassword, KEY_SALT, 32)
-    : undefined;
+export interface UserAuth {
+  enabled: boolean;
+  usernames: string[];
+  authenticate(username: string, password: string): string | undefined;
+  createSession(username: string, now?: number): string | undefined;
+  sessionUser(token: string | undefined, now?: number): string | undefined;
+}
+
+export function createUserAuth(
+  rawUsers = process.env.APP_USERS,
+  legacyPassword = process.env.APP_PASSWORD,
+): UserAuth {
+  const users = parseUsers(rawUsers, legacyPassword);
+  const credentialFingerprint = [...users.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([username, password]) => `${username}\0${password}`)
+    .join("\0");
+  const signingKey = users.size ? scryptSync(credentialFingerprint, KEY_SALT, 32) : undefined;
 
   function signature(payload: string): string {
     return createHmac("sha256", signingKey!).update(payload, "utf8").digest("base64url");
   }
 
+  function createSession(username: string, now = Date.now()): string | undefined {
+    if (!signingKey || !users.has(username)) return undefined;
+    const expiresAt = Math.floor(now / 1_000) + SESSION_MAX_AGE_SECONDS;
+    const encodedUsername = Buffer.from(username, "utf8").toString("base64url");
+    const payload = `${SESSION_VERSION}.${encodedUsername}.${expiresAt}`;
+    return `${payload}.${signature(payload)}`;
+  }
+
   return {
-    enabled: Boolean(configuredPassword),
-    passwordMatches(candidate: string): boolean {
-      return configuredPassword ? equal(candidate, configuredPassword) : false;
+    enabled: users.size > 0,
+    usernames: [...users.keys()],
+    authenticate(username: string, password: string): string | undefined {
+      const configuredPassword = users.get(username);
+      return configuredPassword && equal(password, configuredPassword) ? createSession(username) : undefined;
     },
-    createSession(now = Date.now()): string | undefined {
-      if (!signingKey) return undefined;
-      const expiresAt = Math.floor(now / 1_000) + SESSION_MAX_AGE_SECONDS;
-      const payload = `${SESSION_VERSION}.${expiresAt}`;
-      return `${payload}.${signature(payload)}`;
-    },
-    sessionIsValid(token: string | undefined, now = Date.now()): boolean {
-      if (!signingKey || !token) return false;
-      const [version, expiresAtText, receivedSignature, ...rest] = token.split(".");
-      if (rest.length || version !== SESSION_VERSION || !expiresAtText || !receivedSignature) return false;
+    createSession,
+    sessionUser(token: string | undefined, now = Date.now()): string | undefined {
+      if (!signingKey || !token) return undefined;
+      const [version, encodedUsername, expiresAtText, receivedSignature, ...rest] = token.split(".");
+      if (rest.length || version !== SESSION_VERSION || !encodedUsername || !expiresAtText || !receivedSignature) return undefined;
+      let username: string;
+      try {
+        username = Buffer.from(encodedUsername, "base64url").toString("utf8");
+      } catch {
+        return undefined;
+      }
+      if (!users.has(username)) return undefined;
       const expiresAt = Number(expiresAtText);
       const nowSeconds = Math.floor(now / 1_000);
-      if (!Number.isSafeInteger(expiresAt) || expiresAt <= nowSeconds || expiresAt > nowSeconds + SESSION_MAX_AGE_SECONDS) return false;
-      return equal(receivedSignature, signature(`${version}.${expiresAtText}`));
+      if (!Number.isSafeInteger(expiresAt) || expiresAt <= nowSeconds || expiresAt > nowSeconds + SESSION_MAX_AGE_SECONDS) return undefined;
+      const payload = `${version}.${encodedUsername}.${expiresAtText}`;
+      return equal(receivedSignature, signature(payload)) ? username : undefined;
     },
   };
 }

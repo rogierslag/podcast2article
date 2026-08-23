@@ -100,9 +100,7 @@ fi
 install -d -o root -g root -m 0755 /opt/podcast2article /opt/podcast2article/releases
 install -d -o podcast2article -g podcast2article -m 0750 \
   /var/lib/podcast2article \
-  /var/lib/podcast2article/jobs \
-  /var/lib/podcast2article/media \
-  /var/lib/podcast2article/work
+  /var/lib/podcast2article/users
 install -d -o root -g root -m 0755 \
   /usr/local/lib/podcast2article \
   /var/cache/podcast2article-yarn \
@@ -209,7 +207,7 @@ else
   printf 'Webhook receiver not started: configure GITHUB_WEBHOOK_SECRET first.\n'
 fi
 
-if grep -Eq '^OPENAI_API_KEY=.+$' /etc/podcast2article.env && grep -Eq '^APP_PASSWORD=.+$' /etc/podcast2article.env; then
+if grep -Eq '^OPENAI_API_KEY=.+$' /etc/podcast2article.env && grep -Eq '^APP_USERS=.+$' /etc/podcast2article.env; then
   systemctl enable podcast2article.service
   if [[ -e /opt/podcast2article/current ]]; then
     systemctl restart podcast2article.service
@@ -218,7 +216,7 @@ if grep -Eq '^OPENAI_API_KEY=.+$' /etc/podcast2article.env && grep -Eq '^APP_PAS
   fi
 else
   systemctl disable --now podcast2article.service >/dev/null 2>&1 || true
-  printf 'Application not started: configure OPENAI_API_KEY and APP_PASSWORD first.\n'
+  printf 'Application not started: configure OPENAI_API_KEY and APP_USERS first.\n'
 fi
 
 printf 'Infrastructure files installed successfully. See deploy/README.md for provisioning and verification steps.\n'

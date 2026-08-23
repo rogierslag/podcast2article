@@ -51,15 +51,16 @@ yarn build
 yarn start
 ```
 
-Zet voor een publieke installatie ook een lang, uniek applicatiewachtwoord in
-`.env`. De login gebruikt een ondertekende, 30 dagen geldige `HttpOnly`-cookie
-die automatisch ongeldig wordt als het wachtwoord verandert:
+Zet voor een publieke installatie de gebruikersaccounts als JSON in `.env`.
+Ieder wachtwoord moet minimaal 16 tekens lang zijn. De login gebruikt een
+ondertekende, 30 dagen geldige `HttpOnly`-cookie die automatisch ongeldig wordt
+als de accountconfiguratie verandert:
 
 ```bash
-APP_PASSWORD='een-lang-uniek-wachtwoord'
+APP_USERS='{"rogier":"een-lang-uniek-wachtwoord","melvin":"nog-een-uniek-wachtwoord"}'
 ```
 
-Als `APP_PASSWORD` leeg blijft, is authenticatie uitgeschakeld voor lokaal
+Als `APP_USERS` leeg blijft, is authenticatie uitgeschakeld voor lokaal
 ontwikkelen. Zet de productie-installatie altijd achter HTTPS; bijvoorbeeld via
 Caddy of Nginx. Na vijf mislukte pogingen vanaf hetzelfde IP-adres blokkeert de
 login nieuwe pogingen gedurende vijftien minuten.
@@ -86,10 +87,11 @@ Spotify-afleveringslink       YouTube-videolink        publieke Drive-opnamelink
   → artikel met aanklikbare transcriptbronnen
 ```
 
-Jobs worden lokaal als JSON opgeslagen in `data/jobs/`. Compacte afspeelaudio
-wordt opgeslagen in `data/media/`; gedownloade bronbestanden en
-transcriptiechunks worden verwijderd. De app heeft bewust geen accountsysteem;
-zet hem niet zonder authenticatie en rate limiting open op het publieke internet.
+Jobs worden per gebruiker als JSON opgeslagen in
+`data/users/<gebruikersnaam>/jobs/`. Compacte afspeelaudio wordt opgeslagen in
+`data/users/<gebruikersnaam>/media/`; gedownloade bronbestanden en
+transcriptiechunks worden verwijderd. Gebruikers kunnen uitsluitend hun eigen
+jobs, artikelen, transcripties en audio benaderen.
 Onvoltooide jobs worden na een serverherstart automatisch opnieuw gestart met
 hetzelfde job-ID. Jobs worden bewust één voor één verwerkt om piekbelasting op
 kleine servers te beperken. De actieve verwerkingsstap begint daarbij opnieuw,
@@ -107,7 +109,7 @@ voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
 | Variabele | Standaard | Betekenis |
 |---|---|---|
 | `OPENAI_API_KEY` | vereist | Via de CLI meegegeven OpenAI API-key |
-| `APP_PASSWORD` | leeg | Wachtwoord voor de login; leeg schakelt authenticatie uit |
+| `APP_USERS` | leeg | JSON-object met gebruikersnaam/wachtwoord-paren; leeg schakelt authenticatie uit |
 | `OPENAI_REGION` | `global` | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us` |
 | `HOST` | `127.0.0.1` | Netwerkinterface; gebruik alleen in een container eventueel `0.0.0.0` |
 | `PORT` | `3000` | HTTP-poort |

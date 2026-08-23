@@ -213,9 +213,11 @@ Before changing SSH configuration:
       .deployed-commit
 
 /var/lib/podcast2article/
-  jobs/                 persistent job JSON
-  media/                persistent normalized MP3 files
-  work/                 temporary per-job workspace
+  users/
+    <username>/
+      jobs/             persistent job JSON
+      media/            persistent normalized MP3 files
+      work/             temporary per-job workspace
 
 /var/cache/podcast2article-yarn/
                         dependency cache used during release validation
@@ -463,13 +465,14 @@ group: podcast2article
 mode: 0640
 ```
 
-It contains the OpenAI API key, application password, model selection, limits,
-timeouts, region, and bind configuration.
+It contains the OpenAI API key, fixed user accounts, model selection, limits,
+timeouts, region, and bind configuration. `APP_USERS` is a JSON object with a
+unique password of at least 16 characters for every username.
 
-To display only the application password when administratively necessary:
+To display the account configuration when administratively necessary:
 
 ```bash
-sudo sed -n 's/^APP_PASSWORD=//p' /etc/podcast2article.env
+sudo sed -n 's/^APP_USERS=//p' /etc/podcast2article.env
 ```
 
 Avoid running this while screen sharing or recording a terminal.
@@ -481,7 +484,7 @@ sudo systemctl restart podcast2article
 sudo systemctl status podcast2article
 ```
 
-Changing `APP_PASSWORD` immediately invalidates old cookies after restart.
+Changing `APP_USERS` immediately invalidates all old cookies after restart.
 
 ### Webhook environment
 
@@ -602,7 +605,7 @@ recoverable from GitHub, but production data under
 ### Essential backup scope
 
 ```text
-/var/lib/podcast2article/jobs
+/var/lib/podcast2article/users
 /etc/podcast2article.env
 /etc/podcast2article-webhook.env
 /etc/caddy/Caddyfile
@@ -611,7 +614,7 @@ recoverable from GitHub, but production data under
 /etc/cron.d/podcast2article-update
 ```
 
-`/var/lib/podcast2article/media` is optional only if source media can reliably be
+Each user's `media` directory is optional only if source media can reliably be
 recovered. It is required to preserve timestamp playback independently of the
 original source.
 
@@ -678,8 +681,8 @@ sudo systemctl status podcast2article-update.service
 ```bash
 free -h
 df -h /
-sudo du -sh /var/lib/podcast2article/jobs
-sudo du -sh /var/lib/podcast2article/media
+sudo du -sh /var/lib/podcast2article/users/*/jobs
+sudo du -sh /var/lib/podcast2article/users/*/media
 ```
 
 ### DNS and certificate

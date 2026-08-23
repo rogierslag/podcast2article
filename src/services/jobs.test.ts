@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeStoredJob, toArticleSummary, toProcessingJobSummary } from "./jobs.js";
+import { normalizeStoredJob, playbackFileForJob, toArticleSummary, toProcessingJobSummary } from "./jobs.js";
 import type { Job } from "../types.js";
 
 describe("stored job compatibility", () => {
@@ -33,6 +33,19 @@ describe("stored job compatibility", () => {
       mediaUrl: "https://cdn.example.com/episode.mp3",
       playbackUrl: "https://cdn.example.com/episode.mp3",
     });
+  });
+});
+
+describe("user storage isolation", () => {
+  it("uses a different media path for every user", () => {
+    const id = "11111111-1111-1111-1111-111111111111";
+    expect(playbackFileForJob("rogier", id)).toContain("/users/rogier/media/");
+    expect(playbackFileForJob("melvin", id)).toContain("/users/melvin/media/");
+    expect(playbackFileForJob("rogier", id)).not.toBe(playbackFileForJob("melvin", id));
+  });
+
+  it("rejects usernames that could escape the data directory", () => {
+    expect(() => playbackFileForJob("../pascal", "11111111-1111-1111-1111-111111111111")).toThrow(/gebruikersnaam/);
   });
 });
 

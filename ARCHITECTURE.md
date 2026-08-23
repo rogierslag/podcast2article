@@ -16,9 +16,10 @@ Google Drive recording into:
 3. clickable paragraph citations that seek to the supporting audio moment;
 4. a downloadable PDF containing the article and source links.
 
-The application is designed for a single trusted operator rather than for a
-multi-tenant public service. It uses one shared application password, persists
-jobs to local files, and deliberately processes only one job at a time.
+The application is designed for a small, fixed group of trusted users rather
+than for public self-service. Credentials are configured by the administrator,
+each user's data is isolated on disk and in the API, and the application
+deliberately processes only one job at a time across all users.
 
 ## 2. System context
 
@@ -113,19 +114,20 @@ data, model output, or secrets.
 
 Authentication is implemented in `src/services/auth.ts`.
 
-- `APP_PASSWORD` enables authentication.
-- An empty password disables authentication and must never be used in production.
+- `APP_USERS` is a JSON object containing fixed usernames and passwords.
+- An empty account configuration disables authentication and must never be used in production.
 - Password comparison is timing-safe.
-- The password derives the session signing key using `scrypt`.
-- A successful login produces a signed, 30-day `HttpOnly` cookie.
+- The complete credential configuration derives the session signing key using `scrypt`.
+- A successful login produces a signed, 30-day `HttpOnly` cookie containing the username.
 - The cookie uses `SameSite=Strict`.
 - Caddy supplies HTTPS, so production cookies include `Secure`.
-- Changing `APP_PASSWORD` invalidates all existing sessions.
+- Changing `APP_USERS` invalidates all existing sessions.
 - Five failed attempts from one IP block new attempts for 15 minutes.
 - Login attempts are stored in memory and reset after a process restart.
 
-The application has no user database, account recovery, roles, or per-user
-authorization. Anyone with the shared password has full application access.
+The application has no user database, self-service registration, account
+recovery, or roles. Every authenticated user has the same capabilities, but
+all job, article, transcript, PDF, and audio access is scoped to that user.
 
 ### 3.4 Job manager and queue
 
@@ -137,7 +139,8 @@ in an in-memory FIFO queue. This protects the one-vCPU, one-GB VPS from
 concurrent FFmpeg and Node workloads.
 
 The persisted job record is updated at important boundaries. Job files are
-written as formatted JSON under `data/jobs/<uuid>.json`.
+written as formatted JSON under
+`data/users/<username>/jobs/<uuid>.json`.
 
 On startup:
 
@@ -240,9 +243,9 @@ printing.
 The application deliberately does not use a database.
 
 ```text
-data/jobs/<uuid>.json   complete job state, transcript, article, read state
-data/media/<uuid>.mp3   normalized playback audio
-data/work/<uuid>/       temporary downloads and transcript chunks
+data/users/<username>/jobs/<uuid>.json   job, transcript, article, read state
+data/users/<username>/media/<uuid>.mp3   normalized playback audio
+data/users/<username>/work/<uuid>/       temporary downloads and chunks
 ```
 
 In production, `data` is a symlink to `/var/lib/podcast2article`. This keeps
@@ -313,7 +316,7 @@ document.
 | Variable | Role |
 |---|---|
 | `OPENAI_API_KEY` | OpenAI API credential |
-| `APP_PASSWORD` | Shared application login password |
+| `APP_USERS` | JSON object with fixed username/password pairs |
 | `OPENAI_REGION` | `global`, `eu`, or `us` API endpoint |
 | `HOST` | Production bind address; currently loopback |
 | `PORT` | Production HTTP port; currently 3000 |
@@ -389,8 +392,8 @@ health endpoint to become healthy, otherwise it restores the previous release.
 
 ## 10. Architectural constraints and known limitations
 
-- Designed for one trusted operator and one active processing job.
-- Shared-password authentication is not an account system.
+- Designed for a small fixed user group and one globally active processing job.
+- Accounts are administrator-managed environment configuration, not a user database.
 - Job files are local JSON rather than transactional database records.
 - Horizontal scaling is not supported.
 - Source availability depends on public third-party endpoints.
@@ -433,4 +436,3 @@ media remain under `/var/lib/podcast2article`.
 Caddy never executes deployment commands. The receiver authenticates GitHub
 and can only create a fixed trigger file. A root-owned systemd service then runs
 the hard-coded updater.
-
