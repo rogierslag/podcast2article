@@ -2,16 +2,85 @@ import express from "express";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { createPasswordAuth, expiredSessionCookie, readCookie, SESSION_COOKIE_NAME, sessionCookie } from "./services/auth.js";
 import { createJob, getJob, listProcessingJobs, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, setArticleRead, shutdownJobs } from "./services/jobs.js";
 import { generateArticlePdf, pdfDownloadName, shutdownPdfBrowser } from "./services/pdf.js";
 import { validateSourceUrl } from "./services/resolver.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
+const host = process.env.HOST?.trim() || "127.0.0.1";
 const publicDirectory = path.resolve("public");
+const auth = createPasswordAuth();
+const loginAttempts = new Map<string, { failures: number; blockedUntil: number }>();
+const maximumLoginFailures = 5;
+const loginBlockMs = 15 * 60 * 1_000;
 
 app.disable("x-powered-by");
+app.set("trust proxy", "loopback");
 app.use(express.json({ limit: "32kb" }));
+app.use(express.urlencoded({ extended: false, limit: "2kb" }));
+
+function isAuthenticated(cookieHeader: string | undefined): boolean {
+  return !auth.enabled || auth.sessionIsValid(readCookie(cookieHeader, SESSION_COOKIE_NAME));
+}
+
+app.get("/api/health", (_request, response) => {
+  response.json({ ok: true });
+});
+
+app.get("/login", (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  if (isAuthenticated(request.headers.cookie)) return response.redirect(303, "/");
+  return response.sendFile(path.join(publicDirectory, "login.html"));
+});
+
+app.post("/login", (request, response) => {
+  if (!auth.enabled) return response.redirect(303, "/");
+  const key = request.ip ?? request.socket.remoteAddress ?? "unknown";
+  const now = Date.now();
+  const storedAttempt = loginAttempts.get(key);
+  const attempt = storedAttempt && (storedAttempt.blockedUntil === 0 || storedAttempt.blockedUntil > now)
+    ? storedAttempt
+    : undefined;
+  if (storedAttempt && !attempt) loginAttempts.delete(key);
+  if (attempt && attempt.blockedUntil > Date.now()) {
+    response.setHeader("Retry-After", String(Math.ceil((attempt.blockedUntil - Date.now()) / 1_000)));
+    return response.status(429).send("Te veel mislukte pogingen. Probeer het over een kwartier opnieuw.");
+  }
+  const password = typeof request.body?.password === "string" ? request.body.password : "";
+  if (!auth.passwordMatches(password)) {
+    const failures = (attempt?.failures ?? 0) + 1;
+    loginAttempts.set(key, {
+      failures,
+      blockedUntil: failures >= maximumLoginFailures ? Date.now() + loginBlockMs : 0,
+    });
+    return response.redirect(303, "/login?error=1");
+  }
+  loginAttempts.delete(key);
+  response.setHeader("Set-Cookie", sessionCookie(auth.createSession()!, request.secure));
+  return response.redirect(303, "/");
+});
+
+app.use((request, response, next) => {
+  if (isAuthenticated(request.headers.cookie)) return next();
+  response.setHeader("Cache-Control", "no-store");
+  if (request.path.startsWith("/api/")) return response.status(401).json({ error: "Log opnieuw in om verder te gaan." });
+  return request.method === "GET"
+    ? response.redirect(303, "/login")
+    : response.status(401).send("Log opnieuw in om verder te gaan.");
+});
+
+app.post("/logout", (request, response) => {
+  response.setHeader("Set-Cookie", expiredSessionCookie(request.secure));
+  return response.redirect(303, "/login");
+});
+
+app.get("/api/auth", (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  response.json({ enabled: auth.enabled });
+});
+
 app.use(express.static(publicDirectory, { extensions: ["html"] }));
 
 const requestSchema = z.object({
@@ -42,10 +111,6 @@ const requestSchema = z.object({
 }));
 
 const readingStateSchema = z.object({ read: z.boolean() });
-
-app.get("/api/health", (_request, response) => {
-  response.json({ ok: true, openaiConfigured: Boolean(process.env.OPENAI_API_KEY) });
-});
 
 app.get("/api/articles", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
@@ -126,10 +191,11 @@ app.use((_request, response) => response.sendFile(path.join(publicDirectory, "in
 
 await resumeIncompleteJobs();
 
-const server = app.listen(port, () => {
-  console.log(`${new Date().toISOString()} INFO  Podcast2Article luistert op http://localhost:${port}`);
+const server = app.listen(port, host, () => {
+  console.log(`${new Date().toISOString()} INFO  Podcast2Article luistert op http://${host}:${port}`);
   console.log(`${new Date().toISOString()} INFO  Modellen · transcriptie=${process.env.TRANSCRIPTION_MODEL ?? "gpt-4o-transcribe-diarize"} artikel=${process.env.ARTICLE_MODEL ?? "gpt-5.6-terra"}`);
   if (!process.env.OPENAI_API_KEY) console.warn("OPENAI_API_KEY ontbreekt; nieuwe opdrachten zijn uitgeschakeld.");
+  if (!auth.enabled) console.warn("APP_PASSWORD ontbreekt; de applicatie is zonder login bereikbaar.");
 });
 
 let shuttingDown = false;

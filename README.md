@@ -51,6 +51,19 @@ yarn build
 yarn start
 ```
 
+Zet voor een publieke installatie ook een lang, uniek applicatiewachtwoord in
+`.env`. De login gebruikt een ondertekende, 30 dagen geldige `HttpOnly`-cookie
+die automatisch ongeldig wordt als het wachtwoord verandert:
+
+```bash
+APP_PASSWORD='een-lang-uniek-wachtwoord'
+```
+
+Als `APP_PASSWORD` leeg blijft, is authenticatie uitgeschakeld voor lokaal
+ontwikkelen. Zet de productie-installatie altijd achter HTTPS; bijvoorbeeld via
+Caddy of Nginx. Na vijf mislukte pogingen vanaf hetzelfde IP-adres blokkeert de
+login nieuwe pogingen gedurende vijftien minuten.
+
 Gebruik voor regionale OpenAI-verwerking in de EU of de VS respectievelijk
 `OPENAI_REGION=eu` of `OPENAI_REGION=us` in `.env`. `yarn start` leest de
 variabelen uit dat bestand:
@@ -93,7 +106,9 @@ voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
 | Variabele | Standaard | Betekenis |
 |---|---|---|
 | `OPENAI_API_KEY` | vereist | Via de CLI meegegeven OpenAI API-key |
+| `APP_PASSWORD` | leeg | Wachtwoord voor de login; leeg schakelt authenticatie uit |
 | `OPENAI_REGION` | `global` | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us` |
+| `HOST` | `127.0.0.1` | Netwerkinterface; gebruik alleen in een container eventueel `0.0.0.0` |
 | `PORT` | `3000` | HTTP-poort |
 | `PDF_BROWSER_PATH` | automatisch gevonden | Pad naar Chrome, Chromium of Edge voor directe PDF-export |
 | `ARTICLE_MODEL` | `gpt-5.6-terra` | Model voor het artikel |

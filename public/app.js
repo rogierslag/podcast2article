@@ -1,4 +1,13 @@
 const $ = (selector) => document.querySelector(selector);
+const browserFetch = window.fetch.bind(window);
+window.fetch = async (...arguments_) => {
+  const response = await browserFetch(...arguments_);
+  if (response.status === 401) {
+    location.assign("/login");
+    throw new Error("Je sessie is verlopen. Log opnieuw in.");
+  }
+  return response;
+};
 const landing = $("#landing");
 const articlesView = $("#articles-view");
 const progressView = $("#progress-view");
@@ -8,6 +17,10 @@ let currentJob;
 let articlesState=[];
 let processingState=[];
 let overviewRefreshTimer;
+
+fetch("/api/auth").then((response)=>response.json()).then(({enabled})=>{
+  if(enabled)$("#logout-form").classList.remove("hidden");
+}).catch(()=>undefined);
 
 const sourceLabels = { spotify:"Spotify", youtube:"YouTube", "google-drive":"Google Drive" };
 const processingStageLabels = { queued:"In wachtrij", resolving:"Bron controleren", downloading:"Downloaden", transcribing:"Transcriberen", writing:"Artikel schrijven" };
