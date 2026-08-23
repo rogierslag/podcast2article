@@ -91,8 +91,9 @@ wordt opgeslagen in `data/media/`; gedownloade bronbestanden en
 transcriptiechunks worden verwijderd. De app heeft bewust geen accountsysteem;
 zet hem niet zonder authenticatie en rate limiting open op het publieke internet.
 Onvoltooide jobs worden na een serverherstart automatisch opnieuw gestart met
-hetzelfde job-ID. De actieve verwerkingsstap begint daarbij opnieuw, zodat er
-nooit stilzwijgend een job in een oude status blijft hangen.
+hetzelfde job-ID. Jobs worden bewust één voor één verwerkt om piekbelasting op
+kleine servers te beperken. De actieve verwerkingsstap begint daarbij opnieuw,
+zodat er nooit stilzwijgend een job in een oude status blijft hangen.
 
 Bij `SIGINT` of `SIGTERM` stopt de server met het aannemen van verzoeken en
 annuleert hij alle actieve OpenAI HTTP-requests via `AbortSignal`. Onderbroken

@@ -14,6 +14,9 @@ const workDirectory = path.join(root, "work");
 const mediaDirectory = path.join(root, "media");
 const memory = new Map<string, Job>();
 const activeRuns = new Map<string, { controller: AbortController; promise: Promise<void> }>();
+const pendingRuns: Array<{ job: Job; type: "full" | "article" }> = [];
+const pendingJobIds = new Set<string>();
+let shuttingDown = false;
 
 function mediaLimit(sourceType: NonNullable<Job["episode"]>["sourceType"]): number {
   const fallback = sourceType === "google-drive" ? 1_500 : 500;
@@ -73,7 +76,7 @@ export async function createJob(input: Pick<Job, "sourceUrl" | "language" | "art
   };
   await persist(job);
   jobLog(job.id, job.stage, "Opdracht aangemaakt", { language: job.language, articleLength: job.articleLength });
-  queueMicrotask(() => launchJob(job));
+  enqueueJob(job, "full");
   return job;
 }
 
@@ -144,7 +147,7 @@ export async function setArticleRead(id: string, read: boolean): Promise<Article
 export async function retryArticle(id: string): Promise<Job> {
   const job = await getJob(id);
   if (!job) throw new Error("Opdracht niet gevonden.");
-  if (activeRuns.has(id)) throw new Error("Deze opdracht wordt al verwerkt.");
+  if (activeRuns.has(id) || pendingJobIds.has(id)) throw new Error("Deze opdracht wordt al verwerkt.");
   if (!job.transcript?.length || !job.episode) {
     throw new Error("Deze opdracht heeft geen complete transcriptie om te hergebruiken.");
   }
@@ -157,7 +160,7 @@ export async function retryArticle(id: string): Promise<Job> {
     readAt: undefined,
   });
   jobLog(job.id, "writing", "Artikel-only retry gestart", { transcriptSegments: job.transcript.length });
-  queueMicrotask(() => launchArticleRetry(job));
+  enqueueJob(job, "article");
   return job;
 }
 
@@ -177,28 +180,49 @@ export async function resumeIncompleteJobs(): Promise<void> {
         error: undefined,
       });
       jobLog(job.id, "queued", "Onvoltooide opdracht na serverstart hervat", { previousStage });
-      queueMicrotask(() => launchJob(job));
+      enqueueJob(job, "full");
     } catch (error) {
       console.error(`${new Date().toISOString()} ERROR Kon opgeslagen jobbestand niet herstellen · file=${JSON.stringify(file)}`, error);
     }
   }
 }
 
+function enqueueJob(job: Job, type: "full" | "article"): void {
+  if (shuttingDown || activeRuns.has(job.id) || pendingJobIds.has(job.id)) return;
+  pendingRuns.push({ job, type });
+  pendingJobIds.add(job.id);
+  queueMicrotask(drainQueue);
+}
+
+function drainQueue(): void {
+  if (shuttingDown || activeRuns.size > 0) return;
+  const next = pendingRuns.shift();
+  if (!next) return;
+  pendingJobIds.delete(next.job.id);
+  if (next.type === "article") launchArticleRetry(next.job);
+  else launchJob(next.job);
+}
+
+function finishRun(jobId: string): void {
+  activeRuns.delete(jobId);
+  drainQueue();
+}
+
 function launchJob(job: Job): void {
-  if (activeRuns.has(job.id)) return;
+  if (shuttingDown || activeRuns.size > 0 || activeRuns.has(job.id)) return;
   const controller = new AbortController();
   const promise = processJob(job, controller.signal)
     .catch((error) => jobError(job.id, job.stage, error))
-    .finally(() => activeRuns.delete(job.id));
+    .finally(() => finishRun(job.id));
   activeRuns.set(job.id, { controller, promise });
 }
 
 function launchArticleRetry(job: Job): void {
-  if (activeRuns.has(job.id) || !job.transcript || !job.episode) return;
+  if (shuttingDown || activeRuns.size > 0 || activeRuns.has(job.id) || !job.transcript || !job.episode) return;
   const controller = new AbortController();
   const promise = processArticleRetry(job, controller.signal)
     .catch((error) => jobError(job.id, job.stage, error))
-    .finally(() => activeRuns.delete(job.id));
+    .finally(() => finishRun(job.id));
   activeRuns.set(job.id, { controller, promise });
 }
 
@@ -219,6 +243,7 @@ async function processArticleRetry(job: Job, signal: AbortSignal): Promise<void>
 }
 
 export async function shutdownJobs(reason = "Server wordt afgesloten"): Promise<void> {
+  shuttingDown = true;
   const active = [...activeRuns.entries()];
   console.log(`${new Date().toISOString()} INFO  Shutdown · actieve jobs=${active.length}`);
   for (const [jobId, run] of active) {
