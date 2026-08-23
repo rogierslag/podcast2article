@@ -30,10 +30,10 @@ wordt daarom niet geaccepteerd.
 
 ## Snel starten
 
-Vereisten: Node.js 22+, Python 3.9+, Chrome/Chromium/Edge en een OpenAI API-key.
+Vereisten: Node.js 22+, Python 3.9+ en een OpenAI API-key.
 FFmpeg en yt-dlp worden als Node-dependencies meegeleverd. Python wordt door
-yt-dlp gebruikt op macOS en Linux. De browser wordt alleen headless gestart om
-een artikel met de bestaande print-stylesheet direct als PDF te downloaden.
+yt-dlp gebruikt op macOS en Linux. PDF's worden rechtstreeks in Node.js
+opgebouwd; daarvoor is geen browser op de server nodig.
 
 ```bash
 npm install
@@ -110,7 +110,6 @@ voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
 | `OPENAI_REGION` | `global` | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us` |
 | `HOST` | `127.0.0.1` | Netwerkinterface; gebruik alleen in een container eventueel `0.0.0.0` |
 | `PORT` | `3000` | HTTP-poort |
-| `PDF_BROWSER_PATH` | automatisch gevonden | Pad naar Chrome, Chromium of Edge voor directe PDF-export |
 | `ARTICLE_MODEL` | `gpt-5.6-terra` | Model voor het artikel |
 | `TRANSCRIPTION_MODEL` | `gpt-4o-transcribe-diarize` | Transcriptiemodel |
 | `MAX_AUDIO_MB` | `500` | Maximale Spotify-audiodownload |

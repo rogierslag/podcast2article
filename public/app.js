@@ -84,6 +84,10 @@ function renderResult(job) {
   $("#article").innerHTML = `<h1>${escapeHtml(article.title)}</h1><p class="dek">${escapeHtml(article.dek)}</p><p class="byline">${article.readingTimeMinutes} minuten leestijd · gebaseerd op ${transcript.length} bronfragmenten</p><p class="style-note">${escapeHtml(article.styleNote)}</p>${sections}<div class="takeaways"><h2>Kernpunten</h2><ul>${article.takeaways.map((item)=>`<li>${escapeHtml(item.text)} ${sourceButtons(item.sources,transcript)}</li>`).join("")}</ul></div>`;
   $("#toc").innerHTML = article.sections.map((section,index)=>`<a href="#${slug(section.heading,index)}">${escapeHtml(section.heading)}</a>`).join("");
   $("#audio").src = episode.playbackUrl||episode.audioUrl||episode.mediaUrl;
+  const requestedTime=Number(new URLSearchParams(location.hash.slice(1)).get("time"));
+  if(Number.isFinite(requestedTime)&&requestedTime>=0){
+    $("#audio").addEventListener("loadedmetadata",()=>{$("#audio").currentTime=requestedTime;},{once:true});
+  }
   setArticleActionStatus("");
   updateReadButtons();
   renderTranscript(transcript, "");
@@ -286,5 +290,6 @@ async function showArticles(showLoading=true) {
   }
 }
 
-const hashMatch=location.hash.match(/^#job=([0-9a-f-]{36})$/i);
-if(hashMatch)poll(hashMatch[1]);else if(location.pathname.replace(/\/$/,"")==="/articles")showArticles();
+const hashParameters=new URLSearchParams(location.hash.slice(1));
+const hashJob=hashParameters.get("job");
+if(hashJob&&/^[0-9a-f-]{36}$/i.test(hashJob))poll(hashJob);else if(location.pathname.replace(/\/$/,"")==="/articles")showArticles();

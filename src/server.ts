@@ -4,7 +4,7 @@ import path from "node:path";
 import { z } from "zod";
 import { createPasswordAuth, expiredSessionCookie, readCookie, SESSION_COOKIE_NAME, sessionCookie } from "./services/auth.js";
 import { createJob, getJob, listProcessingJobs, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, setArticleRead, shutdownJobs } from "./services/jobs.js";
-import { generateArticlePdf, pdfDownloadName, shutdownPdfBrowser } from "./services/pdf.js";
+import { generateArticlePdf, pdfDownloadName } from "./services/pdf.js";
 import { validateSourceUrl } from "./services/resolver.js";
 
 const app = express();
@@ -166,14 +166,14 @@ app.get("/api/jobs/:id/pdf", async (request, response) => {
     return response.status(409).json({ error: "Dit artikel is nog niet klaar voor PDF-export." });
   }
   try {
-    const pdf = await generateArticlePdf(job.id, `http://127.0.0.1:${port}`);
+    const pdf = await generateArticlePdf(job, `${request.protocol}://${request.get("host")}`);
     response.attachment(pdfDownloadName(job.article.title));
     response.setHeader("Cache-Control", "no-store");
     response.setHeader("Content-Length", pdf.byteLength);
     return response.send(Buffer.from(pdf));
   } catch (error) {
     console.error(`${new Date().toISOString()} ERROR PDF-export mislukt · job=${JSON.stringify(job.id)}`, error);
-    return response.status(503).json({ error: "PDF-export is niet beschikbaar. Controleer de browserconfiguratie van de server." });
+    return response.status(503).json({ error: "PDF-export is op dit moment niet beschikbaar." });
   }
 });
 
@@ -211,7 +211,6 @@ async function shutdown(signal: "SIGINT" | "SIGTERM"): Promise<void> {
   }, 15_000);
   forcedExit.unref();
   await shutdownJobs(signal);
-  await shutdownPdfBrowser();
   clearTimeout(forcedExit);
   console.log(`${new Date().toISOString()} INFO  Graceful shutdown voltooid`);
   process.exit(0);
