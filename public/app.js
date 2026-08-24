@@ -122,7 +122,7 @@ async function exportToPdf(){
   if(!currentJob)return;
   const job=currentJob;
   const buttons=document.querySelectorAll("[data-pdf-export]");
-  buttons.forEach((button)=>{button.disabled=true;button.querySelector("span").textContent="PDF maken…";});
+  buttons.forEach((button)=>{button.disabled=true;const label=button.querySelector("span");if(label)label.textContent="PDF maken…";});
   setArticleActionStatus("");
   try {
     const response=await fetch(`/api/jobs/${job.id}/pdf`);
@@ -141,13 +141,39 @@ async function exportToPdf(){
   } catch(error) {
     setArticleActionStatus(error.message);
   } finally {
-    buttons.forEach((button)=>{button.disabled=false;button.querySelector("span").textContent="Download PDF";});
+    buttons.forEach((button)=>{button.disabled=false;const label=button.querySelector("span");if(label)label.textContent="Download PDF";});
+  }
+}
+
+async function copyArticlePermalink(){
+  if(!currentJob)return;
+  const buttons=document.querySelectorAll("[data-share-article]");
+  buttons.forEach((button)=>{button.disabled=true;});
+  setArticleActionStatus("");
+  try {
+    const response=await fetch(`/api/jobs/${currentJob.id}/share`,{method:"POST"});
+    const body=await response.json();
+    if(!response.ok)throw new Error(body.error||"Permalink kon niet worden aangemaakt.");
+    if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(body.url);
+    else {
+      const input=document.createElement("textarea");
+      input.value=body.url;input.setAttribute("readonly","");input.style.position="fixed";input.style.opacity="0";
+      document.body.append(input);input.select();
+      const copied=document.execCommand("copy");input.remove();
+      if(!copied)throw new Error("Kopiëren is niet gelukt.");
+    }
+    setArticleActionStatus("Permalink gekopieerd.",true);
+  } catch(error) {
+    setArticleActionStatus(error.message);
+  } finally {
+    buttons.forEach((button)=>{button.disabled=false;});
   }
 }
 $("#transcript").addEventListener("click", sourceClick);
 $("#transcript-search").addEventListener("input",(event)=>currentJob&&renderTranscript(currentJob.transcript,event.target.value));
 $("#toggle-transcript").addEventListener("click",()=>{const transcript=$("#transcript");transcript.classList.toggle("hidden");$("#toggle-transcript").textContent=transcript.classList.contains("hidden")?"Toon":"Verberg";});
 document.querySelectorAll("[data-pdf-export]").forEach((button)=>button.addEventListener("click",exportToPdf));
+document.querySelectorAll("[data-share-article]").forEach((button)=>button.addEventListener("click",copyArticlePermalink));
 
 async function updateArticleRead(id,read) {
   const response=await fetch(`/api/articles/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({read})});

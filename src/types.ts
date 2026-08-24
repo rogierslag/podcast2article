@@ -64,6 +64,8 @@ export interface Job {
   updatedAt: string;
   completedAt?: string;
   readAt?: string;
+  /** High-entropy capability token for the article's anonymous public permalink. */
+  shareToken?: string;
   episode?: Episode;
   transcript?: TranscriptSegment[];
   article?: Article;

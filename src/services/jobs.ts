@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { jobError, jobLog } from "../lib/logger.js";
@@ -157,6 +157,34 @@ export async function setArticleRead(username: string, id: string, read: boolean
   }
   await update(username, job, { readAt: read ? new Date().toISOString() : undefined });
   return toArticleSummary(job)!;
+}
+
+function isShareToken(value: string): boolean {
+  return /^[A-Za-z0-9_-]{43}$/.test(value);
+}
+
+export async function createArticleShare(username: string, id: string): Promise<string> {
+  const job = await getJob(username, id);
+  if (!job) throw new Error("Opdracht niet gevonden.");
+  if (job.stage !== "complete" || !job.article || !job.episode || !job.transcript) {
+    throw new Error("Dit artikel is nog niet klaar om te delen.");
+  }
+  if (!job.shareToken || !isShareToken(job.shareToken)) {
+    const shareToken = randomBytes(32).toString("base64url");
+    await update(username, job, { shareToken });
+    return shareToken;
+  }
+  return job.shareToken;
+}
+
+export function getSharedArticle(token: string): { username: string; job: Job } | undefined {
+  if (!isShareToken(token)) return undefined;
+  for (const [key, job] of memory.entries()) {
+    if (job.shareToken === token && job.stage === "complete" && job.article && job.episode && job.transcript) {
+      return { username: key.slice(0, key.indexOf("/")), job };
+    }
+  }
+  return undefined;
 }
 
 export async function retryArticle(username: string, id: string): Promise<Job> {

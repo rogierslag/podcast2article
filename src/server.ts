@@ -1,9 +1,9 @@
 import express from "express";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { createUserAuth, expiredSessionCookie, readCookie, SESSION_COOKIE_NAME, sessionCookie } from "./services/auth.js";
-import { createJob, getJob, listProcessingJobs, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, setArticleRead, shutdownJobs } from "./services/jobs.js";
+import { createArticleShare, createJob, getJob, getSharedArticle, listProcessingJobs, listReadyArticles, playbackFileForJob, resumeIncompleteJobs, retryArticle, setArticleRead, shutdownJobs } from "./services/jobs.js";
 import { generateArticlePdf, pdfDownloadName } from "./services/pdf.js";
 import { validateSourceUrl } from "./services/resolver.js";
 
@@ -25,8 +25,99 @@ function authenticatedUser(cookieHeader: string | undefined): string | undefined
   return auth.enabled ? auth.sessionUser(readCookie(cookieHeader, SESSION_COOKIE_NAME)) : "local";
 }
 
+function publicOrigin(request: express.Request): string {
+  const configured = process.env.PUBLIC_BASE_URL?.trim().replace(/\/$/, "");
+  return configured || `${request.protocol}://${request.get("host")}`;
+}
+
+function htmlAttribute(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character]!);
+}
+
 app.get("/api/health", (_request, response) => {
   response.json({ ok: true });
+});
+
+app.get("/s/:token", async (request, response) => {
+  const shared = getSharedArticle(request.params.token);
+  if (!shared) {
+    response.type("html");
+    return response.status(404).send(await readFile(path.join(publicDirectory, "share-not-found.html"), "utf8"));
+  }
+  const { job } = shared;
+  const url = `${publicOrigin(request)}/s/${request.params.token}`;
+  const title = job.article!.title;
+  const description = job.article!.dek;
+  const image = job.episode!.imageUrl;
+  const metadata = [
+    `<title>${htmlAttribute(title)} — Podcast2Article</title>`,
+    `<meta name="description" content="${htmlAttribute(description)}">`,
+    `<link rel="canonical" href="${htmlAttribute(url)}">`,
+    `<meta property="og:type" content="article">`,
+    `<meta property="og:locale" content="nl_NL">`,
+    `<meta property="og:site_name" content="Podcast2Article">`,
+    `<meta property="og:title" content="${htmlAttribute(title)}">`,
+    `<meta property="og:description" content="${htmlAttribute(description)}">`,
+    `<meta property="og:url" content="${htmlAttribute(url)}">`,
+    `<meta property="article:published_time" content="${htmlAttribute(job.completedAt ?? job.updatedAt)}">`,
+    ...(image ? [
+      `<meta property="og:image" content="${htmlAttribute(image)}">`,
+      `<meta property="og:image:alt" content="${htmlAttribute(job.episode!.title)}">`,
+      `<meta name="twitter:card" content="summary_large_image">`,
+      `<meta name="twitter:image" content="${htmlAttribute(image)}">`,
+      `<meta name="twitter:image:alt" content="${htmlAttribute(job.episode!.title)}">`,
+    ] : [`<meta name="twitter:card" content="summary">`]),
+    `<meta name="twitter:title" content="${htmlAttribute(title)}">`,
+    `<meta name="twitter:description" content="${htmlAttribute(description)}">`,
+  ].join("\n  ");
+  const template = await readFile(path.join(publicDirectory, "share.html"), "utf8");
+  response.setHeader("Cache-Control", "public, max-age=300");
+  response.type("html");
+  return response.send(template.replace("<!-- SHARE_METADATA -->", metadata));
+});
+
+app.get("/api/shared/:token", (request, response) => {
+  const shared = getSharedArticle(request.params.token);
+  if (!shared) return response.status(404).json({ error: "Gedeeld artikel niet gevonden." });
+  const { job } = shared;
+  response.setHeader("Cache-Control", "public, max-age=300");
+  return response.json({
+    article: job.article,
+    sources: job.transcript!.map(({ id, start }) => ({ id, start })),
+    episode: {
+      sourceType: job.episode!.sourceType,
+      sourceUrl: job.episode!.sourceUrl,
+      sourceName: job.episode!.sourceName,
+      title: job.episode!.title,
+      imageUrl: job.episode!.imageUrl,
+      durationSeconds: job.episode!.durationSeconds,
+      publishedAt: job.episode!.publishedAt,
+    },
+  });
+});
+
+app.get("/api/shared/:token/audio", async (request, response) => {
+  const shared = getSharedArticle(request.params.token);
+  if (!shared) return response.status(404).json({ error: "Audio niet gevonden." });
+  const file = playbackFileForJob(shared.username, shared.job.id);
+  if (!file) return response.status(404).json({ error: "Audio niet gevonden." });
+  try {
+    await stat(file);
+    response.setHeader("Cache-Control", "public, max-age=3600");
+    return response.sendFile(file);
+  } catch {
+    return response.status(404).json({ error: "Audio niet gevonden." });
+  }
+});
+
+app.get(["/share.js", "/share.css", "/styles.css", "/favicon.svg", "/favicon-32.png", "/apple-touch-icon.png"], async (request, response) => {
+  const contentTypes: Record<string, string> = {
+    ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png",
+  };
+  response.type(contentTypes[path.extname(request.path)] ?? "application/octet-stream");
+  return response.send(await readFile(path.join(publicDirectory, request.path)));
 });
 
 app.get("/login", (request, response) => {
@@ -135,6 +226,16 @@ app.patch("/api/articles/:id", async (request, response) => {
     return response.json(await setArticleRead(response.locals.username, request.params.id, parsed.data.read));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Leesstatus kon niet worden opgeslagen.";
+    return response.status(message === "Opdracht niet gevonden." ? 404 : 409).json({ error: message });
+  }
+});
+
+app.post("/api/jobs/:id/share", async (request, response) => {
+  try {
+    const token = await createArticleShare(response.locals.username, request.params.id);
+    return response.status(201).json({ url: `${publicOrigin(request)}/s/${token}` });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Permalink kon niet worden aangemaakt.";
     return response.status(message === "Opdracht niet gevonden." ? 404 : 409).json({ error: message });
   }
 });
