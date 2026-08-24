@@ -22,6 +22,7 @@ This file applies to the entire repository.
 - If a temporary stored job or media fixture is required for screenshots, create it under a clearly test-only ID and remove it after capture. Never alter or delete a user's existing article data.
 - Inspect the rendered DOM or accessibility tree as well as the screenshot when verifying labels and responsive visibility.
 - For local browser testing, start the compiled server from the repository root so `public/` and `data/` resolve correctly. Stop the temporary server when finished.
+- Use the fixed local browser-testing URL `http://127.0.0.1:4317` (`PORT=4317 HOST=127.0.0.1`) so Codex can reuse the same browser permission. Before starting a server, check whether that port already serves this application and reuse it when appropriate; never stop a server that Codex did not start for the current task.
 
 ## Current article-action behavior
 
