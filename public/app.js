@@ -145,7 +145,16 @@ async function exportToPdf(){
   }
 }
 
-async function copyArticlePermalink(){
+async function copyToClipboard(value){
+  if(navigator.clipboard?.writeText)return navigator.clipboard.writeText(value);
+  const input=document.createElement("textarea");
+  input.value=value;input.setAttribute("readonly","");input.style.position="fixed";input.style.opacity="0";
+  document.body.append(input);input.select();
+  const copied=document.execCommand("copy");input.remove();
+  if(!copied)throw new Error("Kopiëren is niet gelukt.");
+}
+
+async function shareArticle(){
   if(!currentJob)return;
   const buttons=document.querySelectorAll("[data-share-article]");
   buttons.forEach((button)=>{button.disabled=true;});
@@ -154,15 +163,17 @@ async function copyArticlePermalink(){
     const response=await fetch(`/api/jobs/${currentJob.id}/share`,{method:"POST"});
     const body=await response.json();
     if(!response.ok)throw new Error(body.error||"Permalink kon niet worden aangemaakt.");
-    if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(body.url);
-    else {
-      const input=document.createElement("textarea");
-      input.value=body.url;input.setAttribute("readonly","");input.style.position="fixed";input.style.opacity="0";
-      document.body.append(input);input.select();
-      const copied=document.execCommand("copy");input.remove();
-      if(!copied)throw new Error("Kopiëren is niet gelukt.");
+    if(matchMedia("(max-width: 600px)").matches&&navigator.share){
+      try {
+        await navigator.share({title:currentJob.article.title,text:currentJob.article.title,url:body.url});
+        setArticleActionStatus("Artikel gedeeld.",true);
+        return;
+      } catch(error) {
+        if(error?.name==="AbortError")return;
+      }
     }
-    setArticleActionStatus("Permalink gekopieerd.",true);
+    await copyToClipboard(body.url);
+    setArticleActionStatus("Deelbare link gekopieerd.",true);
   } catch(error) {
     setArticleActionStatus(error.message);
   } finally {
@@ -173,7 +184,7 @@ $("#transcript").addEventListener("click", sourceClick);
 $("#transcript-search").addEventListener("input",(event)=>currentJob&&renderTranscript(currentJob.transcript,event.target.value));
 $("#toggle-transcript").addEventListener("click",()=>{const transcript=$("#transcript");transcript.classList.toggle("hidden");$("#toggle-transcript").textContent=transcript.classList.contains("hidden")?"Toon":"Verberg";});
 document.querySelectorAll("[data-pdf-export]").forEach((button)=>button.addEventListener("click",exportToPdf));
-document.querySelectorAll("[data-share-article]").forEach((button)=>button.addEventListener("click",copyArticlePermalink));
+document.querySelectorAll("[data-share-article]").forEach((button)=>button.addEventListener("click",shareArticle));
 
 async function updateArticleRead(id,read) {
   const response=await fetch(`/api/articles/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({read})});

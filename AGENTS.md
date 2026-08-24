@@ -22,6 +22,7 @@ This file applies to the entire repository.
 - If a temporary stored job or media fixture is required for screenshots, create it under a clearly test-only ID and remove it after capture. Never alter or delete a user's existing article data.
 - Inspect the rendered DOM or accessibility tree as well as the screenshot when verifying labels and responsive visibility.
 - For local browser testing, start the compiled server from the repository root so `public/` and `data/` resolve correctly. Stop the temporary server when finished.
+- Use the fixed local browser-testing URL `http://127.0.0.1:4317` (`PORT=4317 HOST=127.0.0.1`) so Codex can reuse the same browser permission. Before starting a server, check whether that port already serves this application and reuse it when appropriate; never stop a server that Codex did not start for the current task.
 
 ## Current article-action behavior
 
@@ -104,9 +105,13 @@ In the pull request description, include a concise verification section with:
 
 - Pull request titles, descriptions, section headings, image/video captions, and reviewer-facing notes must always be written in English, even when the user request or product UI is in Dutch.
 - When the user indicates that a pull request should be created, carry the task through to an actual PR: prepare the branch and commits as needed, push the branch, create the PR, and return the PR link. Do not stop after drafting a title or description unless an external blocker or missing authorization prevents creation.
+- Prefer the local `gh` CLI and documented GitHub APIs for PR operations. Do not open GitHub in a browser solely to create or edit a PR or to work around a missing API capability.
+- Before starting PR operations, run `gh auth status`. If the worktree is on a detached `HEAD`, create a focused branch before committing. Preserve unrelated worktree changes and stage only the files intended for the PR.
 - Before creating the PR, run the required validation and produce the applicable screenshots or recordings described above.
+- Write the PR description to a temporary Markdown file and pass it with `gh pr create --body-file` or `gh pr edit --body-file`. Do not pass multiline Markdown inline through the shell because backticks and substitutions may be interpreted as commands.
 - Add the screenshots and videos to the PR description itself, or use durable links/attachments that reviewers can open from the PR. Do not leave required visual evidence only in a local filesystem path.
-- If the available PR tooling cannot upload an attachment directly, use an approved durable artifact location when available. Otherwise report the attachment limitation clearly, include all remaining evidence, and provide the exact local artifact paths so the user can attach them; do not silently omit media.
+- GitHub's documented APIs and `gh` CLI do not upload native PR-body attachments. Use an approved durable artifact location when available. If none is configured, use the single long-lived `assets` branch and store each PR's media under `pr-media/<PR number>/`. Create the branch through `gh api` when it does not exist, reuse it for later PRs, keep binary media out of feature branches and PR diffs, and embed its raw GitHub URLs in the PR description. State this storage choice in the PR notes and do not delete the `assets` branch so existing links remain valid.
+- If no durable upload is possible, report the limitation clearly in the PR, include all remaining evidence, and provide the exact local artifact paths so the user can attach them; do not silently omit required media.
 - PR titles and descriptions must be concise but complete. Remove repetition and implementation diary details, but never omit behavior changes, security implications, migrations/configuration, verification performed, visual evidence, known limitations, or reviewer-relevant tradeoffs.
 - Prefer this compact PR-description structure when applicable:
   - **Summary:** what changed and why.
@@ -115,3 +120,4 @@ In the pull request description, include a concise verification section with:
   - **Verification:** commands and focused runtime checks performed.
   - **Notes:** configuration, migrations, limitations, or follow-up work; omit this section when empty.
 - Ensure the final PR description reflects the actual diff and completed checks. Do not claim an attachment, test, screenshot, or recording that was not successfully produced and made available to reviewers.
+- After every PR creation or description update, use `gh pr view --json` to verify the remote title, body, head branch, state, verification claims, and media URLs before handing off.
