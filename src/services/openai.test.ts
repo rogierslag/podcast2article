@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { openAIBaseURL, transcribeChunks, validateArticleSources } from "./openai.js";
+import { articleLanguageInstruction, openAIBaseURL, transcribeChunks, validateArticleSources } from "./openai.js";
 import type { Article } from "../types.js";
 
 const article: Article = {
@@ -28,6 +28,17 @@ describe("article source validation", () => {
     const invalid = structuredClone(article);
     invalid.takeaways[0]!.sources = ["missing"];
     expect(() => validateArticleSources(invalid, new Set(["t-00001"]))).toThrow(/zonder geldige transcriptbron/);
+  });
+});
+
+describe("article language", () => {
+  it("uses the source language by default", () => {
+    expect(articleLanguageInstruction("auto")).toContain("dominante taal van het transcript");
+    expect(articleLanguageInstruction("auto")).toContain("Vertaal de bron niet");
+  });
+
+  it("keeps an explicit language selection as an override", () => {
+    expect(articleLanguageInstruction("en")).toBe("Schrijf het volledige artikel in het Engels.");
   });
 });
 

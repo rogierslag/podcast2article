@@ -156,6 +156,21 @@ export function validateArticleSources(article: Article, validIds: Set<string>):
   return article;
 }
 
+const ARTICLE_LANGUAGE_NAMES: Record<string, string> = {
+  nl: "Nederlands",
+  en: "Engels",
+  de: "Duits",
+  fr: "Frans",
+  es: "Spaans",
+};
+
+export function articleLanguageInstruction(language: string): string {
+  if (language === "auto") {
+    return "Detecteer de dominante taal van het transcript en schrijf het volledige artikel in diezelfde taal. Vertaal de bron niet.";
+  }
+  return `Schrijf het volledige artikel in het ${ARTICLE_LANGUAGE_NAMES[language] ?? language}.`;
+}
+
 export async function writeArticle(
   transcript: TranscriptSegment[],
   metadata: { title: string; sourceName: string; language: string; length: string },
@@ -183,7 +198,7 @@ export async function writeArticle(
     instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
 Behoud de herkenbare stijl van de opname: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
 Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea direct ondersteunen. Kies de nauwkeurigste fragmenten. Vermijd meta-commentaar zoals 'in de podcast' of 'in de opname'. Geef in styleNote in één korte zin aan welke stijleigenschappen je hebt behouden. Schrijf circa ${targetWords} woorden.`,
-    input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nGewenste taal: ${metadata.language}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
+    input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nTaalinstructie: ${articleLanguageInstruction(metadata.language)}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
     text: {
       format: {
         type: "json_schema",
