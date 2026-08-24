@@ -1,4 +1,5 @@
 import express from "express";
+import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
@@ -104,9 +105,11 @@ app.get("/api/shared/:token/audio", async (request, response) => {
   const file = playbackFileForJob(shared.username, shared.job.id);
   if (!file) return response.status(404).json({ error: "Audio niet gevonden." });
   try {
-    await stat(file);
+    const fileStats = await stat(file);
     response.setHeader("Cache-Control", "public, max-age=3600");
-    return response.sendFile(file);
+    response.setHeader("Content-Length", fileStats.size);
+    response.type("audio/mpeg");
+    return createReadStream(file).pipe(response);
   } catch {
     return response.status(404).json({ error: "Audio niet gevonden." });
   }
