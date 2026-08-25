@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
+      content="width=device-width, initial-scale=1, viewport-fit=contain"
     />
     <meta name="theme-color" content="#e85e2a" />
     <meta name="robots" content="noindex, nofollow" />
@@ -18,11 +18,11 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=ios-scroll-shell-v1" />
     <link rel="stylesheet" href="/share.css" />
-    <script src="/share.js" defer></script>
+    <script src="/share.js?v=ios-scroll-shell-v1" defer></script>
   </head>
-  <body class="shared-page">
+  <body class="shared-page scroll-shell">
     <div
       id="article-reading-progress"
       class="reading-progress hidden"
@@ -35,50 +35,52 @@
     >
       <div class="reading-progress-value"></div>
     </div>
-    <header class="nav">
-      <span class="brand" aria-label="Podcast2Article">
-        <span class="brand-mark" aria-hidden="true"
-          ><i></i><i></i><i></i><i></i
-        ></span>
-        <span>Podcast<span>2</span>Article</span>
-      </span>
-      <span class="shared-label">Anoniem gedeeld artikel</span>
-    </header>
-    <main id="shared-main" aria-live="polite">
-      <section id="shared-loading" class="shared-loading">
-        Artikel laden…
-      </section>
-      <section id="shared-result" class="hidden">
-        <div id="episode-hero" class="episode-hero"></div>
-        <div class="shared-source">
-          <div>
-            <span class="kicker">Luister naar de bron</span>
-            <p>
-              De bronverwijzingen in het artikel starten de audio op het juiste
-              moment.
-            </p>
-          </div>
-          <audio id="audio" controls preload="metadata"></audio>
-        </div>
-        <div class="content-layout shared-layout">
-          <article id="article" class="article"></article>
-          <aside class="side-nav">
+    <div class="page-scroll">
+      <header class="nav">
+        <span class="brand" aria-label="Podcast2Article">
+          <span class="brand-mark" aria-hidden="true"
+            ><i></i><i></i><i></i><i></i
+          ></span>
+          <span>Podcast<span>2</span>Article</span>
+        </span>
+        <span class="shared-label">Anoniem gedeeld artikel</span>
+      </header>
+      <main id="shared-main" aria-live="polite">
+        <section id="shared-loading" class="shared-loading">
+          Artikel laden…
+        </section>
+        <section id="shared-result" class="hidden">
+          <div id="episode-hero" class="episode-hero"></div>
+          <div class="shared-source">
             <div>
-              <span>In dit artikel</span>
-              <nav id="toc"></nav>
+              <span class="kicker">Luister naar de bron</span>
+              <p>
+                De bronverwijzingen in het artikel starten de audio op het
+                juiste moment.
+              </p>
             </div>
-          </aside>
-        </div>
-      </section>
-      <section id="shared-error" class="shared-error hidden">
-        <span class="kicker">Niet beschikbaar</span>
-        <h1>Dit gedeelde artikel kon niet worden gevonden.</h1>
-        <p>Controleer of je de volledige permalink hebt geopend.</p>
-      </section>
-    </main>
-    <footer>
-      <span>Podcast2Article</span
-      ><span>Publiek gedeeld · zonder afzendergegevens</span>
-    </footer>
+            <audio id="audio" controls preload="metadata"></audio>
+          </div>
+          <div class="content-layout shared-layout">
+            <article id="article" class="article"></article>
+            <aside class="side-nav">
+              <div>
+                <span>In dit artikel</span>
+                <nav id="toc"></nav>
+              </div>
+            </aside>
+          </div>
+        </section>
+        <section id="shared-error" class="shared-error hidden">
+          <span class="kicker">Niet beschikbaar</span>
+          <h1>Dit gedeelde artikel kon niet worden gevonden.</h1>
+          <p>Controleer of je de volledige permalink hebt geopend.</p>
+        </section>
+      </main>
+      <footer>
+        <span>Podcast2Article</span
+        ><span>Publiek gedeeld · zonder afzendergegevens</span>
+      </footer>
+    </div>
   </body>
 </html>
