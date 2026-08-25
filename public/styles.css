@@ -319,6 +319,22 @@ body {
 .article-column {
   min-width: 0;
 }
+.reading-progress {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: rgb(216 209 196 / 72%);
+  pointer-events: none;
+}
+.reading-progress-value {
+  width: 0;
+  height: 100%;
+  background: var(--orange);
+  transition: width 80ms linear;
+}
 .article-actions {
   display: flex;
   justify-content: flex-end;
@@ -623,6 +639,7 @@ footer {
     print-color-adjust: exact;
   }
   .nav,
+  .reading-progress,
   .article-actions,
   .side-nav,
   .transcript-wrap,
@@ -1480,7 +1497,8 @@ footer {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .collapsible-shelf summary svg {
+  .collapsible-shelf summary svg,
+  .reading-progress-value {
     transition: none;
   }
   .processing-wave i {

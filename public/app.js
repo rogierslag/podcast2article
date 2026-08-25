@@ -26,6 +26,48 @@ let currentJob;
 let articlesState = [];
 let processingState = [];
 let overviewRefreshTimer;
+let readingProgressFrame;
+
+function updateArticleReadingProgress() {
+  readingProgressFrame = undefined;
+  const article = $("#article");
+  const progress = $("#article-reading-progress");
+  if (!article || !progress || resultView.classList.contains("hidden")) {
+    return;
+  }
+
+  const articleTop = article.getBoundingClientRect().top + window.scrollY;
+  const articleEnd = Math.max(
+    articleTop,
+    articleTop + article.offsetHeight - window.innerHeight,
+  );
+  const progressRatio =
+    articleEnd === articleTop
+      ? Number(window.scrollY >= articleTop)
+      : (window.scrollY - articleTop) / (articleEnd - articleTop);
+  const progressPercentage = Math.round(
+    Math.min(1, Math.max(0, progressRatio)) * 100,
+  );
+
+  progress.querySelector(".reading-progress-value").style.width =
+    `${progressPercentage}%`;
+  progress.setAttribute("aria-valuenow", String(progressPercentage));
+  progress.setAttribute(
+    "aria-valuetext",
+    `${progressPercentage} procent gelezen`,
+  );
+}
+
+function scheduleArticleReadingProgressUpdate() {
+  if (readingProgressFrame === undefined) {
+    readingProgressFrame = requestAnimationFrame(updateArticleReadingProgress);
+  }
+}
+
+window.addEventListener("scroll", scheduleArticleReadingProgressUpdate, {
+  passive: true,
+});
+window.addEventListener("resize", scheduleArticleReadingProgressUpdate);
 
 fetch("/api/auth")
   .then((response) => response.json())
@@ -279,6 +321,7 @@ function renderResult(job) {
   renderTranscript(transcript, "");
   document.addEventListener("click", sourceClick);
   window.scrollTo({ top: 0 });
+  scheduleArticleReadingProgressUpdate();
 }
 
 function renderTranscript(transcript, query) {
