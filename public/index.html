@@ -25,6 +25,18 @@
     <script src="/app.js" defer></script>
   </head>
   <body>
+    <div
+      id="article-reading-progress"
+      class="reading-progress hidden"
+      role="progressbar"
+      aria-label="Leesvoortgang van het artikel"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+      aria-valuetext="0 procent gelezen"
+    >
+      <div class="reading-progress-value"></div>
+    </div>
     <header class="nav">
       <a class="brand" href="/" aria-label="Podcast2Article home">
         <span class="brand-mark" aria-hidden="true"
@@ -164,18 +176,6 @@
       </section>
 
       <section id="result-view" class="result-view hidden">
-        <div
-          id="article-reading-progress"
-          class="reading-progress"
-          role="progressbar"
-          aria-label="Leesvoortgang van het artikel"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow="0"
-          aria-valuetext="0 procent gelezen"
-        >
-          <div class="reading-progress-value"></div>
-        </div>
         <div id="episode-hero" class="episode-hero"></div>
         <div class="content-layout">
           <div class="article-column">

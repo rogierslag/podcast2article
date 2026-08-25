@@ -21,6 +21,7 @@ const landing = $("#landing");
 const articlesView = $("#articles-view");
 const progressView = $("#progress-view");
 const resultView = $("#result-view");
+const articleReadingProgress = $("#article-reading-progress");
 const form = $("#job-form");
 let currentJob;
 let articlesState = [];
@@ -31,8 +32,11 @@ let readingProgressFrame;
 function updateArticleReadingProgress() {
   readingProgressFrame = undefined;
   const article = $("#article");
-  const progress = $("#article-reading-progress");
-  if (!article || !progress || resultView.classList.contains("hidden")) {
+  if (
+    !article ||
+    articleReadingProgress.classList.contains("hidden") ||
+    resultView.classList.contains("hidden")
+  ) {
     return;
   }
 
@@ -49,10 +53,14 @@ function updateArticleReadingProgress() {
     Math.min(1, Math.max(0, progressRatio)) * 100,
   );
 
-  progress.querySelector(".reading-progress-value").style.width =
-    `${progressPercentage}%`;
-  progress.setAttribute("aria-valuenow", String(progressPercentage));
-  progress.setAttribute(
+  articleReadingProgress.querySelector(
+    ".reading-progress-value",
+  ).style.transform = `scaleX(${progressPercentage / 100})`;
+  articleReadingProgress.setAttribute(
+    "aria-valuenow",
+    String(progressPercentage),
+  );
+  articleReadingProgress.setAttribute(
     "aria-valuetext",
     `${progressPercentage} procent gelezen`,
   );
@@ -135,6 +143,7 @@ function showProgress(job) {
   landing.classList.add("hidden");
   articlesView.classList.add("hidden");
   resultView.classList.add("hidden");
+  articleReadingProgress.classList.add("hidden");
   progressView.classList.remove("hidden");
   $("#progress-message").textContent = job.message;
   $("#progress-bar").style.width = `${job.progress}%`;
@@ -202,6 +211,7 @@ function renderResult(job) {
   landing.classList.add("hidden");
   articlesView.classList.add("hidden");
   resultView.classList.remove("hidden");
+  articleReadingProgress.classList.remove("hidden");
   const episode = job.episode,
     article = job.article,
     transcript = job.transcript;
@@ -802,6 +812,7 @@ async function showArticles(showLoading = true) {
   landing.classList.add("hidden");
   progressView.classList.add("hidden");
   resultView.classList.add("hidden");
+  articleReadingProgress.classList.add("hidden");
   articlesView.classList.remove("hidden");
   if (showLoading) {
     $("#articles-content").innerHTML = html`

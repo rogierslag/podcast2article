@@ -30,15 +30,15 @@ const slug = (value, index) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")}`;
+const articleReadingProgress = $("#article-reading-progress");
 let readingProgressFrame;
 
 function updateArticleReadingProgress() {
   readingProgressFrame = undefined;
   const article = $("#article");
-  const progress = $("#article-reading-progress");
   if (
     !article ||
-    !progress ||
+    articleReadingProgress.classList.contains("hidden") ||
     $("#shared-result").classList.contains("hidden")
   ) {
     return;
@@ -57,10 +57,14 @@ function updateArticleReadingProgress() {
     Math.min(1, Math.max(0, progressRatio)) * 100,
   );
 
-  progress.querySelector(".reading-progress-value").style.width =
-    `${progressPercentage}%`;
-  progress.setAttribute("aria-valuenow", String(progressPercentage));
-  progress.setAttribute(
+  articleReadingProgress.querySelector(
+    ".reading-progress-value",
+  ).style.transform = `scaleX(${progressPercentage / 100})`;
+  articleReadingProgress.setAttribute(
+    "aria-valuenow",
+    String(progressPercentage),
+  );
+  articleReadingProgress.setAttribute(
     "aria-valuetext",
     `${progressPercentage} procent gelezen`,
   );
@@ -198,6 +202,7 @@ function renderSharedArticle(shared, token) {
   $("#audio").src = `/api/shared/${encodeURIComponent(token)}/audio`;
   $("#shared-loading").classList.add("hidden");
   $("#shared-result").classList.remove("hidden");
+  articleReadingProgress.classList.remove("hidden");
   scheduleArticleReadingProgressUpdate();
 }
 
