@@ -288,21 +288,21 @@ Detailed flow:
 
 ## 5. API surface
 
-| Method | Path | Purpose | Authentication |
-|---|---|---|---|
-| `GET` | `/api/health` | Deployment health | No |
-| `GET` | `/login` | Login form | No |
-| `POST` | `/login` | Create session | No |
-| `POST` | `/logout` | Expire session | Yes |
-| `GET` | `/api/auth` | Report auth state | Yes |
-| `GET` | `/api/articles` | List completed articles | Yes |
-| `PATCH` | `/api/articles/:id` | Set read/unread state | Yes |
-| `GET` | `/api/jobs` | List active jobs | Yes |
-| `POST` | `/api/jobs` | Create a job | Yes |
-| `GET` | `/api/jobs/:id` | Read one job | Yes |
-| `GET` | `/api/jobs/:id/audio` | Stream normalized MP3 | Yes |
-| `GET` | `/api/jobs/:id/pdf` | Generate article PDF | Yes |
-| `POST` | `/api/jobs/:id/retry-article` | Reuse transcript and rewrite | Yes |
+| Method  | Path                          | Purpose                      | Authentication |
+| ------- | ----------------------------- | ---------------------------- | -------------- |
+| `GET`   | `/api/health`                 | Deployment health            | No             |
+| `GET`   | `/login`                      | Login form                   | No             |
+| `POST`  | `/login`                      | Create session               | No             |
+| `POST`  | `/logout`                     | Expire session               | Yes            |
+| `GET`   | `/api/auth`                   | Report auth state            | Yes            |
+| `GET`   | `/api/articles`               | List completed articles      | Yes            |
+| `PATCH` | `/api/articles/:id`           | Set read/unread state        | Yes            |
+| `GET`   | `/api/jobs`                   | List active jobs             | Yes            |
+| `POST`  | `/api/jobs`                   | Create a job                 | Yes            |
+| `GET`   | `/api/jobs/:id`               | Read one job                 | Yes            |
+| `GET`   | `/api/jobs/:id/audio`         | Stream normalized MP3        | Yes            |
+| `GET`   | `/api/jobs/:id/pdf`           | Generate article PDF         | Yes            |
+| `POST`  | `/api/jobs/:id/retry-article` | Reuse transcript and rewrite | Yes            |
 
 `POST /hooks/github` is not handled by the application. Caddy routes it to a
 separate, restricted webhook receiver. See `INFRASTRUCTURE.md`.
@@ -313,25 +313,25 @@ Production application configuration is stored in
 `/etc/podcast2article.env`. Values must never be committed or copied into this
 document.
 
-| Variable | Role |
-|---|---|
-| `OPENAI_API_KEY` | OpenAI API credential |
-| `APP_USERS` | JSON object with fixed username/password pairs |
-| `OPENAI_REGION` | `global`, `eu`, or `us` API endpoint |
-| `HOST` | Production bind address; currently loopback |
-| `PORT` | Production HTTP port; currently 3000 |
-| `NODE_ENV` | Production runtime mode |
-| `ARTICLE_MODEL` | Article-generation model |
-| `TRANSCRIPTION_MODEL` | Diarized transcription model |
-| `MAX_AUDIO_MB` | Spotify/RSS source limit |
-| `MAX_YOUTUBE_MB` | YouTube source limit |
-| `MAX_RECORDING_MB` | Google Drive recording limit |
-| `YOUTUBE_METADATA_TIMEOUT_MS` | Metadata timeout |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS` | Download timeout |
-| `AUDIO_CHUNK_SECONDS` | Transcript chunk duration |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout |
-| `OPENAI_ARTICLE_TIMEOUT_MS` | Article API timeout |
-| `LOG_STACKS` | Enable full stack traces in logs |
+| Variable                          | Role                                           |
+| --------------------------------- | ---------------------------------------------- |
+| `OPENAI_API_KEY`                  | OpenAI API credential                          |
+| `APP_USERS`                       | JSON object with fixed username/password pairs |
+| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint           |
+| `HOST`                            | Production bind address; currently loopback    |
+| `PORT`                            | Production HTTP port; currently 3000           |
+| `NODE_ENV`                        | Production runtime mode                        |
+| `ARTICLE_MODEL`                   | Article-generation model                       |
+| `TRANSCRIPTION_MODEL`             | Diarized transcription model                   |
+| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                       |
+| `MAX_YOUTUBE_MB`                  | YouTube source limit                           |
+| `MAX_RECORDING_MB`                | Google Drive recording limit                   |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                               |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                               |
+| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                      |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                          |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                            |
+| `LOG_STACKS`                      | Enable full stack traces in logs               |
 
 ## 7. Dependency model
 

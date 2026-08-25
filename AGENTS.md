@@ -58,12 +58,11 @@ Readability is the default. Some older frontend files are densely formatted; tre
 
 ### General formatting
 
-- Use two spaces for indentation in TypeScript, JavaScript, JSON, HTML, and CSS. Do not use tabs.
-- Put one statement or declaration on each line. Do not combine control flow, assignments, or DOM updates on one line.
-- Always use braces for `if`, `else`, loops, and `try`/`catch`, including one-line bodies.
-- Prefer double quotes in TypeScript and JavaScript, trailing commas in multiline literals and calls, and semicolons.
-- Break long expressions at meaningful boundaries. Multiline calls, conditionals, object literals, and template construction should make their structure obvious; there is no rigid line-length target.
-- Do not hand-minify source code. When changing a compressed legacy block, format the complete logical block you touched, but do not reformat unrelated sections solely for style.
+- Prettier is the formatting authority for all supported repository files. Run `npm run format` after editing and do not manually fight its output.
+- Run `npm run format:check` to verify formatting without changing files. The full `npm run check` command includes this verification.
+- Do not hand-minify, manually align, or use formatting tricks that Prettier will undo.
+- Keep statements and control flow structurally clear before formatting. Prettier standardizes layout; it does not make overly compressed logic readable.
+- Always use braces for `if`, `else`, loops, and `try`/`catch`, including one-line bodies. ESLint enforces this rule; run `npm run lint:fix` to repair violations.
 - Keep comments for intent, constraints, and non-obvious tradeoffs. Do not narrate code that is already clear from its names and structure.
 
 ### TypeScript and JavaScript
@@ -75,13 +74,12 @@ Readability is the default. Some older frontend files are densely formatted; tre
 - Use `interface` for object shapes with a stable domain identity and `type` for unions, aliases, and composed types. Reuse the domain types in `src/types.ts` rather than recreating similar inline shapes.
 - Keep imports grouped at the top of the file: Node built-ins, external packages, then local modules, with type-only imports marked using `import type`.
 - Use `async`/`await` for asynchronous flows. Handle expected failures at the boundary that can add useful context; do not silently swallow errors unless failure is explicitly best-effort.
-- In browser code, cache repeatedly used DOM elements, use semantic event-handler names, and keep HTML escaping at every untrusted interpolation point. Prefer DOM APIs when template strings become difficult to read or audit.
+- In browser code, cache repeatedly used DOM elements, use semantic event-handler names, and keep HTML escaping at every untrusted interpolation point. Use the local `html` tagged template for markup assigned through `innerHTML` so Prettier formats the embedded HTML; prefer DOM APIs when a template still becomes difficult to read or audit.
 
 ### HTML and CSS
 
 - Use semantic HTML before adding ARIA. Every interactive control needs an accessible name and must remain usable with a keyboard.
-- Format HTML so nesting is visible. Keep one element per line when an element has children or multiple attributes.
-- Write CSS as readable blocks: selectors and braces on their own structure, one declaration per line, and blank lines between logical component groups. Do not add new compressed one-line rule sets.
+- Let Prettier format HTML nesting, attributes, selectors, and declarations. Do not preserve compressed legacy formatting by hand.
 - Keep selectors component-scoped and avoid `!important` except for an established utility or a documented cascade requirement. Reuse the existing custom properties before introducing literal colors, fonts, or spacing values.
 - Place responsive adjustments next to the component they modify when practical. Verify that desktop, mobile, print, hover, focus, and reduced-motion behavior still agree.
 

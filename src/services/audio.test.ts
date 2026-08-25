@@ -4,8 +4,11 @@ import { audioChunkSeconds, audioSplitArguments } from "./audio.js";
 const original = process.env.AUDIO_CHUNK_SECONDS;
 
 afterEach(() => {
-  if (original === undefined) delete process.env.AUDIO_CHUNK_SECONDS;
-  else process.env.AUDIO_CHUNK_SECONDS = original;
+  if (original === undefined) {
+    delete process.env.AUDIO_CHUNK_SECONDS;
+  } else {
+    process.env.AUDIO_CHUNK_SECONDS = original;
+  }
 });
 
 describe("audio chunk duration", () => {
@@ -29,7 +32,11 @@ describe("audio chunk duration", () => {
 
 describe("audio chunking", () => {
   it("copies the normalized MP3 stream without encoding it again", () => {
-    const arguments_ = audioSplitArguments("playback.mp3", "chunk-%03d.mp3", 300);
+    const arguments_ = audioSplitArguments(
+      "playback.mp3",
+      "chunk-%03d.mp3",
+      300,
+    );
     expect(arguments_).toContain("copy");
     expect(arguments_).toContain("0:a:0");
     expect(arguments_).not.toContain("48k");

@@ -10,23 +10,23 @@ Application internals are documented in `../ARCHITECTURE.md`.
 
 ## 1. Production summary
 
-| Item | Value |
-|---|---|
-| Provider | TransIP or another VPS provider |
-| VPS class | 1 vCPU and 1 GiB RAM minimum |
-| Hostname | `production.example.nl` |
-| Operating system | Ubuntu LTS, x86-64 |
-| CPU | 1 shared vCPU |
-| RAM | 1 GiB minimum; 2 GiB preferred |
-| Swap | 2 GiB `/swapfile` |
-| Root disk | 20 GiB minimum; size for retained media |
-| Public IPv4 | `192.0.2.10` |
-| Public IPv6 | `2001:db8::10` |
-| Public URL | `https://production.example.nl` |
-| Application port | `127.0.0.1:3000` |
-| Webhook port | `127.0.0.1:9000` |
-| Reverse proxy | Caddy 2.6.2 |
-| Runtime | Node.js 22+, Python 3.9+ |
+| Item              | Value                                                          |
+| ----------------- | -------------------------------------------------------------- |
+| Provider          | TransIP or another VPS provider                                |
+| VPS class         | 1 vCPU and 1 GiB RAM minimum                                   |
+| Hostname          | `production.example.nl`                                        |
+| Operating system  | Ubuntu LTS, x86-64                                             |
+| CPU               | 1 shared vCPU                                                  |
+| RAM               | 1 GiB minimum; 2 GiB preferred                                 |
+| Swap              | 2 GiB `/swapfile`                                              |
+| Root disk         | 20 GiB minimum; size for retained media                        |
+| Public IPv4       | `192.0.2.10`                                                   |
+| Public IPv6       | `2001:db8::10`                                                 |
+| Public URL        | `https://production.example.nl`                                |
+| Application port  | `127.0.0.1:3000`                                               |
+| Webhook port      | `127.0.0.1:9000`                                               |
+| Reverse proxy     | Caddy 2.6.2                                                    |
+| Runtime           | Node.js 22+, Python 3.9+                                       |
 | Deployment source | `https://github.com/rogierslag/podcast2article`, branch `main` |
 
 At the time of verification, disk use was about 6.4 GiB of 96 GiB and the

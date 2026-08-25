@@ -1,7 +1,75 @@
-.shared-label{font:500 10px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.shared-loading{min-height:70vh;display:grid;place-items:center;font:500 12px var(--mono);text-transform:uppercase;color:var(--muted)}
-.shared-source{display:flex;align-items:center;gap:40px;padding:24px max(22px,calc((100vw - 1120px)/2));background:var(--paper);border-bottom:1px solid var(--line)}
-.shared-source>div{flex:0 1 380px}.shared-source p{margin:6px 0 0;color:var(--muted);font-size:12px;line-height:1.5}.shared-source audio{flex:1;margin:0}
-.shared-layout{grid-template-columns:minmax(0,760px) 230px}.shared-layout>.article{min-width:0}
-.shared-error{min-height:calc(100vh - 76px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px}.shared-error h1{max-width:760px;font:600 clamp(45px,7vw,78px)/1 var(--serif);letter-spacing:-.04em;margin:18px 0}.shared-error p{color:var(--muted)}
-@media(max-width:800px){.shared-label{font-size:8px}.shared-source{align-items:stretch;flex-direction:column;gap:15px}.shared-source>div{flex:auto}.shared-layout{grid-template-columns:1fr}}
+.shared-label {
+  font: 500 10px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.shared-loading {
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  font: 500 12px var(--mono);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.shared-source {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 24px max(22px, calc((100vw - 1120px) / 2));
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.shared-source > div {
+  flex: 0 1 380px;
+}
+.shared-source p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.shared-source audio {
+  flex: 1;
+  margin: 0;
+}
+.shared-layout {
+  grid-template-columns: minmax(0, 760px) 230px;
+}
+.shared-layout > .article {
+  min-width: 0;
+}
+.shared-error {
+  min-height: calc(100vh - 76px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+}
+.shared-error h1 {
+  max-width: 760px;
+  font: 600 clamp(45px, 7vw, 78px) / 1 var(--serif);
+  letter-spacing: -0.04em;
+  margin: 18px 0;
+}
+.shared-error p {
+  color: var(--muted);
+}
+@media (max-width: 800px) {
+  .shared-label {
+    font-size: 8px;
+  }
+  .shared-source {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .shared-source > div {
+    flex: auto;
+  }
+  .shared-layout {
+    grid-template-columns: 1fr;
+  }
+}

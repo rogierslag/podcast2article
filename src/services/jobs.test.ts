@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { normalizeStoredJob, playbackFileForJob, toArticleSummary, toProcessingJobSummary } from "./jobs.js";
+import {
+  normalizeStoredJob,
+  playbackFileForJob,
+  toArticleSummary,
+  toProcessingJobSummary,
+} from "./jobs.js";
 import type { Job } from "../types.js";
 
 describe("stored job compatibility", () => {
@@ -41,11 +46,15 @@ describe("user storage isolation", () => {
     const id = "11111111-1111-1111-1111-111111111111";
     expect(playbackFileForJob("rogier", id)).toContain("/users/rogier/media/");
     expect(playbackFileForJob("melvin", id)).toContain("/users/melvin/media/");
-    expect(playbackFileForJob("rogier", id)).not.toBe(playbackFileForJob("melvin", id));
+    expect(playbackFileForJob("rogier", id)).not.toBe(
+      playbackFileForJob("melvin", id),
+    );
   });
 
   it("rejects usernames that could escape the data directory", () => {
-    expect(() => playbackFileForJob("../pascal", "11111111-1111-1111-1111-111111111111")).toThrow(/gebruikersnaam/);
+    expect(() =>
+      playbackFileForJob("../pascal", "11111111-1111-1111-1111-111111111111"),
+    ).toThrow(/gebruikersnaam/);
   });
 });
 
@@ -80,7 +89,15 @@ describe("article summaries", () => {
         sections: [],
         takeaways: [],
       },
-      transcript: [{ id: "s1", start: 0, end: 1, speaker: "A", text: "Private transcript text" }],
+      transcript: [
+        {
+          id: "s1",
+          start: 0,
+          end: 1,
+          speaker: "A",
+          text: "Private transcript text",
+        },
+      ],
     } satisfies Job;
 
     expect(toArticleSummary(job)).toEqual({
@@ -133,7 +150,15 @@ describe("processing summaries", () => {
         title: "De opname",
         mediaUrl: "https://example.com/audio.mp3",
       },
-      transcript: [{ id: "s1", start: 0, end: 1, speaker: "A", text: "Private transcript text" }],
+      transcript: [
+        {
+          id: "s1",
+          start: 0,
+          end: 1,
+          speaker: "A",
+          text: "Private transcript text",
+        },
+      ],
     } satisfies Job;
 
     expect(toProcessingJobSummary(job)).toEqual({
@@ -160,7 +185,11 @@ describe("processing summaries", () => {
       updatedAt: "2026-01-01T00:05:00.000Z",
     } satisfies Omit<Job, "stage">;
 
-    expect(toProcessingJobSummary({ ...base, stage: "complete" })).toBeUndefined();
-    expect(toProcessingJobSummary({ ...base, stage: "failed" })).toBeUndefined();
+    expect(
+      toProcessingJobSummary({ ...base, stage: "complete" }),
+    ).toBeUndefined();
+    expect(
+      toProcessingJobSummary({ ...base, stage: "failed" }),
+    ).toBeUndefined();
   });
 });

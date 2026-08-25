@@ -25,7 +25,11 @@ function timestamp(seconds: number): string {
     : `${minutes}:${String(remainder).padStart(2, "0")}`;
 }
 
-function articleMomentUrl(baseUrl: string, jobId: string, seconds: number): string {
+function articleMomentUrl(
+  baseUrl: string,
+  jobId: string,
+  seconds: number,
+): string {
   const url = new URL("/", baseUrl);
   url.hash = `job=${jobId}&time=${Math.max(0, Math.floor(seconds))}`;
   return url.toString();
@@ -33,7 +37,9 @@ function articleMomentUrl(baseUrl: string, jobId: string, seconds: number): stri
 
 function ensureSpace(document: PDFKit.PDFDocument, points: number): void {
   const bottom = document.page.height - document.page.margins.bottom;
-  if (document.y + points > bottom) document.addPage();
+  if (document.y + points > bottom) {
+    document.addPage();
+  }
 }
 
 function sourceMoments(
@@ -46,9 +52,14 @@ function sourceMoments(
   const sources = value.sources
     .map((id) => transcriptById.get(id))
     .filter((source): source is TranscriptSegment => Boolean(source));
-  if (!sources.length) return;
+  if (!sources.length) {
+    return;
+  }
 
-  document.font("Courier-Bold").fontSize(7).fillColor(colors.green)
+  document
+    .font("Courier-Bold")
+    .fontSize(7)
+    .fillColor(colors.green)
     .text("BRON  ", { continued: true });
   sources.forEach((source, index) => {
     document.text(timestamp(source.start), {
@@ -57,7 +68,11 @@ function sourceMoments(
       underline: true,
     });
     if (index < sources.length - 1) {
-      document.text("  ·  ", { continued: true, underline: false, link: undefined });
+      document.text("  ·  ", {
+        continued: true,
+        underline: false,
+        link: undefined,
+      });
     }
   });
   document.moveDown(1.15);
@@ -70,7 +85,10 @@ function renderParagraph(
   jobId: string,
   baseUrl: string,
 ): void {
-  document.font("Helvetica").fontSize(10.5).fillColor(colors.ink)
+  document
+    .font("Helvetica")
+    .fontSize(10.5)
+    .fillColor(colors.ink)
     .text(cleanText(value.text), { lineGap: 3, align: "left" });
   document.moveDown(0.35);
   sourceMoments(document, value, transcriptById, jobId, baseUrl);
@@ -83,71 +101,126 @@ function addPageNumbers(document: PDFKit.PDFDocument): void {
     const label = `${index - range.start + 1} / ${range.count}`;
     const bottomMargin = document.page.margins.bottom;
     document.page.margins.bottom = 0;
-    document.font("Courier").fontSize(7).fillColor(colors.muted)
+    document
+      .font("Courier")
+      .fontSize(7)
+      .fillColor(colors.muted)
       .text(label, document.page.margins.left, document.page.height - 31, {
         align: "right",
         lineBreak: false,
-        width: document.page.width - document.page.margins.left - document.page.margins.right,
+        width:
+          document.page.width -
+          document.page.margins.left -
+          document.page.margins.right,
       });
     document.page.margins.bottom = bottomMargin;
   }
 }
 
-function renderArticle(document: PDFKit.PDFDocument, job: Job, baseUrl: string): void {
+function renderArticle(
+  document: PDFKit.PDFDocument,
+  job: Job,
+  baseUrl: string,
+): void {
   const article = job.article!;
   const episode = job.episode!;
   const transcript = job.transcript!;
-  const transcriptById = new Map(transcript.map((segment) => [segment.id, segment]));
-  const contentWidth = document.page.width - document.page.margins.left - document.page.margins.right;
+  const transcriptById = new Map(
+    transcript.map((segment) => [segment.id, segment]),
+  );
+  const contentWidth =
+    document.page.width -
+    document.page.margins.left -
+    document.page.margins.right;
 
   document.save();
   [14, 27, 35, 20].forEach((height, index) => {
-    document.roundedRect(document.page.margins.left + index * 7, document.y + 35 - height, 3.5, height, 2).fill(colors.orange);
+    document
+      .roundedRect(
+        document.page.margins.left + index * 7,
+        document.y + 35 - height,
+        3.5,
+        height,
+        2,
+      )
+      .fill(colors.orange);
   });
   document.restore();
   document.moveDown(3.2);
 
-  document.font("Courier-Bold").fontSize(8).fillColor(colors.orange)
+  document
+    .font("Courier-Bold")
+    .fontSize(8)
+    .fillColor(colors.orange)
     .text(cleanText(episode.sourceName.toUpperCase()), {
       characterSpacing: 0.7,
       link: episode.sourceUrl,
       underline: true,
     });
   document.moveDown(1.1);
-  document.font("Times-Bold").fontSize(31).fillColor(colors.ink)
+  document
+    .font("Times-Bold")
+    .fontSize(31)
+    .fillColor(colors.ink)
     .text(cleanText(article.title), { lineGap: 1 });
   document.moveDown(0.65);
-  document.font("Helvetica").fontSize(13).fillColor(colors.muted)
+  document
+    .font("Helvetica")
+    .fontSize(13)
+    .fillColor(colors.muted)
     .text(cleanText(article.dek), { lineGap: 4 });
   document.moveDown(1);
 
   const details = [
     `${article.readingTimeMinutes} minuten leestijd`,
     `${transcript.length} bronfragmenten`,
-    episode.publishedAt ? new Date(episode.publishedAt).toLocaleDateString("nl-NL", { dateStyle: "long" }) : undefined,
-  ].filter(Boolean).join("  ·  ");
-  document.font("Courier").fontSize(7.5).fillColor(colors.muted)
+    episode.publishedAt
+      ? new Date(episode.publishedAt).toLocaleDateString("nl-NL", {
+          dateStyle: "long",
+        })
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
+  document
+    .font("Courier")
+    .fontSize(7.5)
+    .fillColor(colors.muted)
     .text(details.toUpperCase(), { characterSpacing: 0.35 });
   document.moveDown(1.8);
-  document.strokeColor(colors.line).lineWidth(0.7)
+  document
+    .strokeColor(colors.line)
+    .lineWidth(0.7)
     .moveTo(document.page.margins.left, document.y)
-    .lineTo(document.page.margins.left + contentWidth, document.y).stroke();
+    .lineTo(document.page.margins.left + contentWidth, document.y)
+    .stroke();
   document.moveDown(1.6);
 
   const noteTop = document.y;
   document.save();
   document.rect(document.page.margins.left, noteTop, 2, 34).fill(colors.orange);
   document.restore();
-  document.font("Helvetica-Oblique").fontSize(9).fillColor(colors.muted)
-    .text(cleanText(article.styleNote), document.page.margins.left + 13, noteTop, {
-      lineGap: 2,
-      width: contentWidth - 13,
-    });
+  document
+    .font("Helvetica-Oblique")
+    .fontSize(9)
+    .fillColor(colors.muted)
+    .text(
+      cleanText(article.styleNote),
+      document.page.margins.left + 13,
+      noteTop,
+      {
+        lineGap: 2,
+        width: contentWidth - 13,
+      },
+    );
   document.moveDown(2);
 
   for (const section of article.sections) {
     ensureSpace(document, 80);
-    document.font("Times-Bold").fontSize(20).fillColor(colors.ink)
+    document
+      .font("Times-Bold")
+      .fontSize(20)
+      .fillColor(colors.ink)
       .text(cleanText(section.heading), { lineGap: 2 });
     document.moveDown(0.7);
     for (const value of section.paragraphs) {
@@ -156,29 +229,57 @@ function renderArticle(document: PDFKit.PDFDocument, job: Job, baseUrl: string):
   }
 
   document.font("Helvetica").fontSize(10.5);
-  const takeawaysHeight = 62 + article.takeaways.reduce((height, takeaway) => (
-    height + document.heightOfString(cleanText(takeaway.text), { width: contentWidth - 15, lineGap: 3 }) + 31
-  ), 0);
-  const usablePageHeight = document.page.height - document.page.margins.top - document.page.margins.bottom;
+  const takeawaysHeight =
+    62 +
+    article.takeaways.reduce(
+      (height, takeaway) =>
+        height +
+        document.heightOfString(cleanText(takeaway.text), {
+          width: contentWidth - 15,
+          lineGap: 3,
+        }) +
+        31,
+      0,
+    );
+  const usablePageHeight =
+    document.page.height -
+    document.page.margins.top -
+    document.page.margins.bottom;
   ensureSpace(document, Math.min(takeawaysHeight, usablePageHeight));
   document.moveDown(0.6);
   document.save();
-  document.rect(document.page.margins.left, document.y, contentWidth, 4).fill(colors.orange);
+  document
+    .rect(document.page.margins.left, document.y, contentWidth, 4)
+    .fill(colors.orange);
   document.restore();
   document.moveDown(1.2);
-  document.font("Times-Bold").fontSize(19).fillColor(colors.ink).text("Kernpunten");
+  document
+    .font("Times-Bold")
+    .fontSize(19)
+    .fillColor(colors.ink)
+    .text("Kernpunten");
   document.moveDown(0.7);
   for (const takeaway of article.takeaways) {
     ensureSpace(document, 60);
     const bulletY = document.y + 4;
     document.save();
-    document.circle(document.page.margins.left + 3, bulletY, 2).fill(colors.orange);
+    document
+      .circle(document.page.margins.left + 3, bulletY, 2)
+      .fill(colors.orange);
     document.restore();
-    document.font("Helvetica").fontSize(10.5).fillColor(colors.ink)
-      .text(cleanText(takeaway.text), document.page.margins.left + 15, document.y, {
-        lineGap: 3,
-        width: contentWidth - 15,
-      });
+    document
+      .font("Helvetica")
+      .fontSize(10.5)
+      .fillColor(colors.ink)
+      .text(
+        cleanText(takeaway.text),
+        document.page.margins.left + 15,
+        document.y,
+        {
+          lineGap: 3,
+          width: contentWidth - 15,
+        },
+      );
     document.moveDown(0.35);
     sourceMoments(document, takeaway, transcriptById, job.id, baseUrl);
   }
@@ -197,9 +298,14 @@ export function pdfDownloadName(title: string): string {
   return `${safeTitle || "artikel"}.pdf`;
 }
 
-export function generateArticlePdf(job: Job, baseUrl: string): Promise<Uint8Array> {
+export function generateArticlePdf(
+  job: Job,
+  baseUrl: string,
+): Promise<Uint8Array> {
   if (!job.article || !job.episode || !job.transcript) {
-    return Promise.reject(new Error("De opdracht bevat niet alle gegevens voor PDF-export."));
+    return Promise.reject(
+      new Error("De opdracht bevat niet alle gegevens voor PDF-export."),
+    );
   }
   const document = new PDFDocument({
     size: "A4",
