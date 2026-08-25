@@ -22,6 +22,7 @@ const articlesView = $("#articles-view");
 const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const articleReadingProgress = $("#article-reading-progress");
+const pageScroll = $(".page-scroll");
 const form = $("#job-form");
 let currentJob;
 let articlesState = [];
@@ -40,15 +41,19 @@ function updateArticleReadingProgress() {
     return;
   }
 
-  const articleTop = article.getBoundingClientRect().top + window.scrollY;
+  const pageScrollRect = pageScroll.getBoundingClientRect();
+  const articleTop =
+    article.getBoundingClientRect().top -
+    pageScrollRect.top +
+    pageScroll.scrollTop;
   const articleEnd = Math.max(
     articleTop,
-    articleTop + article.offsetHeight - window.innerHeight,
+    articleTop + article.offsetHeight - pageScroll.clientHeight,
   );
   const progressRatio =
     articleEnd === articleTop
-      ? Number(window.scrollY >= articleTop)
-      : (window.scrollY - articleTop) / (articleEnd - articleTop);
+      ? Number(pageScroll.scrollTop >= articleTop)
+      : (pageScroll.scrollTop - articleTop) / (articleEnd - articleTop);
   const progressPercentage = Math.round(
     Math.min(1, Math.max(0, progressRatio)) * 100,
   );
@@ -72,7 +77,7 @@ function scheduleArticleReadingProgressUpdate() {
   }
 }
 
-window.addEventListener("scroll", scheduleArticleReadingProgressUpdate, {
+pageScroll.addEventListener("scroll", scheduleArticleReadingProgressUpdate, {
   passive: true,
 });
 window.addEventListener("resize", scheduleArticleReadingProgressUpdate);
@@ -330,7 +335,7 @@ function renderResult(job) {
   updateReadButtons();
   renderTranscript(transcript, "");
   document.addEventListener("click", sourceClick);
-  window.scrollTo({ top: 0 });
+  pageScroll.scrollTo({ top: 0 });
   scheduleArticleReadingProgressUpdate();
 }
 

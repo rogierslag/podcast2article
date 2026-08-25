@@ -31,6 +31,7 @@ const slug = (value, index) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")}`;
 const articleReadingProgress = $("#article-reading-progress");
+const pageScroll = $(".page-scroll");
 let readingProgressFrame;
 
 function updateArticleReadingProgress() {
@@ -44,15 +45,19 @@ function updateArticleReadingProgress() {
     return;
   }
 
-  const articleTop = article.getBoundingClientRect().top + window.scrollY;
+  const pageScrollRect = pageScroll.getBoundingClientRect();
+  const articleTop =
+    article.getBoundingClientRect().top -
+    pageScrollRect.top +
+    pageScroll.scrollTop;
   const articleEnd = Math.max(
     articleTop,
-    articleTop + article.offsetHeight - window.innerHeight,
+    articleTop + article.offsetHeight - pageScroll.clientHeight,
   );
   const progressRatio =
     articleEnd === articleTop
-      ? Number(window.scrollY >= articleTop)
-      : (window.scrollY - articleTop) / (articleEnd - articleTop);
+      ? Number(pageScroll.scrollTop >= articleTop)
+      : (pageScroll.scrollTop - articleTop) / (articleEnd - articleTop);
   const progressPercentage = Math.round(
     Math.min(1, Math.max(0, progressRatio)) * 100,
   );
@@ -76,7 +81,7 @@ function scheduleArticleReadingProgressUpdate() {
   }
 }
 
-window.addEventListener("scroll", scheduleArticleReadingProgressUpdate, {
+pageScroll.addEventListener("scroll", scheduleArticleReadingProgressUpdate, {
   passive: true,
 });
 window.addEventListener("resize", scheduleArticleReadingProgressUpdate);
