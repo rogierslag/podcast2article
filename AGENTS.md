@@ -49,8 +49,48 @@ This file applies to the entire repository.
 - `src/types.ts`: persisted and API-related domain types.
 - `public/index.html` and `public/app.js`: authenticated/owner application UI.
 - `public/share.html`, `public/share.js`, and `public/share.css`: anonymous public article reader.
-- `public/styles.css`: shared and owner styling. This file is intentionally compact; make scoped additions and avoid unrelated reformatting.
+- `public/styles.css`: shared and owner styling. Keep additions scoped and avoid unrelated reformatting, but do not copy the compressed formatting of older rules.
 - `data/users/<username>/`: runtime data. Treat it as user-owned and do not commit it.
+
+## Code style
+
+Readability is the default. Some older frontend files are densely formatted; treat that as legacy code, not as the style to imitate. Source files must remain pleasant to review without a formatter or minifier.
+
+### General formatting
+
+- Use two spaces for indentation in TypeScript, JavaScript, JSON, HTML, and CSS. Do not use tabs.
+- Put one statement or declaration on each line. Do not combine control flow, assignments, or DOM updates on one line.
+- Always use braces for `if`, `else`, loops, and `try`/`catch`, including one-line bodies.
+- Prefer double quotes in TypeScript and JavaScript, trailing commas in multiline literals and calls, and semicolons.
+- Break long expressions at meaningful boundaries. Multiline calls, conditionals, object literals, and template construction should make their structure obvious; there is no rigid line-length target.
+- Do not hand-minify source code. When changing a compressed legacy block, format the complete logical block you touched, but do not reformat unrelated sections solely for style.
+- Keep comments for intent, constraints, and non-obvious tradeoffs. Do not narrate code that is already clear from its names and structure.
+
+### TypeScript and JavaScript
+
+- Use descriptive domain names. Avoid single-letter names except for conventional, very small scopes; prefer names such as `response`, `article`, and `segment` over abbreviations.
+- Keep functions focused on one responsibility. Extract named helpers when a route handler, rendering function, or callback starts mixing validation, transformation, persistence, and presentation.
+- Prefer early returns and guard clauses over deeply nested branches. Expand conditionals when compression would hide behavior.
+- Preserve strict typing. Avoid `any`, unchecked casts, and non-null assertions; validate external input and narrow `unknown` values before use. If a boundary requires a cast, keep it local and explain why it is safe when that is not obvious.
+- Use `interface` for object shapes with a stable domain identity and `type` for unions, aliases, and composed types. Reuse the domain types in `src/types.ts` rather than recreating similar inline shapes.
+- Keep imports grouped at the top of the file: Node built-ins, external packages, then local modules, with type-only imports marked using `import type`.
+- Use `async`/`await` for asynchronous flows. Handle expected failures at the boundary that can add useful context; do not silently swallow errors unless failure is explicitly best-effort.
+- In browser code, cache repeatedly used DOM elements, use semantic event-handler names, and keep HTML escaping at every untrusted interpolation point. Prefer DOM APIs when template strings become difficult to read or audit.
+
+### HTML and CSS
+
+- Use semantic HTML before adding ARIA. Every interactive control needs an accessible name and must remain usable with a keyboard.
+- Format HTML so nesting is visible. Keep one element per line when an element has children or multiple attributes.
+- Write CSS as readable blocks: selectors and braces on their own structure, one declaration per line, and blank lines between logical component groups. Do not add new compressed one-line rule sets.
+- Keep selectors component-scoped and avoid `!important` except for an established utility or a documented cascade requirement. Reuse the existing custom properties before introducing literal colors, fonts, or spacing values.
+- Place responsive adjustments next to the component they modify when practical. Verify that desktop, mobile, print, hover, focus, and reduced-motion behavior still agree.
+
+### Tests
+
+- Add or update tests for behavior changes and bug fixes. Tests should describe observable behavior rather than implementation details.
+- Follow arrange, act, assert within each test, separated by blank lines when those phases are not already obvious.
+- Keep fixtures minimal but realistic. Prefer typed fixtures with `satisfies` and shared helpers over broad casts or large copied payloads.
+- Cover failure paths and boundary conditions for validation, authentication, storage isolation, public payload shaping, and external-service parsing.
 
 ## Implementation guidelines
 
