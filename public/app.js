@@ -600,20 +600,37 @@ function articleCard(article) {
   `;
 }
 
-function articleShelf(title, articles, emptyText) {
+function articleShelf(title, articles, emptyText, collapsible = false) {
+  const content = articles.length
+    ? html`
+        <div class="articles-grid">${articles.map(articleCard).join("")}</div>
+      `
+    : html`<p class="article-shelf-empty">${emptyText}</p>`;
+
+  if (collapsible) {
+    return html`
+      <details class="article-shelf collapsible-shelf">
+        <summary class="article-shelf-heading">
+          <h2>
+            ${title}
+            <span class="article-shelf-count">${articles.length}</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </h2>
+        </summary>
+        ${content}
+      </details>
+    `;
+  }
+
   return html`
     <section class="article-shelf">
       <div class="article-shelf-heading">
         <h2>${title}</h2>
-        <span>${articles.length}</span>
+        <span class="article-shelf-count">${articles.length}</span>
       </div>
-      ${articles.length
-        ? html`
-            <div class="articles-grid">
-              ${articles.map(articleCard).join("")}
-            </div>
-          `
-        : html`<p class="article-shelf-empty">${emptyText}</p>`}
+      ${content}
     </section>
   `;
 }
@@ -660,7 +677,7 @@ function processingShelf() {
     <section class="article-shelf processing-shelf">
       <div class="article-shelf-heading">
         <h2>In verwerking</h2>
-        <span>${processingState.length}</span>
+        <span class="article-shelf-count">${processingState.length}</span>
       </div>
       ${processingState.length
         ? html`
@@ -691,7 +708,7 @@ function renderArticlesOverview() {
   $("#articles-content").innerHTML =
     processingShelf() +
     articleShelf("Nog te lezen", unread, "Je bent helemaal bij.") +
-    articleShelf("Gelezen", read, "Nog geen artikelen afgevinkt.");
+    articleShelf("Gelezen", read, "Nog geen artikelen afgevinkt.", true);
   $("#articles-empty").classList.add("hidden");
 }
 
