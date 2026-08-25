@@ -20,6 +20,18 @@
     <script src="/share.js" defer></script>
   </head>
   <body class="shared-page">
+    <div
+      id="article-reading-progress"
+      class="reading-progress hidden"
+      role="progressbar"
+      aria-label="Leesvoortgang van het artikel"
+      aria-valuemin="0"
+      aria-valuemax="100"
+      aria-valuenow="0"
+      aria-valuetext="0 procent gelezen"
+    >
+      <div class="reading-progress-value"></div>
+    </div>
     <header class="nav">
       <span class="brand" aria-label="Podcast2Article">
         <span class="brand-mark" aria-hidden="true"
@@ -34,18 +46,6 @@
         Artikel laden…
       </section>
       <section id="shared-result" class="hidden">
-        <div
-          id="article-reading-progress"
-          class="reading-progress"
-          role="progressbar"
-          aria-label="Leesvoortgang van het artikel"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow="0"
-          aria-valuetext="0 procent gelezen"
-        >
-          <div class="reading-progress-value"></div>
-        </div>
         <div id="episode-hero" class="episode-hero"></div>
         <div class="shared-source">
           <div>

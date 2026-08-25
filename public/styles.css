@@ -322,18 +322,21 @@ body {
 .reading-progress {
   position: fixed;
   z-index: 50;
-  top: 0;
-  right: 0;
-  left: 0;
+  inset: 0 0 auto;
   height: 4px;
+  overflow: hidden;
   background: rgb(216 209 196 / 72%);
   pointer-events: none;
+  transform: translate3d(0, 0, 0);
 }
 .reading-progress-value {
-  width: 0;
+  width: 100%;
   height: 100%;
   background: var(--orange);
-  transition: width 80ms linear;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 80ms linear;
+  will-change: transform;
 }
 .article-actions {
   display: flex;
