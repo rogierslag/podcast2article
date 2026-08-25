@@ -30,6 +30,52 @@ const slug = (value, index) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")}`;
+let readingProgressFrame;
+
+function updateArticleReadingProgress() {
+  readingProgressFrame = undefined;
+  const article = $("#article");
+  const progress = $("#article-reading-progress");
+  if (
+    !article ||
+    !progress ||
+    $("#shared-result").classList.contains("hidden")
+  ) {
+    return;
+  }
+
+  const articleTop = article.getBoundingClientRect().top + window.scrollY;
+  const articleEnd = Math.max(
+    articleTop,
+    articleTop + article.offsetHeight - window.innerHeight,
+  );
+  const progressRatio =
+    articleEnd === articleTop
+      ? Number(window.scrollY >= articleTop)
+      : (window.scrollY - articleTop) / (articleEnd - articleTop);
+  const progressPercentage = Math.round(
+    Math.min(1, Math.max(0, progressRatio)) * 100,
+  );
+
+  progress.querySelector(".reading-progress-value").style.width =
+    `${progressPercentage}%`;
+  progress.setAttribute("aria-valuenow", String(progressPercentage));
+  progress.setAttribute(
+    "aria-valuetext",
+    `${progressPercentage} procent gelezen`,
+  );
+}
+
+function scheduleArticleReadingProgressUpdate() {
+  if (readingProgressFrame === undefined) {
+    readingProgressFrame = requestAnimationFrame(updateArticleReadingProgress);
+  }
+}
+
+window.addEventListener("scroll", scheduleArticleReadingProgressUpdate, {
+  passive: true,
+});
+window.addEventListener("resize", scheduleArticleReadingProgressUpdate);
 
 function sourceButtons(ids, sources) {
   return html`
@@ -152,6 +198,7 @@ function renderSharedArticle(shared, token) {
   $("#audio").src = `/api/shared/${encodeURIComponent(token)}/audio`;
   $("#shared-loading").classList.add("hidden");
   $("#shared-result").classList.remove("hidden");
+  scheduleArticleReadingProgressUpdate();
 }
 
 $("#shared-main").addEventListener("click", (event) => {
