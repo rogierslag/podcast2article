@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareArticleSummaries,
   normalizeStoredJob,
   playbackFileForJob,
   toArticleSummary,
   toProcessingJobSummary,
 } from "./jobs.js";
-import type { Job } from "../types.js";
+import type { ArticleSummary, Job } from "../types.js";
 
 describe("stored job compatibility", () => {
   it("upgrades Spotify jobs created before generic source support", () => {
@@ -128,6 +129,36 @@ describe("article summaries", () => {
     } satisfies Job;
 
     expect(toArticleSummary(job)).toBeUndefined();
+  });
+
+  it("sorts read articles by their full read timestamp in descending order", () => {
+    const base = {
+      title: "Een leesbaar artikel",
+      dek: "De korte introductie.",
+      readingTimeMinutes: 7,
+      sourceName: "Voorbeeldkanaal",
+      sourceType: "youtube",
+      completedAt: "2026-01-02T00:00:00.000Z",
+    } satisfies Omit<ArticleSummary, "id" | "readAt">;
+    const articles = [
+      {
+        ...base,
+        id: "11111111-1111-1111-1111-111111111111",
+        readAt: "2026-01-03T09:15:00.000Z",
+      },
+      {
+        ...base,
+        id: "22222222-2222-2222-2222-222222222222",
+        readAt: "2026-01-03T18:45:00.000Z",
+      },
+    ] satisfies ArticleSummary[];
+
+    articles.sort(compareArticleSummaries);
+
+    expect(articles.map((article) => article.id)).toEqual([
+      "22222222-2222-2222-2222-222222222222",
+      "11111111-1111-1111-1111-111111111111",
+    ]);
   });
 });
 
