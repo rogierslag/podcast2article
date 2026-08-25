@@ -434,7 +434,7 @@ async function shareArticle() {
       try {
         await navigator.share({
           title: currentJob.article.title,
-          text: currentJob.article.title,
+          text: `Lees “${currentJob.article.title}” op Podcast2Article: ${body.url}`,
           url: body.url,
         });
         setArticleActionStatus("Artikel gedeeld.", true);
