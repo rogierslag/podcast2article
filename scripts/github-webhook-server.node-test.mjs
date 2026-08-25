@@ -4,10 +4,12 @@ import test from "node:test";
 import { evaluateGithubWebhook } from "./github-webhook-server.mjs";
 
 const secret = "a-secure-webhook-secret-that-is-long-enough";
-const body = Buffer.from(JSON.stringify({
-  ref: "refs/heads/main",
-  repository: { full_name: "rogierslag/podcast2article" },
-}));
+const body = Buffer.from(
+  JSON.stringify({
+    ref: "refs/heads/main",
+    repository: { full_name: "rogierslag/podcast2article" },
+  }),
+);
 
 function headers(event = "push", payload = body) {
   return {
@@ -27,7 +29,14 @@ test("accepts a signed push to main", () => {
 });
 
 test("rejects an invalid signature", () => {
-  assert.equal(evaluateGithubWebhook({ ...headers(), "x-hub-signature-256": "sha256=invalid" }, body, secret).status, 401);
+  assert.equal(
+    evaluateGithubWebhook(
+      { ...headers(), "x-hub-signature-256": "sha256=invalid" },
+      body,
+      secret,
+    ).status,
+    401,
+  );
 });
 
 test("authenticates but ignores ping events", () => {
@@ -39,11 +48,24 @@ test("authenticates but ignores ping events", () => {
 });
 
 test("ignores another repository or branch", () => {
-  const otherBody = Buffer.from(JSON.stringify({ ref: "refs/heads/feature", repository: { full_name: "rogierslag/podcast2article" } }));
-  assert.equal(evaluateGithubWebhook(headers("push", otherBody), otherBody, secret).trigger, false);
+  const otherBody = Buffer.from(
+    JSON.stringify({
+      ref: "refs/heads/feature",
+      repository: { full_name: "rogierslag/podcast2article" },
+    }),
+  );
+  assert.equal(
+    evaluateGithubWebhook(headers("push", otherBody), otherBody, secret)
+      .trigger,
+    false,
+  );
 });
 
 test("rejects malformed signed JSON", () => {
   const invalidBody = Buffer.from("{");
-  assert.equal(evaluateGithubWebhook(headers("push", invalidBody), invalidBody, secret).status, 400);
+  assert.equal(
+    evaluateGithubWebhook(headers("push", invalidBody), invalidBody, secret)
+      .status,
+    400,
+  );
 });

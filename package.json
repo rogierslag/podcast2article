@@ -9,7 +9,11 @@
     "build": "tsc -p tsconfig.json",
     "start": "node --env-file=.env dist/server.js",
     "test": "vitest run && node --test scripts/github-webhook-server.node-test.mjs",
-    "check": "npm run build && npm test"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint src public scripts eslint.config.js",
+    "lint:fix": "npm run lint -- --fix",
+    "check": "npm run format:check && npm run lint && npm run build && npm test"
   },
   "engines": {
     "node": ">=22"
@@ -27,8 +31,11 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.14",
     "@types/pdfkit": "^0.17.6",
+    "eslint": "^10.9.1",
+    "prettier": "3.6.2",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.68.0",
     "vitest": "^3.2.4"
   }
 }

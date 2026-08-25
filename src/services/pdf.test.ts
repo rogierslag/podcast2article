@@ -4,11 +4,15 @@ import type { Job } from "../types.js";
 
 describe("PDF download names", () => {
   it("keeps a readable Unicode article title", () => {
-    expect(pdfDownloadName("Waarom AI wél werkt")).toBe("Waarom AI wél werkt.pdf");
+    expect(pdfDownloadName("Waarom AI wél werkt")).toBe(
+      "Waarom AI wél werkt.pdf",
+    );
   });
 
   it("removes path separators and reserved filename characters", () => {
-    expect(pdfDownloadName('Audio/video: een vraag? <deel 1>')).toBe("Audio video een vraag deel 1.pdf");
+    expect(pdfDownloadName("Audio/video: een vraag? <deel 1>")).toBe(
+      "Audio video een vraag deel 1.pdf",
+    );
   });
 
   it("falls back when the title contains no usable characters", () => {
@@ -36,20 +40,42 @@ describe("PDF generation", () => {
         title: "Een aflevering",
         mediaUrl: "https://example.com/audio.mp3",
       },
-      transcript: [{ id: "t-00001", start: 83, end: 90, speaker: "Rogier", text: "Een bronfragment." }],
+      transcript: [
+        {
+          id: "t-00001",
+          start: 83,
+          end: 90,
+          speaker: "Rogier",
+          text: "Een bronfragment.",
+        },
+      ],
       article: {
         title: "Waarom AI wél werkt",
         dek: "Een compact artikel met een controleerbare bron.",
         readingTimeMinutes: 4,
         styleNote: "Direct, praktisch en zorgvuldig.",
-        sections: [{
-          heading: "De kern",
-          paragraphs: [{ text: "Dit is de inhoud van de eerste alinea.", sources: ["t-00001"] }],
-        }],
-        takeaways: [{ text: "Controleer altijd de oorspronkelijke bron.", sources: ["t-00001"] }],
+        sections: [
+          {
+            heading: "De kern",
+            paragraphs: [
+              {
+                text: "Dit is de inhoud van de eerste alinea.",
+                sources: ["t-00001"],
+              },
+            ],
+          },
+        ],
+        takeaways: [
+          {
+            text: "Controleer altijd de oorspronkelijke bron.",
+            sources: ["t-00001"],
+          },
+        ],
       },
     };
-    const pdf = Buffer.from(await generateArticlePdf(job, "https://podcast.example"));
+    const pdf = Buffer.from(
+      await generateArticlePdf(job, "https://podcast.example"),
+    );
     expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
     expect(pdf.byteLength).toBeGreaterThan(1_000);
     expect(pdf.includes(Buffer.from("https://podcast.example/"))).toBe(true);

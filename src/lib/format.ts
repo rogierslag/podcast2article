@@ -21,7 +21,9 @@ export function normalizeText(value: string): string {
 export function similarity(a: string, b: string): number {
   const left = new Set(normalizeText(a).split(" ").filter(Boolean));
   const right = new Set(normalizeText(b).split(" ").filter(Boolean));
-  if (!left.size || !right.size) return 0;
+  if (!left.size || !right.size) {
+    return 0;
+  }
   const intersection = [...left].filter((word) => right.has(word)).length;
   const union = new Set([...left, ...right]).size;
   return intersection / union;

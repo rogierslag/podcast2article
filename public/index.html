@@ -1,162 +1,296 @@
 <!doctype html>
 <html lang="nl">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Maak van een publieke podcast, YouTube-video of Google Meet-opname een brongebonden blogartikel.">
-  <meta name="theme-color" content="#e85e2a">
-  <title>Podcast2Article — van stem naar verhaal</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/app.js" defer></script>
-</head>
-<body>
-  <header class="nav">
-    <a class="brand" href="/" aria-label="Podcast2Article home">
-      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span>Podcast<span>2</span>Article</span>
-    </a>
-    <nav class="main-nav" aria-label="Hoofdnavigatie">
-      <a href="/">Nieuw artikel</a>
-      <a href="/articles">Artikelen</a>
-      <form id="logout-form" class="hidden" method="post" action="/logout"><button type="submit">Uitloggen</button></form>
-    </nav>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Maak van een publieke podcast, YouTube-video of Google Meet-opname een brongebonden blogartikel."
+    />
+    <meta name="theme-color" content="#e85e2a" />
+    <title>Podcast2Article — van stem naar verhaal</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="/" aria-label="Podcast2Article home">
+        <span class="brand-mark" aria-hidden="true"
+          ><i></i><i></i><i></i><i></i
+        ></span>
+        <span>Podcast<span>2</span>Article</span>
+      </a>
+      <nav class="main-nav" aria-label="Hoofdnavigatie">
+        <a href="/">Nieuw artikel</a>
+        <a href="/articles">Artikelen</a>
+        <form id="logout-form" class="hidden" method="post" action="/logout">
+          <button type="submit">Uitloggen</button>
+        </form>
+      </nav>
+    </header>
 
-  <main>
-    <section id="landing" class="landing">
-      <div class="eyebrow"><span></span> Van opname naar publicatie</div>
-      <h1>Laat het gesprek<br><em>doorleven.</em></h1>
-      <p class="intro">Plak een publieke Spotify-aflevering, YouTube-video of Google Meet-opname uit Drive. Wij halen de audio op, maken een transcript en schrijven een helder artikel dat trouw blijft aan de oorspronkelijke stem.</p>
+    <main>
+      <section id="landing" class="landing">
+        <div class="eyebrow"><span></span> Van opname naar publicatie</div>
+        <h1>Laat het gesprek<br /><em>doorleven.</em></h1>
+        <p class="intro">
+          Plak een publieke Spotify-aflevering, YouTube-video of Google
+          Meet-opname uit Drive. Wij halen de audio op, maken een transcript en
+          schrijven een helder artikel dat trouw blijft aan de oorspronkelijke
+          stem.
+        </p>
 
-      <form id="job-form" class="composer">
-        <label for="source-url">Publieke opname</label>
-        <div class="url-row">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.4-3.4a3 3 0 1 1 4.2 4.2l-2.4 2.4a3 3 0 0 1-4.2 0 1 1 0 1 1 1.4-1.4 1 1 0 0 0 1.4 0l2.4-2.4a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0Zm2.8-2.8a1 1 0 0 1 0 1.4L10 15.4a3 3 0 1 1-4.2-4.2l2.4-2.4a3 3 0 0 1 4.2 0 1 1 0 0 1-1.4 1.4 1 1 0 0 0-1.4 0l-2.4 2.4A1 1 0 0 0 8.6 14l3.4-3.4a1 1 0 0 1 1.4 0Z"/></svg>
-          <input id="source-url" name="sourceUrl" type="url" required autocomplete="url" placeholder="Spotify-, YouTube- of Google Drive-link">
-          <button type="submit">Maak artikel <span aria-hidden="true">→</span></button>
-        </div>
-        <div class="options">
-          <label>Taal
-            <select name="language">
-              <option value="auto" selected>Taal van de bron (automatisch)</option><option value="nl">Nederlands</option><option value="en">Engels</option><option value="de">Duits</option><option value="fr">Frans</option><option value="es">Spaans</option>
-            </select>
-          </label>
-          <label>Lengte
-            <select name="articleLength">
-              <option value="compact">Compact</option><option value="standard" selected>Standaard</option><option value="long">Uitgebreid</option>
-            </select>
-          </label>
-          <span class="privacy"><span></span> Alleen publieke bronnen</span>
-        </div>
-        <p id="form-error" class="error" role="alert"></p>
-      </form>
-
-      <div class="promise-grid">
-        <article><strong>01</strong><h2>Brongetrouw</h2><p>Geen externe feiten. Elke alinea verwijst naar het transcript.</p></article>
-        <article><strong>02</strong><h2>Eigen stem</h2><p>De cadans, humor en argumentatie van de opname blijven herkenbaar.</p></article>
-        <article><strong>03</strong><h2>Controleerbaar</h2><p>Klik vanuit het artikel direct naar het juiste audio- en transcriptmoment.</p></article>
-      </div>
-    </section>
-
-    <section id="articles-view" class="articles-view hidden">
-      <div class="articles-heading">
-        <div>
-          <p class="eyebrow"><span></span> Klaar om te lezen</p>
-          <h1>Alle artikelen.</h1>
-        </div>
-        <p id="articles-count" class="articles-count" aria-live="polite"></p>
-      </div>
-      <div id="articles-content" class="articles-content" aria-live="polite"></div>
-      <div id="articles-empty" class="articles-empty hidden">
-        <span class="kicker">Nog even geduld</span>
-        <h2>Er staan nog geen artikelen klaar.</h2>
-        <p>Maak je eerste artikel van een publieke opname; zodra het klaar is verschijnt het hier.</p>
-        <a href="/">Maak een artikel <span aria-hidden="true">→</span></a>
-      </div>
-      <p id="articles-error" class="error" role="alert"></p>
-    </section>
-
-    <section id="progress-view" class="progress-view hidden" aria-live="polite">
-      <div class="record"><div class="record-center"></div></div>
-      <p class="eyebrow"><span></span> Bezig met verwerken</p>
-      <h1 id="progress-title">We luisteren mee…</h1>
-      <p id="progress-message">Openbare opnamebron controleren</p>
-      <div class="progress-track"><div id="progress-bar"></div></div>
-      <span id="progress-percent" class="mono">0%</span>
-    </section>
-
-    <section id="result-view" class="result-view hidden">
-      <div id="episode-hero" class="episode-hero"></div>
-      <div class="content-layout">
-        <div class="article-column">
-          <div class="article-actions">
-            <span id="article-action-status" class="article-action-status" role="status"></span>
-            <button id="toggle-read" data-article-read-toggle type="button" aria-label="Markeer artikel als gelezen">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="m5 12 4 4L19 6"/>
-              </svg>
-              <span>Markeer als gelezen</span>
-            </button>
-            <button id="export-pdf" data-pdf-export type="button" aria-label="Download artikel als PDF">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/>
-              </svg>
-              <span class="compact-label">Download PDF</span>
-            </button>
-            <button id="share-article" data-share-article type="button" aria-label="Deel dit artikel">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M15 8l-6 3.5m6 4.5-6-3.5M18 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM6 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/>
-              </svg>
-              <span class="compact-label">Kopieer permalink</span>
+        <form id="job-form" class="composer">
+          <label for="source-url">Publieke opname</label>
+          <div class="url-row">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path
+                d="M10.6 13.4a1 1 0 0 1 0-1.4l3.4-3.4a3 3 0 1 1 4.2 4.2l-2.4 2.4a3 3 0 0 1-4.2 0 1 1 0 1 1 1.4-1.4 1 1 0 0 0 1.4 0l2.4-2.4a1 1 0 0 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0Zm2.8-2.8a1 1 0 0 1 0 1.4L10 15.4a3 3 0 1 1-4.2-4.2l2.4-2.4a3 3 0 0 1 4.2 0 1 1 0 0 1-1.4 1.4 1 1 0 0 0-1.4 0l-2.4 2.4A1 1 0 0 0 8.6 14l3.4-3.4a1 1 0 0 1 1.4 0Z"
+              />
+            </svg>
+            <input
+              id="source-url"
+              name="sourceUrl"
+              type="url"
+              required
+              autocomplete="url"
+              placeholder="Spotify-, YouTube- of Google Drive-link"
+            />
+            <button type="submit">
+              Maak artikel <span aria-hidden="true">→</span>
             </button>
           </div>
-          <article id="article" class="article"></article>
-          <div class="article-read-footer">
-            <div>
-              <span class="kicker">Klaar met lezen?</span>
-              <p>Bewaar je voortgang en verplaats dit artikel naar je gelezen artikelen.</p>
-            </div>
-            <div class="article-read-footer-actions">
-              <button id="toggle-read-bottom" data-article-read-toggle type="button" aria-label="Markeer artikel als gelezen">
+          <div class="options">
+            <label
+              >Taal
+              <select name="language">
+                <option value="auto" selected>
+                  Taal van de bron (automatisch)
+                </option>
+                <option value="nl">Nederlands</option>
+                <option value="en">Engels</option>
+                <option value="de">Duits</option>
+                <option value="fr">Frans</option>
+                <option value="es">Spaans</option>
+              </select>
+            </label>
+            <label
+              >Lengte
+              <select name="articleLength">
+                <option value="compact">Compact</option>
+                <option value="standard" selected>Standaard</option>
+                <option value="long">Uitgebreid</option>
+              </select>
+            </label>
+            <span class="privacy"><span></span> Alleen publieke bronnen</span>
+          </div>
+          <p id="form-error" class="error" role="alert"></p>
+        </form>
+
+        <div class="promise-grid">
+          <article>
+            <strong>01</strong>
+            <h2>Brongetrouw</h2>
+            <p>
+              Geen externe feiten. Elke alinea verwijst naar het transcript.
+            </p>
+          </article>
+          <article>
+            <strong>02</strong>
+            <h2>Eigen stem</h2>
+            <p>
+              De cadans, humor en argumentatie van de opname blijven herkenbaar.
+            </p>
+          </article>
+          <article>
+            <strong>03</strong>
+            <h2>Controleerbaar</h2>
+            <p>
+              Klik vanuit het artikel direct naar het juiste audio- en
+              transcriptmoment.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="articles-view" class="articles-view hidden">
+        <div class="articles-heading">
+          <div>
+            <p class="eyebrow"><span></span> Klaar om te lezen</p>
+            <h1>Alle artikelen.</h1>
+          </div>
+          <p id="articles-count" class="articles-count" aria-live="polite"></p>
+        </div>
+        <div
+          id="articles-content"
+          class="articles-content"
+          aria-live="polite"
+        ></div>
+        <div id="articles-empty" class="articles-empty hidden">
+          <span class="kicker">Nog even geduld</span>
+          <h2>Er staan nog geen artikelen klaar.</h2>
+          <p>
+            Maak je eerste artikel van een publieke opname; zodra het klaar is
+            verschijnt het hier.
+          </p>
+          <a href="/">Maak een artikel <span aria-hidden="true">→</span></a>
+        </div>
+        <p id="articles-error" class="error" role="alert"></p>
+      </section>
+
+      <section
+        id="progress-view"
+        class="progress-view hidden"
+        aria-live="polite"
+      >
+        <div class="record"><div class="record-center"></div></div>
+        <p class="eyebrow"><span></span> Bezig met verwerken</p>
+        <h1 id="progress-title">We luisteren mee…</h1>
+        <p id="progress-message">Openbare opnamebron controleren</p>
+        <div class="progress-track"><div id="progress-bar"></div></div>
+        <span id="progress-percent" class="mono">0%</span>
+      </section>
+
+      <section id="result-view" class="result-view hidden">
+        <div id="episode-hero" class="episode-hero"></div>
+        <div class="content-layout">
+          <div class="article-column">
+            <div class="article-actions">
+              <span
+                id="article-action-status"
+                class="article-action-status"
+                role="status"
+              ></span>
+              <button
+                id="toggle-read"
+                data-article-read-toggle
+                type="button"
+                aria-label="Markeer artikel als gelezen"
+              >
                 <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="m5 12 4 4L19 6"/>
+                  <path d="m5 12 4 4L19 6" />
                 </svg>
                 <span>Markeer als gelezen</span>
               </button>
-              <button id="export-pdf-bottom" data-pdf-export type="button" aria-label="Download artikel als PDF">
+              <button
+                id="export-pdf"
+                data-pdf-export
+                type="button"
+                aria-label="Download artikel als PDF"
+              >
                 <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/>
+                  <path
+                    d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"
+                  />
                 </svg>
                 <span class="compact-label">Download PDF</span>
               </button>
-              <button id="share-article-bottom" data-share-article type="button" aria-label="Deel dit artikel">
+              <button
+                id="share-article"
+                data-share-article
+                type="button"
+                aria-label="Deel dit artikel"
+              >
                 <svg aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="M15 8l-6 3.5m6 4.5-6-3.5M18 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM6 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/>
+                  <path
+                    d="M15 8l-6 3.5m6 4.5-6-3.5M18 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM6 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
+                  />
                 </svg>
                 <span class="compact-label">Kopieer permalink</span>
               </button>
             </div>
-            <span id="article-read-footer-status" class="article-read-footer-status"></span>
+            <article id="article" class="article"></article>
+            <div class="article-read-footer">
+              <div>
+                <span class="kicker">Klaar met lezen?</span>
+                <p>
+                  Bewaar je voortgang en verplaats dit artikel naar je gelezen
+                  artikelen.
+                </p>
+              </div>
+              <div class="article-read-footer-actions">
+                <button
+                  id="toggle-read-bottom"
+                  data-article-read-toggle
+                  type="button"
+                  aria-label="Markeer artikel als gelezen"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path d="m5 12 4 4L19 6" />
+                  </svg>
+                  <span>Markeer als gelezen</span>
+                </button>
+                <button
+                  id="export-pdf-bottom"
+                  data-pdf-export
+                  type="button"
+                  aria-label="Download artikel als PDF"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path
+                      d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"
+                    />
+                  </svg>
+                  <span class="compact-label">Download PDF</span>
+                </button>
+                <button
+                  id="share-article-bottom"
+                  data-share-article
+                  type="button"
+                  aria-label="Deel dit artikel"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24">
+                    <path
+                      d="M15 8l-6 3.5m6 4.5-6-3.5M18 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM6 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm12 6a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
+                    />
+                  </svg>
+                  <span class="compact-label">Kopieer permalink</span>
+                </button>
+              </div>
+              <span
+                id="article-read-footer-status"
+                class="article-read-footer-status"
+              ></span>
+            </div>
           </div>
+          <aside class="side-nav">
+            <div>
+              <span>In dit artikel</span>
+              <nav id="toc"></nav>
+            </div>
+          </aside>
         </div>
-        <aside class="side-nav"><div><span>In dit artikel</span><nav id="toc"></nav></div></aside>
-      </div>
-      <section class="transcript-wrap">
-        <div class="transcript-head">
-          <div><span class="kicker">Oorspronkelijke bron</span><h2>Transcriptie</h2></div>
-          <div class="transcript-actions"><input id="transcript-search" type="search" placeholder="Zoek in transcript…"><button id="toggle-transcript">Verberg</button></div>
-        </div>
-        <audio id="audio" controls preload="metadata"></audio>
-        <div id="transcript" class="transcript"></div>
+        <section class="transcript-wrap">
+          <div class="transcript-head">
+            <div>
+              <span class="kicker">Oorspronkelijke bron</span>
+              <h2>Transcriptie</h2>
+            </div>
+            <div class="transcript-actions">
+              <input
+                id="transcript-search"
+                type="search"
+                placeholder="Zoek in transcript…"
+              /><button id="toggle-transcript">Verberg</button>
+            </div>
+          </div>
+          <audio id="audio" controls preload="metadata"></audio>
+          <div id="transcript" class="transcript"></div>
+        </section>
       </section>
-    </section>
-  </main>
-  <footer><span>Podcast2Article</span><span>Open source · publieke opnames · jouw API-key</span></footer>
-</body>
+    </main>
+    <footer>
+      <span>Podcast2Article</span
+      ><span>Open source · publieke opnames · jouw API-key</span>
+    </footer>
+  </body>
 </html>

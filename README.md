@@ -106,24 +106,24 @@ voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
 
 ## Configuratie
 
-| Variabele | Standaard | Betekenis |
-|---|---|---|
-| `OPENAI_API_KEY` | vereist | Via de CLI meegegeven OpenAI API-key |
-| `APP_USERS` | leeg | JSON-object met gebruikersnaam/wachtwoord-paren; leeg schakelt authenticatie uit |
-| `OPENAI_REGION` | `global` | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us` |
-| `HOST` | `127.0.0.1` | Netwerkinterface; gebruik alleen in een container eventueel `0.0.0.0` |
-| `PORT` | `3000` | HTTP-poort |
-| `ARTICLE_MODEL` | `gpt-5.6-terra` | Model voor het artikel |
-| `TRANSCRIPTION_MODEL` | `gpt-4o-transcribe-diarize` | Transcriptiemodel |
-| `MAX_AUDIO_MB` | `500` | Maximale Spotify-audiodownload |
-| `MAX_YOUTUBE_MB` | `500` | Maximale YouTube-audiodownload |
-| `MAX_RECORDING_MB` | `1500` | Maximale Google Drive-opnamedownload |
-| `YOUTUBE_METADATA_TIMEOUT_MS` | `60000` | Timeout voor het lezen van YouTube-metadata (1 minuut) |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS` | `900000` | Timeout voor het downloaden van media (15 minuten) |
-| `AUDIO_CHUNK_SECONDS` | `300` | Lengte van ieder audiofragment (5 minuten; toegestaan: 60–1200) |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000` | Timeout per transcriptiefragment (10 minuten) |
-| `OPENAI_ARTICLE_TIMEOUT_MS` | `600000` | Timeout voor artikelgeneratie (10 minuten) |
-| `LOG_STACKS` | `false` | Toon volledige foutstacks in de CLI |
+| Variabele                         | Standaard                   | Betekenis                                                                        |
+| --------------------------------- | --------------------------- | -------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | vereist                     | Via de CLI meegegeven OpenAI API-key                                             |
+| `APP_USERS`                       | leeg                        | JSON-object met gebruikersnaam/wachtwoord-paren; leeg schakelt authenticatie uit |
+| `OPENAI_REGION`                   | `global`                    | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us`                     |
+| `HOST`                            | `127.0.0.1`                 | Netwerkinterface; gebruik alleen in een container eventueel `0.0.0.0`            |
+| `PORT`                            | `3000`                      | HTTP-poort                                                                       |
+| `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Model voor het artikel                                                           |
+| `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcriptiemodel                                                                |
+| `MAX_AUDIO_MB`                    | `500`                       | Maximale Spotify-audiodownload                                                   |
+| `MAX_YOUTUBE_MB`                  | `500`                       | Maximale YouTube-audiodownload                                                   |
+| `MAX_RECORDING_MB`                | `1500`                      | Maximale Google Drive-opnamedownload                                             |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | Timeout voor het lezen van YouTube-metadata (1 minuut)                           |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | `900000`                    | Timeout voor het downloaden van media (15 minuten)                               |
+| `AUDIO_CHUNK_SECONDS`             | `300`                       | Lengte van ieder audiofragment (5 minuten; toegestaan: 60–1200)                  |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcriptiefragment (10 minuten)                                    |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Timeout voor artikelgeneratie (10 minuten)                                       |
+| `LOG_STACKS`                      | `false`                     | Toon volledige foutstacks in de CLI                                              |
 
 De CLI toont per job de bronresolutie, download- en FFmpeg-duur, chunkgroottes,
 OpenAI-start- en eindmomenten en iedere 30 seconden een heartbeat zolang een

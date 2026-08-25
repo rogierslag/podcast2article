@@ -8,10 +8,12 @@ describe("format helpers", () => {
   });
 
   it("normalizes podcast boilerplate", () => {
-    expect(normalizeText("Podcast: Dé Grote Aflevering!")) .toBe("de grote");
+    expect(normalizeText("Podcast: Dé Grote Aflevering!")).toBe("de grote");
   });
 
   it("scores matching episode titles above unrelated titles", () => {
-    expect(similarity("Waarom steden werken", "Waarom steden echt werken")).toBeGreaterThan(similarity("Waarom steden werken", "Koken met aandacht"));
+    expect(
+      similarity("Waarom steden werken", "Waarom steden echt werken"),
+    ).toBeGreaterThan(similarity("Waarom steden werken", "Koken met aandacht"));
   });
 });

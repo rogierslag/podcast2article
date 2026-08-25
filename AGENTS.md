@@ -49,8 +49,46 @@ This file applies to the entire repository.
 - `src/types.ts`: persisted and API-related domain types.
 - `public/index.html` and `public/app.js`: authenticated/owner application UI.
 - `public/share.html`, `public/share.js`, and `public/share.css`: anonymous public article reader.
-- `public/styles.css`: shared and owner styling. This file is intentionally compact; make scoped additions and avoid unrelated reformatting.
+- `public/styles.css`: shared and owner styling. Keep additions scoped and avoid unrelated reformatting, but do not copy the compressed formatting of older rules.
 - `data/users/<username>/`: runtime data. Treat it as user-owned and do not commit it.
+
+## Code style
+
+Readability is the default. Some older frontend files are densely formatted; treat that as legacy code, not as the style to imitate. Source files must remain pleasant to review without a formatter or minifier.
+
+### General formatting
+
+- Prettier is the formatting authority for all supported repository files. Run `npm run format` after editing and do not manually fight its output.
+- Run `npm run format:check` to verify formatting without changing files. The full `npm run check` command includes this verification.
+- Do not hand-minify, manually align, or use formatting tricks that Prettier will undo.
+- Keep statements and control flow structurally clear before formatting. Prettier standardizes layout; it does not make overly compressed logic readable.
+- Always use braces for `if`, `else`, loops, and `try`/`catch`, including one-line bodies. ESLint enforces this rule; run `npm run lint:fix` to repair violations.
+- Keep comments for intent, constraints, and non-obvious tradeoffs. Do not narrate code that is already clear from its names and structure.
+
+### TypeScript and JavaScript
+
+- Use descriptive domain names. Avoid single-letter names except for conventional, very small scopes; prefer names such as `response`, `article`, and `segment` over abbreviations.
+- Keep functions focused on one responsibility. Extract named helpers when a route handler, rendering function, or callback starts mixing validation, transformation, persistence, and presentation.
+- Prefer early returns and guard clauses over deeply nested branches. Expand conditionals when compression would hide behavior.
+- Preserve strict typing. Avoid `any`, unchecked casts, and non-null assertions; validate external input and narrow `unknown` values before use. If a boundary requires a cast, keep it local and explain why it is safe when that is not obvious.
+- Use `interface` for object shapes with a stable domain identity and `type` for unions, aliases, and composed types. Reuse the domain types in `src/types.ts` rather than recreating similar inline shapes.
+- Keep imports grouped at the top of the file: Node built-ins, external packages, then local modules, with type-only imports marked using `import type`.
+- Use `async`/`await` for asynchronous flows. Handle expected failures at the boundary that can add useful context; do not silently swallow errors unless failure is explicitly best-effort.
+- In browser code, cache repeatedly used DOM elements, use semantic event-handler names, and keep HTML escaping at every untrusted interpolation point. Use the local `html` tagged template for markup assigned through `innerHTML` so Prettier formats the embedded HTML; prefer DOM APIs when a template still becomes difficult to read or audit.
+
+### HTML and CSS
+
+- Use semantic HTML before adding ARIA. Every interactive control needs an accessible name and must remain usable with a keyboard.
+- Let Prettier format HTML nesting, attributes, selectors, and declarations. Do not preserve compressed legacy formatting by hand.
+- Keep selectors component-scoped and avoid `!important` except for an established utility or a documented cascade requirement. Reuse the existing custom properties before introducing literal colors, fonts, or spacing values.
+- Place responsive adjustments next to the component they modify when practical. Verify that desktop, mobile, print, hover, focus, and reduced-motion behavior still agree.
+
+### Tests
+
+- Add or update tests for behavior changes and bug fixes. Tests should describe observable behavior rather than implementation details.
+- Follow arrange, act, assert within each test, separated by blank lines when those phases are not already obvious.
+- Keep fixtures minimal but realistic. Prefer typed fixtures with `satisfies` and shared helpers over broad casts or large copied payloads.
+- Cover failure paths and boundary conditions for validation, authentication, storage isolation, public payload shaping, and external-service parsing.
 
 ## Implementation guidelines
 
