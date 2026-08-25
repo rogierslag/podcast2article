@@ -618,6 +618,19 @@ function articleShelf(title, articles, emptyText) {
   `;
 }
 
+function compareArticlesForOverview(left, right) {
+  if (left.readAt && right.readAt) {
+    return right.readAt.localeCompare(left.readAt);
+  }
+  if (left.readAt) {
+    return 1;
+  }
+  if (right.readAt) {
+    return -1;
+  }
+  return right.completedAt.localeCompare(left.completedAt);
+}
+
 function processingCard(job) {
   const jobId = escapeHtml(job.id);
   const jobUrl = `/#job=${jobId}`;
@@ -678,6 +691,7 @@ function processingShelf() {
 }
 
 function renderArticlesOverview() {
+  articlesState.sort(compareArticlesForOverview);
   const unread = articlesState.filter((article) => !article.readAt);
   const read = articlesState.filter((article) => article.readAt);
   if (articlesState.length === 0 && processingState.length === 0) {

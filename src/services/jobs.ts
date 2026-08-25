@@ -179,6 +179,22 @@ export function toArticleSummary(job: Job): ArticleSummary | undefined {
   };
 }
 
+export function compareArticleSummaries(
+  left: ArticleSummary,
+  right: ArticleSummary,
+): number {
+  if (left.readAt && right.readAt) {
+    return right.readAt.localeCompare(left.readAt);
+  }
+  if (left.readAt) {
+    return 1;
+  }
+  if (right.readAt) {
+    return -1;
+  }
+  return right.completedAt.localeCompare(left.completedAt);
+}
+
 export function listReadyArticles(username: string): ArticleSummary[] {
   const prefix = `${username}/`;
   return [...memory.entries()]
@@ -186,7 +202,7 @@ export function listReadyArticles(username: string): ArticleSummary[] {
     .map(([, job]) => job)
     .map(toArticleSummary)
     .filter((article): article is ArticleSummary => Boolean(article))
-    .sort((left, right) => right.completedAt.localeCompare(left.completedAt));
+    .sort(compareArticleSummaries);
 }
 
 export function toProcessingJobSummary(
