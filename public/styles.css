@@ -1121,7 +1121,7 @@ footer {
   font: 600 30px var(--serif);
   margin: 0;
 }
-.article-shelf-heading span {
+.article-shelf-count {
   display: grid;
   place-items: center;
   width: 24px;
@@ -1130,6 +1130,37 @@ footer {
   background: var(--ink);
   color: var(--cream);
   font: 9px var(--mono);
+}
+.collapsible-shelf summary {
+  cursor: pointer;
+  list-style: none;
+}
+.collapsible-shelf summary::-webkit-details-marker {
+  display: none;
+}
+.collapsible-shelf summary:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 5px;
+}
+.collapsible-shelf summary h2 {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+}
+.collapsible-shelf summary svg {
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s ease;
+}
+.collapsible-shelf[open] summary svg {
+  transform: rotate(180deg);
 }
 .article-shelf-empty {
   color: var(--muted);
@@ -1449,6 +1480,9 @@ footer {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .collapsible-shelf summary svg {
+    transition: none;
+  }
   .processing-wave i {
     animation: none;
   }
