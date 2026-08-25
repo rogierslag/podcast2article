@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { resolveGitSha } from "./lib/git.js";
 import {
   createUserAuth,
   expiredSessionCookie,
@@ -30,6 +31,11 @@ const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST?.trim() || "127.0.0.1";
 const publicDirectory = path.resolve("public");
+const gitSha = await resolveGitSha();
+const loginTemplate = await readFile(
+  path.join(publicDirectory, "login.html"),
+  "utf8",
+);
 const auth = createUserAuth();
 const loginAttempts = new Map<
   string,
@@ -68,6 +74,14 @@ function htmlAttribute(value: string): string {
         "'": "&#39;",
       })[character]!,
   );
+}
+
+function loginBuildMarkup(): string {
+  if (!gitSha) {
+    return "";
+  }
+  const shortSha = gitSha.slice(0, 7);
+  return `<p class="build-sha" title="Git commit ${gitSha}" aria-label="Git-commit ${gitSha}">build ${shortSha}</p>`;
 }
 
 app.get("/api/health", (_request, response) => {
@@ -198,7 +212,10 @@ app.get("/login", (request, response) => {
   if (authenticatedUser(request.headers.cookie)) {
     return response.redirect(303, "/");
   }
-  return response.sendFile(path.join(publicDirectory, "login.html"));
+  response.type("html");
+  return response.send(
+    loginTemplate.replace("<!-- GIT_SHA -->", loginBuildMarkup()),
+  );
 });
 
 app.post("/login", (request, response) => {

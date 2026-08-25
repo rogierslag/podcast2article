@@ -202,6 +202,19 @@
       .maker-links span {
         color: var(--line);
       }
+      .maker-note .build-sha {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font:
+          500 9px/1.4 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.08em;
+        text-align: center;
+        text-transform: uppercase;
+        opacity: 0.65;
+      }
       @media (max-width: 480px) {
         body {
           place-items: start center;
@@ -312,6 +325,7 @@
             >Broncode</a
           >
         </nav>
+        <!-- GIT_SHA -->
       </aside>
     </main>
     <script>
