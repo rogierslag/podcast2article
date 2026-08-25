@@ -46,10 +46,10 @@
           var(--cream);
       }
       main {
-        width: min(100%, 430px);
+        width: min(100%, 560px);
         background: var(--paper);
         border: 1px solid var(--line);
-        padding: clamp(30px, 7vw, 52px);
+        padding: clamp(32px, 6vw, 58px);
         box-shadow: 0 24px 70px #18211d12;
       }
       .mark {
@@ -57,7 +57,7 @@
         display: flex;
         align-items: center;
         gap: 4px;
-        margin-bottom: 44px;
+        margin-bottom: 36px;
       }
       .mark i {
         display: block;
@@ -79,16 +79,16 @@
       }
       h1 {
         font:
-          600 clamp(38px, 10vw, 55px) / 0.95 Georgia,
+          600 clamp(44px, 8vw, 64px) / 0.95 Georgia,
           serif;
         letter-spacing: -0.04em;
         margin: 0 0 16px;
       }
-      p {
+      .intro {
         color: var(--muted);
-        font-size: 14px;
-        line-height: 1.6;
-        margin: 0 0 32px;
+        font-size: 15px;
+        line-height: 1.65;
+        margin: 0 0 34px;
       }
       label {
         display: block;
@@ -144,15 +144,42 @@
       .error.visible {
         display: block;
       }
+      .access-note {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+        margin: 16px 0 0;
+      }
+      .access-note a {
+        color: var(--orange);
+        text-underline-offset: 3px;
+      }
+      .access-note a:hover {
+        color: var(--ink);
+      }
+      .access-note a:focus-visible,
+      .maker-links a:focus-visible {
+        outline: 3px solid #e85e2a55;
+        outline-offset: 2px;
+      }
+      .maker-note {
+        margin-top: 28px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+      }
+      .maker-note p {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.65;
+        margin: 0;
+      }
       .maker-links {
         display: flex;
         align-items: center;
         justify-content: center;
         flex-wrap: wrap;
         gap: 0 8px;
-        margin-top: 28px;
-        padding-top: 14px;
-        border-top: 1px solid var(--line);
+        margin-top: 14px;
         font:
           500 10px/1.4 ui-monospace,
           SFMono-Regular,
@@ -172,10 +199,6 @@
       .maker-links a:hover {
         color: var(--orange);
       }
-      .maker-links a:focus-visible {
-        outline: 3px solid #e85e2a55;
-        outline-offset: 2px;
-      }
       .maker-links span {
         color: var(--line);
       }
@@ -192,14 +215,21 @@
           padding: 32px 26px;
         }
         .mark {
-          margin-bottom: 34px;
+          margin-bottom: 30px;
         }
         h1 {
           font-size: 42px;
         }
-        .maker-links {
+        .intro {
+          font-size: 14px;
+          margin-bottom: 30px;
+        }
+        .maker-note {
           margin-top: 24px;
-          padding-top: 10px;
+          padding-top: 20px;
+        }
+        .maker-links {
+          margin-top: 10px;
         }
         .maker-links a {
           min-height: 44px;
@@ -210,8 +240,12 @@
   <body>
     <main>
       <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <h1>Welkom terug.</h1>
-      <p>Log in om je opnames, transcripties en artikelen te bekijken.</p>
+      <h1>Van luisteren naar lezen.</h1>
+      <p class="intro">
+        Podcast2Article verandert publieke podcasts, video’s en opnames in
+        bronverankerde artikelen met structuur, context en een prettig leesbare
+        verhaallijn.
+      </p>
       <p id="login-error" class="error" role="alert">
         Die gebruikersnaam of dat wachtwoord klopt niet. Probeer het opnieuw.
       </p>
@@ -237,28 +271,48 @@
         />
         <button type="submit">Inloggen</button>
       </form>
-      <nav class="maker-links" aria-label="Over de maker en broncode">
+      <p class="access-note">
+        Wil je het proberen?
         <a
           href="https://www.linkedin.com/in/rogier-slag/"
           target="_blank"
           rel="me noopener"
-          >LinkedIn</a
+          >Stuur me een bericht op LinkedIn</a
         >
-        <span aria-hidden="true">·</span>
-        <a
-          href="https://github.com/rogierslag"
-          target="_blank"
-          rel="me noopener"
-          >GitHub</a
-        >
-        <span aria-hidden="true">·</span>
-        <a
-          href="https://github.com/rogierslag/podcast2article"
-          target="_blank"
-          rel="noopener"
-          >Broncode</a
-        >
-      </nav>
+        voor toegang.
+      </p>
+      <aside class="maker-note" aria-label="Over dit project">
+        <p>
+          Een AI-native experiment van Rogier Slag — van idee naar werkend
+          product, ontwikkeld in nauwe samenwerking met Codex.
+        </p>
+        <nav class="maker-links" aria-label="Over de maker en broncode">
+          <a href="https://lnkd.in/p/ekHBDVk9" target="_blank" rel="noopener"
+            >Bouwverhaal</a
+          >
+          <span aria-hidden="true">·</span>
+          <a
+            href="https://www.linkedin.com/in/rogier-slag/"
+            target="_blank"
+            rel="me noopener"
+            >LinkedIn</a
+          >
+          <span aria-hidden="true">·</span>
+          <a
+            href="https://github.com/rogierslag"
+            target="_blank"
+            rel="me noopener"
+            >GitHub</a
+          >
+          <span aria-hidden="true">·</span>
+          <a
+            href="https://github.com/rogierslag/podcast2article"
+            target="_blank"
+            rel="noopener"
+            >Broncode</a
+          >
+        </nav>
+      </aside>
     </main>
     <script>
       if (new URLSearchParams(location.search).has("error")) {
