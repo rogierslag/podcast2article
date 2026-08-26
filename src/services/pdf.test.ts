@@ -62,6 +62,11 @@ describe("PDF generation", () => {
                 text: "Dit is de inhoud van de eerste alinea.",
                 sources: ["t-00001"],
               },
+              {
+                kind: "quote",
+                text: "Een bronfragment.",
+                sources: ["t-00001"],
+              },
             ],
           },
         ],

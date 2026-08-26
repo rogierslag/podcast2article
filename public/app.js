@@ -191,6 +191,7 @@ function sourceButtons(ids, transcript) {
                 <button
                   class="source-link"
                   data-source="${id}"
+                  aria-label="Ga naar transcript op ${time(item.start)}"
                   title="Ga naar transcript op ${time(item.start)}"
                 >
                   ${time(item.start)}
@@ -200,6 +201,21 @@ function sourceButtons(ids, transcript) {
         })
         .join("")}
     </span>
+  `;
+}
+
+function articleBlock(block, transcript) {
+  if (block.kind === "quote") {
+    return html`
+      <blockquote>
+        <p>
+          ${escapeHtml(block.text)}${sourceButtons(block.sources, transcript)}
+        </p>
+      </blockquote>
+    `;
+  }
+  return html`
+    <p>${escapeHtml(block.text)} ${sourceButtons(block.sources, transcript)}</p>
   `;
 }
 
@@ -271,14 +287,7 @@ function renderResult(job) {
         <section>
           <h2 id="${id}">${escapeHtml(section.heading)}</h2>
           ${section.paragraphs
-            .map(
-              (paragraph) => html`
-                <p>
-                  ${escapeHtml(paragraph.text)}
-                  ${sourceButtons(paragraph.sources, transcript)}
-                </p>
-              `,
-            )
+            .map((paragraph) => articleBlock(paragraph, transcript))
             .join("")}
         </section>
       `;

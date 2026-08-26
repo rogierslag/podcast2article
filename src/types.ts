@@ -37,6 +37,8 @@ export interface TranscriptSegment {
 }
 
 export interface ArticleParagraph {
+  /** Optional for compatibility with articles created before typed content blocks. */
+  kind?: "paragraph" | "quote";
   text: string;
   sources: string[];
 }
