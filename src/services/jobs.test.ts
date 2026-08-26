@@ -41,6 +41,68 @@ describe("stored job compatibility", () => {
       playbackUrl: "https://cdn.example.com/episode.mp3",
     });
   });
+
+  it("keeps a valid heading-based reading position", () => {
+    const job = {
+      id: "11111111-1111-1111-1111-111111111111",
+      sourceUrl: "https://youtube.com/watch?v=abc123",
+      language: "nl",
+      articleLength: "standard",
+      stage: "complete",
+      progress: 100,
+      message: "Klaar",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      readingPosition: {
+        sectionIndex: 1,
+        updatedAt: "2026-01-02T00:00:00.000Z",
+      },
+      article: {
+        title: "Artikel",
+        dek: "Introductie",
+        readingTimeMinutes: 5,
+        styleNote: "Helder",
+        sections: [
+          { heading: "Eerste", paragraphs: [] },
+          { heading: "Tweede", paragraphs: [] },
+        ],
+        takeaways: [],
+      },
+    } satisfies Job;
+
+    expect(normalizeStoredJob(job).readingPosition).toEqual({
+      sectionIndex: 1,
+      updatedAt: "2026-01-02T00:00:00.000Z",
+    });
+  });
+
+  it("drops a stored reading position that no longer matches the article", () => {
+    const job = {
+      id: "11111111-1111-1111-1111-111111111111",
+      sourceUrl: "https://youtube.com/watch?v=abc123",
+      language: "nl",
+      articleLength: "standard",
+      stage: "complete",
+      progress: 100,
+      message: "Klaar",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      readingPosition: {
+        sectionIndex: 4,
+        updatedAt: "2026-01-02T00:00:00.000Z",
+      },
+      article: {
+        title: "Artikel",
+        dek: "Introductie",
+        readingTimeMinutes: 5,
+        styleNote: "Helder",
+        sections: [{ heading: "Enige", paragraphs: [] }],
+        takeaways: [],
+      },
+    } satisfies Job;
+
+    expect(normalizeStoredJob(job).readingPosition).toBeUndefined();
+  });
 });
 
 describe("user storage isolation", () => {

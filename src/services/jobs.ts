@@ -19,7 +19,12 @@ import {
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource, validateSourceUrl } from "./resolver.js";
 import { downloadYouTubeAudio } from "./youtube.js";
-import type { ArticleSummary, Job, ProcessingJobSummary } from "../types.js";
+import type {
+  ArticleReadingPosition,
+  ArticleSummary,
+  Job,
+  ProcessingJobSummary,
+} from "../types.js";
 
 const root = path.resolve("data");
 const memory = new Map<string, Job>();
@@ -85,6 +90,16 @@ export function normalizeStoredJob(job: Job): Job {
     job.episode.sourceName ??= job.episode.podcast ?? "Onbekende podcast";
     job.episode.mediaUrl ??= job.episode.audioUrl ?? "";
     job.episode.playbackUrl ??= job.episode.audioUrl;
+  }
+  if (
+    job.readingPosition &&
+    (!Number.isInteger(job.readingPosition.sectionIndex) ||
+      job.readingPosition.sectionIndex < 0 ||
+      !job.article ||
+      job.readingPosition.sectionIndex >= job.article.sections.length ||
+      !Number.isFinite(Date.parse(job.readingPosition.updatedAt)))
+  ) {
+    delete job.readingPosition;
   }
   return job;
 }
@@ -313,6 +328,33 @@ export async function setArticleRead(
   return toArticleSummary(job)!;
 }
 
+export async function setArticleReadingPosition(
+  username: string,
+  id: string,
+  sectionIndex: number,
+): Promise<ArticleReadingPosition> {
+  const job = await getJob(username, id);
+  if (!job) {
+    throw new Error("Opdracht niet gevonden.");
+  }
+  if (job.stage !== "complete" || !job.article || !job.episode) {
+    throw new Error("Dit artikel is nog niet klaar om te lezen.");
+  }
+  if (
+    !Number.isInteger(sectionIndex) ||
+    sectionIndex < 0 ||
+    sectionIndex >= job.article.sections.length
+  ) {
+    throw new Error("Deze leespositie bestaat niet in het artikel.");
+  }
+  const readingPosition = {
+    sectionIndex,
+    updatedAt: new Date().toISOString(),
+  } satisfies ArticleReadingPosition;
+  await update(username, job, { readingPosition });
+  return readingPosition;
+}
+
 function isShareToken(value: string): boolean {
   return /^[A-Za-z0-9_-]{43}$/.test(value);
 }
@@ -382,6 +424,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
     error: undefined,
     article: undefined,
     readAt: undefined,
+    readingPosition: undefined,
   });
   jobLog(job.id, "writing", "Artikel-only retry gestart", {
     transcriptSegments: job.transcript.length,
