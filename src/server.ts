@@ -22,6 +22,7 @@ import {
   resumeIncompleteJobs,
   retryArticle,
   setArticleRead,
+  setArticleReadingPosition,
   shutdownJobs,
 } from "./services/jobs.js";
 import { generateArticlePdf, pdfDownloadName } from "./services/pdf.js";
@@ -329,6 +330,9 @@ const requestSchema = z
   }));
 
 const readingStateSchema = z.object({ read: z.boolean() });
+const readingPositionSchema = z.object({
+  sectionIndex: z.number().int().nonnegative(),
+});
 
 app.get("/api/articles", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
@@ -360,6 +364,32 @@ app.patch("/api/articles/:id", async (request, response) => {
       error instanceof Error
         ? error.message
         : "Leesstatus kon niet worden opgeslagen.";
+    return response
+      .status(message === "Opdracht niet gevonden." ? 404 : 409)
+      .json({ error: message });
+  }
+});
+
+app.patch("/api/jobs/:id/reading-position", async (request, response) => {
+  const parsed = readingPositionSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return response
+      .status(400)
+      .json({ error: "Geef een geldige leespositie op." });
+  }
+  try {
+    return response.json({
+      readingPosition: await setArticleReadingPosition(
+        response.locals.username,
+        request.params.id,
+        parsed.data.sectionIndex,
+      ),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Leespositie kon niet worden opgeslagen.";
     return response
       .status(message === "Opdracht niet gevonden." ? 404 : 409)
       .json({ error: message });

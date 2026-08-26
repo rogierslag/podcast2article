@@ -50,6 +50,11 @@ export interface Article {
   takeaways: ArticleParagraph[];
 }
 
+export interface ArticleReadingPosition {
+  sectionIndex: number;
+  updatedAt: string;
+}
+
 export interface Job {
   id: string;
   sourceUrl: string;
@@ -64,6 +69,7 @@ export interface Job {
   updatedAt: string;
   completedAt?: string;
   readAt?: string;
+  readingPosition?: ArticleReadingPosition;
   /** High-entropy capability token for the article's anonymous public permalink. */
   shareToken?: string;
   episode?: Episode;

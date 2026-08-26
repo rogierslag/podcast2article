@@ -33,9 +33,186 @@ const slug = (value, index) =>
 const articleReadingProgress = $("#article-reading-progress");
 const pageScroll = $(".page-scroll");
 let readingProgressFrame;
+let readingPositionTrackingRequested = false;
+let lastSavedReadingSectionIndex;
+let readingTrackingOrigin = 0;
+let readingTrackingEnabled = false;
+let restoringReadingPosition = false;
+let continuationSectionIndex;
+let sharedReadingStorageKey;
+const materialScrollDistance = 120;
+
+function articleSectionHeadings() {
+  return [...document.querySelectorAll("#article section > h2")];
+}
+
+function visibleReadingSectionIndex() {
+  const headings = articleSectionHeadings();
+  const scrollViewportTop = pageScroll.getBoundingClientRect().top;
+  const readingLine =
+    scrollViewportTop + Math.min(pageScroll.clientHeight * 0.42, 320);
+  let sectionIndex;
+  headings.forEach((heading, index) => {
+    if (heading.getBoundingClientRect().top <= readingLine) {
+      sectionIndex = index;
+    }
+  });
+  return sectionIndex;
+}
+
+function hideContinueReading() {
+  $("#continue-reading").classList.add("hidden");
+  continuationSectionIndex = undefined;
+}
+
+function resetArticleScroll() {
+  readingPositionTrackingRequested = false;
+  readingTrackingEnabled = false;
+  restoringReadingPosition = false;
+  readingTrackingOrigin = 0;
+  const previousScrollBehavior = pageScroll.style.scrollBehavior;
+  pageScroll.style.scrollBehavior = "auto";
+  pageScroll.scrollTop = 0;
+  pageScroll.style.scrollBehavior = previousScrollBehavior;
+}
+
+function storedReadingPosition() {
+  if (!sharedReadingStorageKey) {
+    return undefined;
+  }
+  try {
+    const value = JSON.parse(localStorage.getItem(sharedReadingStorageKey));
+    return Number.isInteger(value?.sectionIndex) && value.sectionIndex >= 0
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function persistReadingPosition(sectionIndex) {
+  if (
+    !sharedReadingStorageKey ||
+    sectionIndex === lastSavedReadingSectionIndex
+  ) {
+    return;
+  }
+  lastSavedReadingSectionIndex = sectionIndex;
+  try {
+    localStorage.setItem(
+      sharedReadingStorageKey,
+      JSON.stringify({ sectionIndex, updatedAt: new Date().toISOString() }),
+    );
+  } catch {
+    // Reading remains available when device storage is disabled or full.
+  }
+}
+
+function trackReadingPosition() {
+  if (restoringReadingPosition) {
+    return;
+  }
+  const scrollDistance = Math.abs(pageScroll.scrollTop - readingTrackingOrigin);
+  if (
+    continuationSectionIndex !== undefined &&
+    scrollDistance >= materialScrollDistance
+  ) {
+    hideContinueReading();
+  }
+  if (scrollDistance >= 40) {
+    readingTrackingEnabled = true;
+  }
+  if (
+    !readingTrackingEnabled ||
+    $("#shared-result").classList.contains("hidden")
+  ) {
+    return;
+  }
+  const sectionIndex = visibleReadingSectionIndex();
+  if (sectionIndex !== undefined) {
+    persistReadingPosition(sectionIndex);
+  }
+}
+
+function showContinueReading(readingPosition) {
+  lastSavedReadingSectionIndex = readingPosition?.sectionIndex;
+  readingTrackingOrigin = pageScroll.scrollTop;
+  readingTrackingEnabled = false;
+  const heading = articleSectionHeadings()[readingPosition?.sectionIndex];
+  if (!heading) {
+    hideContinueReading();
+    return;
+  }
+  continuationSectionIndex = readingPosition.sectionIndex;
+  $("#continue-reading-heading").textContent = heading.textContent;
+  $("#continue-reading").classList.remove("hidden");
+}
+
+function drawAttentionToHeading(heading) {
+  heading.classList.remove("resume-highlight");
+  void heading.offsetWidth;
+  heading.classList.add("resume-highlight");
+  heading.setAttribute("tabindex", "-1");
+  heading.focus({ preventScroll: true });
+  setTimeout(() => {
+    heading.classList.remove("resume-highlight");
+    heading.removeAttribute("tabindex");
+  }, 2200);
+}
+
+function afterReadingScroll(callback) {
+  const startedAt = performance.now();
+  let previousScrollTop = pageScroll.scrollTop;
+  let stableFrames = 0;
+
+  function checkPosition(now) {
+    const currentScrollTop = pageScroll.scrollTop;
+    stableFrames =
+      Math.abs(currentScrollTop - previousScrollTop) < 1 ? stableFrames + 1 : 0;
+    previousScrollTop = currentScrollTop;
+    const elapsed = now - startedAt;
+    if ((elapsed >= 120 && stableFrames >= 4) || elapsed >= 1800) {
+      callback();
+      return;
+    }
+    requestAnimationFrame(checkPosition);
+  }
+
+  requestAnimationFrame(checkPosition);
+}
+
+$("#continue-reading").addEventListener("click", () => {
+  const heading = articleSectionHeadings()[continuationSectionIndex];
+  if (!heading) {
+    hideContinueReading();
+    return;
+  }
+  hideContinueReading();
+  readingTrackingEnabled = false;
+  restoringReadingPosition = true;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const headingTop =
+    heading.getBoundingClientRect().top -
+    pageScroll.getBoundingClientRect().top +
+    pageScroll.scrollTop -
+    30;
+  pageScroll.scrollTo({
+    top: Math.max(0, headingTop),
+    behavior: reducedMotion ? "auto" : "smooth",
+  });
+  afterReadingScroll(() => {
+    drawAttentionToHeading(heading);
+    readingPositionTrackingRequested = false;
+    readingTrackingOrigin = pageScroll.scrollTop;
+    readingTrackingEnabled = false;
+    restoringReadingPosition = false;
+  });
+});
 
 function updateArticleReadingProgress() {
   readingProgressFrame = undefined;
+  const shouldTrackReadingPosition = readingPositionTrackingRequested;
+  readingPositionTrackingRequested = false;
   const article = $("#article");
   if (
     !article ||
@@ -73,18 +250,28 @@ function updateArticleReadingProgress() {
     "aria-valuetext",
     `${progressPercentage} procent gelezen`,
   );
+  if (shouldTrackReadingPosition) {
+    trackReadingPosition();
+  }
 }
 
-function scheduleArticleReadingProgressUpdate() {
+function scheduleArticleReadingProgressUpdate(trackPosition = false) {
+  if (trackPosition) {
+    readingPositionTrackingRequested = true;
+  }
   if (readingProgressFrame === undefined) {
     readingProgressFrame = requestAnimationFrame(updateArticleReadingProgress);
   }
 }
 
-pageScroll.addEventListener("scroll", scheduleArticleReadingProgressUpdate, {
-  passive: true,
-});
-window.addEventListener("resize", scheduleArticleReadingProgressUpdate);
+pageScroll.addEventListener(
+  "scroll",
+  () => scheduleArticleReadingProgressUpdate(true),
+  {
+    passive: true,
+  },
+);
+window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
 
 function sourceButtons(ids, sources) {
   return html`
@@ -208,6 +395,9 @@ function renderSharedArticle(shared, token) {
   $("#shared-loading").classList.add("hidden");
   $("#shared-result").classList.remove("hidden");
   articleReadingProgress.classList.remove("hidden");
+  sharedReadingStorageKey = `podcast2article:reading-position:${token}`;
+  resetArticleScroll();
+  showContinueReading(storedReadingPosition());
   scheduleArticleReadingProgressUpdate();
 }
 
