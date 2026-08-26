@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   compareArticleSummaries,
+  findDuplicateJob,
   normalizeStoredJob,
   playbackFileForJob,
   toArticleSummary,
@@ -56,6 +57,68 @@ describe("user storage isolation", () => {
     expect(() =>
       playbackFileForJob("../pascal", "11111111-1111-1111-1111-111111111111"),
     ).toThrow(/gebruikersnaam/);
+  });
+});
+
+describe("duplicate source detection", () => {
+  const baseJob = {
+    id: "11111111-1111-1111-1111-111111111111",
+    sourceUrl: "https://open.spotify.com/episode/abc123",
+    spotifyUrl: "https://open.spotify.com/episode/abc123",
+    language: "nl",
+    articleLength: "standard",
+    stage: "complete",
+    progress: 100,
+    message: "Klaar",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:05:00.000Z",
+  } satisfies Job;
+
+  it("recognizes the same Spotify episode despite tracking parameters", () => {
+    expect(
+      findDuplicateJob(
+        [baseJob],
+        "https://open.spotify.com/episode/abc123?si=tracking",
+      ),
+    ).toBe(baseJob);
+  });
+
+  it("recognizes alternate URLs for the same YouTube video", () => {
+    const youtubeJob = {
+      ...baseJob,
+      sourceUrl: "https://youtu.be/jNQXAC9IVRw?t=12",
+    } satisfies Job;
+
+    expect(
+      findDuplicateJob(
+        [youtubeJob],
+        "https://www.youtube.com/watch?v=jNQXAC9IVRw&feature=share",
+      ),
+    ).toBe(youtubeJob);
+  });
+
+  it("allows a source to be submitted again after a failed job", () => {
+    const failedJob = { ...baseJob, stage: "failed" } satisfies Job;
+
+    expect(
+      findDuplicateJob([failedJob], "https://open.spotify.com/episode/abc123"),
+    ).toBeUndefined();
+  });
+
+  it("prefers the completed article when duplicate stored jobs already exist", () => {
+    const processingJob = {
+      ...baseJob,
+      id: "22222222-2222-2222-2222-222222222222",
+      stage: "writing",
+      createdAt: "2026-01-02T00:00:00.000Z",
+    } satisfies Job;
+
+    expect(
+      findDuplicateJob(
+        [processingJob, baseJob],
+        "https://open.spotify.com/episode/abc123",
+      ),
+    ).toBe(baseJob);
   });
 });
 

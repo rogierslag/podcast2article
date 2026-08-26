@@ -228,6 +228,15 @@ body.scroll-shell {
   margin: 12px 0 0;
   min-height: 18px;
 }
+.error a {
+  color: inherit;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+.error a:focus-visible {
+  outline: 3px solid #e85e2a66;
+  outline-offset: 3px;
+}
 .promise-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

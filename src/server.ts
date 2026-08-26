@@ -14,6 +14,7 @@ import {
 import {
   createArticleShare,
   createJob,
+  DuplicateJobError,
   getJob,
   getSharedArticle,
   listProcessingJobs,
@@ -398,8 +399,19 @@ app.post("/api/jobs", async (request, response) => {
       .status(503)
       .json({ error: "OPENAI_API_KEY ontbreekt in de CLI-omgeving." });
   }
-  const job = await createJob(response.locals.username, parsed.data);
-  return response.status(202).json(job);
+  try {
+    const job = await createJob(response.locals.username, parsed.data);
+    return response.status(202).json(job);
+  } catch (error) {
+    if (error instanceof DuplicateJobError) {
+      return response.status(409).json({
+        error: error.message,
+        existingJobId: error.existingJob.id,
+        existingStage: error.existingJob.stage,
+      });
+    }
+    throw error;
+  }
 });
 
 app.get("/api/jobs/:id", async (request, response) => {

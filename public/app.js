@@ -122,6 +122,28 @@ const time = (seconds) => {
     : `${m}:${String(s).padStart(2, "0")}`;
 };
 
+function showFormError(message, existingJobId, existingStage) {
+  const formError = $("#form-error");
+  formError.textContent = message;
+  if (!existingJobId || !/^[0-9a-f-]{36}$/i.test(existingJobId)) {
+    return;
+  }
+
+  formError.append(" ");
+  const existingJobLink = document.createElement("a");
+  existingJobLink.href = `/#job=${existingJobId}`;
+  existingJobLink.textContent =
+    existingStage === "complete"
+      ? "Open bestaand artikel →"
+      : "Bekijk verwerking →";
+  existingJobLink.addEventListener("click", (event) => {
+    event.preventDefault();
+    location.hash = `job=${existingJobId}`;
+    poll(existingJobId);
+  });
+  formError.append(existingJobLink);
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   $("#form-error").textContent = "";
@@ -134,13 +156,17 @@ form.addEventListener("submit", async (event) => {
     });
     const body = await response.json();
     if (!response.ok) {
+      if (response.status === 409 && body.existingJobId) {
+        showFormError(body.error, body.existingJobId, body.existingStage);
+        return;
+      }
       throw new Error(body.error || "De opdracht kon niet starten.");
     }
     location.hash = `job=${body.id}`;
     showProgress(body);
     poll(body.id);
   } catch (error) {
-    $("#form-error").textContent = error.message;
+    showFormError(error.message);
   }
 });
 

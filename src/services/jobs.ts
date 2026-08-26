@@ -17,7 +17,7 @@ import {
   splitAudio,
 } from "./audio.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
-import { resolveSource } from "./resolver.js";
+import { resolveSource, validateSourceUrl } from "./resolver.js";
 import { downloadYouTubeAudio } from "./youtube.js";
 import type { ArticleSummary, Job, ProcessingJobSummary } from "../types.js";
 
@@ -34,6 +34,17 @@ const pendingRuns: Array<{
 }> = [];
 const pendingJobIds = new Set<string>();
 let shuttingDown = false;
+
+export class DuplicateJobError extends Error {
+  constructor(public readonly existingJob: Job) {
+    super(
+      existingJob.stage === "complete"
+        ? "Deze opname is al verwerkt. Het bestaande artikel staat in je overzicht."
+        : "Deze opname wordt al verwerkt. Bekijk de bestaande opdracht in je overzicht.",
+    );
+    this.name = "DuplicateJobError";
+  }
+}
 
 function userDirectory(username: string): string {
   if (!/^[a-z][a-z0-9_-]{1,31}$/.test(username)) {
@@ -107,18 +118,60 @@ async function update(
   await persist(username, job);
 }
 
+function canonicalSourceUrl(value: string): string | undefined {
+  try {
+    return validateSourceUrl(value).toString();
+  } catch {
+    return undefined;
+  }
+}
+
+export function findDuplicateJob(
+  jobs: Iterable<Job>,
+  sourceUrl: string,
+): Job | undefined {
+  const canonicalUrl = canonicalSourceUrl(sourceUrl);
+  if (!canonicalUrl) {
+    return undefined;
+  }
+  return [...jobs]
+    .filter((job) => job.stage !== "failed")
+    .sort((left, right) => {
+      if (left.stage === "complete" && right.stage !== "complete") {
+        return -1;
+      }
+      if (right.stage === "complete" && left.stage !== "complete") {
+        return 1;
+      }
+      return right.createdAt.localeCompare(left.createdAt);
+    })
+    .find((job) => canonicalSourceUrl(job.sourceUrl) === canonicalUrl);
+}
+
 export async function createJob(
   username: string,
   input: Pick<Job, "sourceUrl" | "language" | "articleLength">,
 ): Promise<Job> {
+  const sourceUrl = validateSourceUrl(input.sourceUrl).toString();
+  const prefix = `${username}/`;
+  const existingJob = findDuplicateJob(
+    [...memory.entries()]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([, job]) => job),
+    sourceUrl,
+  );
+  if (existingJob) {
+    throw new DuplicateJobError(existingJob);
+  }
   const now = new Date().toISOString();
-  const sourceHost = new URL(input.sourceUrl).hostname.toLowerCase();
+  const sourceHost = new URL(sourceUrl).hostname.toLowerCase();
   const job: Job = {
     ...input,
+    sourceUrl,
     ...(sourceHost === "open.spotify.com" ||
     sourceHost === "spotify.com" ||
     sourceHost === "www.spotify.com"
-      ? { spotifyUrl: input.sourceUrl }
+      ? { spotifyUrl: sourceUrl }
       : {}),
     id: randomUUID(),
     stage: "queued",
@@ -127,7 +180,16 @@ export async function createJob(
     createdAt: now,
     updatedAt: now,
   };
-  await persist(username, job);
+  const key = jobKey(username, job.id);
+  memory.set(key, job);
+  try {
+    await persist(username, job);
+  } catch (error) {
+    if (memory.get(key) === job) {
+      memory.delete(key);
+    }
+    throw error;
+  }
   jobLog(job.id, job.stage, "Opdracht aangemaakt", {
     language: job.language,
     articleLength: job.articleLength,
