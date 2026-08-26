@@ -510,6 +510,19 @@ body.scroll-shell {
   color: #343834;
   margin: 0 0 22px;
 }
+.article blockquote {
+  border-left: 3px solid var(--orange);
+  margin: 38px 0;
+  padding: 3px 0 3px 28px;
+}
+.article blockquote p {
+  color: var(--green);
+  font: 500 27px/1.35 var(--serif);
+  margin: 0;
+}
+.article blockquote .sources {
+  margin-left: 6px;
+}
 .sources {
   display: inline-flex;
   gap: 4px;
@@ -841,6 +854,20 @@ footer {
   }
   .article p {
     margin-bottom: 4mm;
+  }
+  .article blockquote {
+    border-left: 1.5pt solid #e85e2a;
+    margin: 7mm 0;
+    padding: 1mm 0 1mm 5mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .article blockquote p {
+    color: #376453;
+    font:
+      600 15pt/1.35 Georgia,
+      serif;
+    margin: 0;
   }
   .source-link {
     background: #e1e7e1 !important;

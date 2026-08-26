@@ -284,6 +284,7 @@ function sourceButtons(ids, sources) {
                 <button
                   class="source-link"
                   data-time="${source.start}"
+                  aria-label="Luister vanaf ${time(source.start)}"
                   title="Luister vanaf ${time(source.start)}"
                 >
                   ${time(source.start)}
@@ -293,6 +294,19 @@ function sourceButtons(ids, sources) {
         })
         .join("")}
     </span>
+  `;
+}
+
+function articleBlock(block, sources) {
+  if (block.kind === "quote") {
+    return html`
+      <blockquote>
+        <p>${escapeHtml(block.text)}${sourceButtons(block.sources, sources)}</p>
+      </blockquote>
+    `;
+  }
+  return html`
+    <p>${escapeHtml(block.text)} ${sourceButtons(block.sources, sources)}</p>
   `;
 }
 
@@ -346,14 +360,7 @@ function renderSharedArticle(shared, token) {
         <section>
           <h2 id="${id}">${escapeHtml(section.heading)}</h2>
           ${section.paragraphs
-            .map(
-              (paragraph) => html`
-                <p>
-                  ${escapeHtml(paragraph.text)}
-                  ${sourceButtons(paragraph.sources, sources)}
-                </p>
-              `,
-            )
+            .map((paragraph) => articleBlock(paragraph, sources))
             .join("")}
         </section>
       `;

@@ -153,7 +153,7 @@ const articleSchema = {
           paragraphs: {
             type: "array",
             minItems: 1,
-            items: { $ref: "#/$defs/paragraph" },
+            items: { $ref: "#/$defs/articleBlock" },
           },
         },
       },
@@ -165,6 +165,21 @@ const articleSchema = {
     },
   },
   $defs: {
+    articleBlock: {
+      type: "object",
+      additionalProperties: false,
+      required: ["kind", "text", "sources"],
+      properties: {
+        kind: { type: "string", enum: ["paragraph", "quote"] },
+        text: { type: "string" },
+        sources: {
+          type: "array",
+          minItems: 1,
+          maxItems: 5,
+          items: { type: "string" },
+        },
+      },
+    },
     paragraph: {
       type: "object",
       additionalProperties: false,
@@ -185,12 +200,19 @@ const articleSchema = {
 function articleSchemaFor(validIds: string[]): Record<string, unknown> {
   const schema = structuredClone(articleSchema) as unknown as {
     $defs: {
+      articleBlock: {
+        properties: { sources: { items: Record<string, unknown> } };
+      };
       paragraph: {
         properties: { sources: { items: Record<string, unknown> } };
       };
     };
   };
   schema.$defs.paragraph.properties.sources.items = {
+    type: "string",
+    enum: validIds,
+  };
+  schema.$defs.articleBlock.properties.sources.items = {
     type: "string",
     enum: validIds,
   };
@@ -230,6 +252,48 @@ export function validateArticleSources(
       );
     }
   }
+  return article;
+}
+
+function words(value: string): string[] {
+  return (
+    value
+      .normalize("NFKC")
+      .toLocaleLowerCase()
+      .match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu) ?? []
+  );
+}
+
+export function validateArticleQuotes(
+  article: Article,
+  transcript: TranscriptSegment[],
+): Article {
+  const transcriptById = new Map(
+    transcript.map((segment) => [segment.id, segment.text]),
+  );
+
+  for (const block of article.sections.flatMap(
+    (section) => section.paragraphs,
+  )) {
+    if (block.kind !== "quote") {
+      continue;
+    }
+
+    const quoteWords = words(block.text);
+    const sourceWords = words(
+      block.sources
+        .map((sourceId) => transcriptById.get(sourceId) ?? "")
+        .join(" "),
+    );
+    const sourceText = ` ${sourceWords.join(" ")} `;
+    const quoteText = ` ${quoteWords.join(" ")} `;
+    if (quoteWords.length < 4 || !sourceText.includes(quoteText)) {
+      throw new Error(
+        "Het gegenereerde artikel bevat een citaat dat niet letterlijk in de gekoppelde transcriptbron staat.",
+      );
+    }
+  }
+
   return article;
 }
 
@@ -296,6 +360,7 @@ export async function writeArticle(
         model: process.env.ARTICLE_MODEL ?? "gpt-5.6-terra",
         instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
 Behoud de herkenbare stijl van de opname: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
+Gebruik verspreid door de secties enkele quote-blokken voor letterlijke, op zichzelf staande en memorabele uitspraken, maar alleen als het transcript zulke uitspraken bevat. Zet dan kind op "quote" en kopieer de gesproken woorden exact uit de gekoppelde, aaneengesloten bronfragmenten; laat omringende aanhalingstekens weg. Gebruik anders kind "paragraph". Forceer geen citaten en gebruik quote-blokken niet voor parafrases.\n
 Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea direct ondersteunen. Kies de nauwkeurigste fragmenten. Vermijd meta-commentaar zoals 'in de podcast' of 'in de opname'. Geef in styleNote in één korte zin aan welke stijleigenschappen je hebt behouden. Schrijf circa ${targetWords} woorden.`,
         input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nTaalinstructie: ${articleLanguageInstruction(metadata.language)}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
         text: {
@@ -320,5 +385,6 @@ Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea
     elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
     sections: article.sections.length,
   });
-  return validateArticleSources(article, new Set(validIds));
+  validateArticleSources(article, new Set(validIds));
+  return validateArticleQuotes(article, transcript);
 }

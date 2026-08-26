@@ -85,11 +85,23 @@ function renderParagraph(
   jobId: string,
   baseUrl: string,
 ): void {
-  document
-    .font("Helvetica")
-    .fontSize(10.5)
-    .fillColor(colors.ink)
-    .text(cleanText(value.text), { lineGap: 3, align: "left" });
+  if (value.kind === "quote") {
+    document
+      .font("Times-Bold")
+      .fontSize(15)
+      .fillColor(colors.green)
+      .text(cleanText(value.text), {
+        indent: 16,
+        lineGap: 4,
+        align: "left",
+      });
+  } else {
+    document
+      .font("Helvetica")
+      .fontSize(10.5)
+      .fillColor(colors.ink)
+      .text(cleanText(value.text), { lineGap: 3, align: "left" });
+  }
   document.moveDown(0.35);
   sourceMoments(document, value, transcriptById, jobId, baseUrl);
 }

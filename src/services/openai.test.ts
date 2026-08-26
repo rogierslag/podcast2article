@@ -8,6 +8,7 @@ import {
   articleLanguageInstruction,
   openAIBaseURL,
   transcribeChunks,
+  validateArticleQuotes,
   validateArticleSources,
 } from "./openai.js";
 import type { Article } from "../types.js";
@@ -51,6 +52,50 @@ describe("article source validation", () => {
     expect(() => validateArticleSources(invalid, new Set(["t-00001"]))).toThrow(
       /zonder geldige transcriptbron/,
     );
+  });
+});
+
+describe("literal article quotes", () => {
+  it("accepts a quote whose words occur in its cited transcript", () => {
+    const quoted = structuredClone(article);
+    quoted.sections[0]!.paragraphs[0] = {
+      kind: "quote",
+      text: "Dat vergeet je nooit meer.",
+      sources: ["t-00001"],
+    };
+
+    expect(
+      validateArticleQuotes(quoted, [
+        {
+          id: "t-00001",
+          start: 0,
+          end: 2,
+          speaker: "Spreker",
+          text: "Nou, dat vergeet je nooit meer! Echt niet.",
+        },
+      ]),
+    ).toBe(quoted);
+  });
+
+  it("rejects a quote that paraphrases its cited transcript", () => {
+    const quoted = structuredClone(article);
+    quoted.sections[0]!.paragraphs[0] = {
+      kind: "quote",
+      text: "Dat zal je altijd bijblijven.",
+      sources: ["t-00001"],
+    };
+
+    expect(() =>
+      validateArticleQuotes(quoted, [
+        {
+          id: "t-00001",
+          start: 0,
+          end: 2,
+          speaker: "Spreker",
+          text: "Dat vergeet je nooit meer.",
+        },
+      ]),
+    ).toThrow(/niet letterlijk/);
   });
 });
 
