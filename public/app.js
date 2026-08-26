@@ -787,19 +787,28 @@ function updateReadButtons() {
   });
 }
 
-async function toggleCurrentArticleRead() {
+async function toggleCurrentArticleRead(event) {
   if (!currentJob) {
     return;
   }
+  const returnToArticles = event.currentTarget.hasAttribute(
+    "data-return-to-articles",
+  );
+  const markAsRead = !currentJob.readAt;
   const buttons = document.querySelectorAll("[data-article-read-toggle]");
   buttons.forEach((button) => {
     button.disabled = true;
   });
   setArticleActionStatus("");
   try {
-    const article = await updateArticleRead(currentJob.id, !currentJob.readAt);
+    const article = await updateArticleRead(currentJob.id, markAsRead);
     currentJob.readAt = article.readAt;
     updateReadButtons();
+    if (returnToArticles && markAsRead) {
+      history.replaceState({}, "", "/articles");
+      pageScroll.scrollTo({ top: 0 });
+      await showArticles();
+    }
   } catch (error) {
     setArticleActionStatus(error.message);
   } finally {
