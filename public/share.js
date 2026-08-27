@@ -1,3 +1,5 @@
+import { t, countText, locale, localizedFetch } from "./localize.js";
+
 const $ = (selector) => document.querySelector(selector);
 
 function html(strings, ...values) {
@@ -248,7 +250,7 @@ function updateArticleReadingProgress() {
   );
   articleReadingProgress.setAttribute(
     "aria-valuetext",
-    `${progressPercentage} procent gelezen`,
+    t("progress.read", { count: progressPercentage }),
   );
   if (shouldTrackReadingPosition) {
     trackReadingPosition();
@@ -284,8 +286,12 @@ function sourceButtons(ids, sources) {
                 <button
                   class="source-link"
                   data-time="${source.start}"
-                  aria-label="Luister vanaf ${time(source.start)}"
-                  title="Luister vanaf ${time(source.start)}"
+                  aria-label="${escapeHtml(
+                    t("source.listen", { time: time(source.start) }),
+                  )}"
+                  title="${escapeHtml(
+                    t("source.listen", { time: time(source.start) }),
+                  )}"
                 >
                   ${time(source.start)}
                 </button>
@@ -314,26 +320,26 @@ function renderSharedArticle(shared, token) {
   const { episode, article, sources } = shared;
   const details = [
     episode.publishedAt
-      ? new Date(episode.publishedAt).toLocaleDateString("nl-NL", {
+      ? new Date(episode.publishedAt).toLocaleDateString(locale, {
           dateStyle: "long",
         })
       : "",
     episode.durationSeconds
-      ? `${Math.round(episode.durationSeconds / 60)} minuten`
+      ? countText("duration", Math.round(episode.durationSeconds / 60))
       : "",
   ].filter(Boolean);
   const sourceLabel =
     episode.sourceType === "google-drive"
-      ? "Bekijk in Google Drive ↗"
+      ? t("source.viewDrive")
       : episode.sourceType === "youtube"
-        ? "Bekijk op YouTube ↗"
-        : "Bekijk op Spotify ↗";
+        ? t("source.viewYoutube")
+        : t("source.viewSpotify");
   $("#episode-hero").innerHTML = html`
     ${episode.imageUrl
       ? html`
           <img
             src="${escapeHtml(episode.imageUrl)}"
-            alt="Afbeelding van ${escapeHtml(episode.sourceName)}"
+            alt="${escapeHtml(t("source.image", { name: episode.sourceName }))}"
           />
         `
       : ""}
@@ -370,12 +376,16 @@ function renderSharedArticle(shared, token) {
     <h1>${escapeHtml(article.title)}</h1>
     <p class="dek">${escapeHtml(article.dek)}</p>
     <p class="byline">
-      ${article.readingTimeMinutes} minuten leestijd · anoniem gedeeld
+      ${escapeHtml(
+        t("shared.byline", {
+          reading: countText("reading", article.readingTimeMinutes),
+        }),
+      )}
     </p>
     <p class="style-note">${escapeHtml(article.styleNote)}</p>
     ${sections}
     <div class="takeaways">
-      <h2>Kernpunten</h2>
+      <h2>${t("article.takeaways")}</h2>
       <ul>
         ${article.takeaways
           .map(
@@ -420,7 +430,7 @@ $("#shared-main").addEventListener("click", (event) => {
 });
 
 const token = location.pathname.split("/").filter(Boolean).at(-1);
-fetch(`/api/shared/${encodeURIComponent(token)}`)
+localizedFetch(`/api/shared/${encodeURIComponent(token)}`)
   .then(async (response) => {
     if (!response.ok) {
       throw new Error("not found");

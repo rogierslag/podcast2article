@@ -1,5 +1,11 @@
 import PDFDocument from "pdfkit";
 import type { ArticleParagraph, Job, TranscriptSegment } from "../types.js";
+import {
+  countLabel,
+  dateLocale,
+  translate,
+  type UiLanguage,
+} from "../../public/i18n.js";
 
 const colors = {
   ink: "#1b201d",
@@ -48,6 +54,7 @@ function sourceMoments(
   transcriptById: Map<string, TranscriptSegment>,
   jobId: string,
   baseUrl: string,
+  language: UiLanguage,
 ): void {
   const sources = value.sources
     .map((id) => transcriptById.get(id))
@@ -60,7 +67,7 @@ function sourceMoments(
     .font("Courier-Bold")
     .fontSize(7)
     .fillColor(colors.green)
-    .text("BRON  ", { continued: true });
+    .text(`${translate(language, "pdf.source")}  `, { continued: true });
   sources.forEach((source, index) => {
     document.text(timestamp(source.start), {
       continued: index < sources.length - 1,
@@ -84,6 +91,7 @@ function renderParagraph(
   transcriptById: Map<string, TranscriptSegment>,
   jobId: string,
   baseUrl: string,
+  language: UiLanguage,
 ): void {
   if (value.kind === "quote") {
     document
@@ -103,7 +111,7 @@ function renderParagraph(
       .text(cleanText(value.text), { lineGap: 3, align: "left" });
   }
   document.moveDown(0.35);
-  sourceMoments(document, value, transcriptById, jobId, baseUrl);
+  sourceMoments(document, value, transcriptById, jobId, baseUrl, language);
 }
 
 function addPageNumbers(document: PDFKit.PDFDocument): void {
@@ -133,6 +141,7 @@ function renderArticle(
   document: PDFKit.PDFDocument,
   job: Job,
   baseUrl: string,
+  language: UiLanguage,
 ): void {
   const article = job.article!;
   const episode = job.episode!;
@@ -184,10 +193,10 @@ function renderArticle(
   document.moveDown(1);
 
   const details = [
-    `${article.readingTimeMinutes} minuten leestijd`,
-    `${transcript.length} bronfragmenten`,
+    countLabel(language, "reading", article.readingTimeMinutes),
+    countLabel(language, "sources", transcript.length),
     episode.publishedAt
-      ? new Date(episode.publishedAt).toLocaleDateString("nl-NL", {
+      ? new Date(episode.publishedAt).toLocaleDateString(dateLocale(language), {
           dateStyle: "long",
         })
       : undefined,
@@ -236,7 +245,14 @@ function renderArticle(
       .text(cleanText(section.heading), { lineGap: 2 });
     document.moveDown(0.7);
     for (const value of section.paragraphs) {
-      renderParagraph(document, value, transcriptById, job.id, baseUrl);
+      renderParagraph(
+        document,
+        value,
+        transcriptById,
+        job.id,
+        baseUrl,
+        language,
+      );
     }
   }
 
@@ -269,7 +285,7 @@ function renderArticle(
     .font("Times-Bold")
     .fontSize(19)
     .fillColor(colors.ink)
-    .text("Kernpunten");
+    .text(translate(language, "article.takeaways"));
   document.moveDown(0.7);
   for (const takeaway of article.takeaways) {
     ensureSpace(document, 60);
@@ -293,13 +309,23 @@ function renderArticle(
         },
       );
     document.moveDown(0.35);
-    sourceMoments(document, takeaway, transcriptById, job.id, baseUrl);
+    sourceMoments(
+      document,
+      takeaway,
+      transcriptById,
+      job.id,
+      baseUrl,
+      language,
+    );
   }
 
   addPageNumbers(document);
 }
 
-export function pdfDownloadName(title: string): string {
+export function pdfDownloadName(
+  title: string,
+  language: UiLanguage = "nl",
+): string {
   const safeTitle = title
     .normalize("NFKC")
     .replace(/[\u0000-\u001f<>:"/\\|?*]/g, " ")
@@ -307,12 +333,13 @@ export function pdfDownloadName(title: string): string {
     .replace(/[. ]+$/g, "")
     .trim()
     .slice(0, 120);
-  return `${safeTitle || "artikel"}.pdf`;
+  return `${safeTitle || translate(language, "article.filename")}.pdf`;
 }
 
 export function generateArticlePdf(
   job: Job,
   baseUrl: string,
+  language: UiLanguage = "nl",
 ): Promise<Uint8Array> {
   if (!job.article || !job.episode || !job.transcript) {
     return Promise.reject(
@@ -327,7 +354,7 @@ export function generateArticlePdf(
     info: {
       Title: cleanText(job.article.title),
       Author: cleanText(job.episode.sourceName),
-      Subject: "Brongebonden artikel met aanklikbare transcriptiemomenten",
+      Subject: translate(language, "pdf.subject"),
       Creator: "Podcast2Article",
     },
   });
@@ -338,7 +365,7 @@ export function generateArticlePdf(
     document.once("error", reject);
   });
   try {
-    renderArticle(document, job, baseUrl);
+    renderArticle(document, job, baseUrl, language);
     document.end();
   } catch (error) {
     document.destroy(error instanceof Error ? error : new Error(String(error)));

@@ -106,6 +106,22 @@ voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
 
 ## Configuratie
 
+### Taal van de interface
+
+De interface volgt de primaire browsertaal: Nederlands (`nl`, `nl-NL`, `nl-BE`,
+enzovoort) gebruikt Nederlandse tekst; alle andere talen vallen terug op Engels.
+Dit geldt ook voor foutmeldingen, datums en de vaste labels in PDF-exports.
+De taalkeuze voor het genereren van artikelen blijft hiervan onafhankelijk.
+Artikelen en transcripties worden niet opnieuw vertaald wanneer de interfacetaal verandert.
+
+De gedeelde vertalingen staan in `public/i18n.js`, met semantische sleutels zoals
+`article.delete` en `nav.articles` in plaats van Nederlandse tekst als sleutel.
+De tests controleren automatisch alle HTML-templates en browsermodules op ontbrekende
+vertalingen, inclusief toegankelijkheidslabels en enkelvoud/meervoud.
+De server gebruikt
+`Accept-Language` voor de eerste HTML-weergave; browserverzoeken sturen de gekozen
+interfacetaal mee. Vernieuw de pagina na een wijziging van de browsertaal.
+
 | Variabele                         | Standaard                   | Betekenis                                                                        |
 | --------------------------------- | --------------------------- | -------------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`                  | vereist                     | Via de CLI meegegeven OpenAI API-key                                             |
