@@ -628,6 +628,10 @@ export const messages = {
     nl: "Dit artikel verwijderen",
     en: "Delete this article",
   },
+  "article.deleteConfirm": {
+    nl: "Weet je zeker dat je dit artikel wilt verwijderen? Je kunt dit niet ongedaan maken in de app.",
+    en: "Are you sure you want to delete this article? You can’t undo this in the app.",
+  },
   "article.contents": {
     nl: "In dit artikel",
     en: "In this article",

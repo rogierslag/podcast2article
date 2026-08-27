@@ -860,6 +860,9 @@ async function deleteCurrentArticle() {
   if (!currentJob) {
     return;
   }
+  if (!window.confirm(t("article.deleteConfirm"))) {
+    return;
+  }
   const button = $("#delete-article");
   const status = $("#article-delete-status");
   button.disabled = true;
