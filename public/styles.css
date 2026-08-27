@@ -482,6 +482,15 @@ body.scroll-shell {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.article {
+  /* Keep long words and URLs inside the reader without clipping content. */
+  overflow-wrap: anywhere;
+}
+.article h1,
+.article h2 {
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
 .article h1 {
   font: 600 clamp(44px, 6vw, 72px) / 1 var(--serif);
   letter-spacing: -0.045em;
