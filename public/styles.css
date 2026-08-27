@@ -332,6 +332,10 @@ body.scroll-shell {
   gap: 35px;
   align-items: center;
 }
+.episode-hero > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .episode-hero img {
   width: 140px;
   height: 140px;

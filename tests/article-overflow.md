@@ -10,6 +10,8 @@ existing user articles.
 - Repeat with a title containing an unbroken string of 100 characters, to test
   wrapping when the browser has no matching hyphenation dictionary.
 - Include a long compound word and a long URL in the article body.
+- Use an episode title such as `De rol van productteams` with artwork, and check
+  that the episode header's text column can shrink at 320px without overflowing.
 
 ## Viewports and assertions
 
