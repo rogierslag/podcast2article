@@ -17,72 +17,83 @@ describe("PDF download names", () => {
 
   it("falls back when the title contains no usable characters", () => {
     expect(pdfDownloadName("  ...  ")).toBe("artikel.pdf");
+    expect(pdfDownloadName("  ...  ", "en")).toBe("article.pdf");
   });
 });
 
 describe("PDF generation", () => {
-  it("creates a PDF with a clickable source moment", async () => {
-    const now = new Date().toISOString();
-    const job: Job = {
-      id: "11111111-1111-4111-8111-111111111111",
-      sourceUrl: "https://example.com/episode",
-      language: "nl",
-      articleLength: "compact",
-      stage: "complete",
-      progress: 100,
-      message: "Klaar",
-      createdAt: now,
-      updatedAt: now,
-      episode: {
-        sourceType: "spotify",
+  it.each(["nl", "en"] as const)(
+    "creates a %s PDF with a clickable source moment",
+    async (language) => {
+      const now = new Date().toISOString();
+      const job: Job = {
+        id: "11111111-1111-4111-8111-111111111111",
         sourceUrl: "https://example.com/episode",
-        sourceName: "Voorbeeldpodcast",
-        title: "Een aflevering",
-        mediaUrl: "https://example.com/audio.mp3",
-      },
-      transcript: [
-        {
-          id: "t-00001",
-          start: 83,
-          end: 90,
-          speaker: "Rogier",
-          text: "Een bronfragment.",
+        language: "nl",
+        articleLength: "compact",
+        stage: "complete",
+        progress: 100,
+        message: "Klaar",
+        createdAt: now,
+        updatedAt: now,
+        episode: {
+          sourceType: "spotify",
+          sourceUrl: "https://example.com/episode",
+          sourceName: "Voorbeeldpodcast",
+          title: "Een aflevering",
+          mediaUrl: "https://example.com/audio.mp3",
         },
-      ],
-      article: {
-        title: "Waarom AI wél werkt",
-        dek: "Een compact artikel met een controleerbare bron.",
-        readingTimeMinutes: 4,
-        styleNote: "Direct, praktisch en zorgvuldig.",
-        sections: [
+        transcript: [
           {
-            heading: "De kern",
-            paragraphs: [
-              {
-                text: "Dit is de inhoud van de eerste alinea.",
-                sources: ["t-00001"],
-              },
-              {
-                kind: "quote",
-                text: "Een bronfragment.",
-                sources: ["t-00001"],
-              },
-            ],
+            id: "t-00001",
+            start: 83,
+            end: 90,
+            speaker: "Rogier",
+            text: "Een bronfragment.",
           },
         ],
-        takeaways: [
-          {
-            text: "Controleer altijd de oorspronkelijke bron.",
-            sources: ["t-00001"],
-          },
-        ],
-      },
-    };
-    const pdf = Buffer.from(
-      await generateArticlePdf(job, "https://podcast.example"),
-    );
-    expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
-    expect(pdf.byteLength).toBeGreaterThan(1_000);
-    expect(pdf.includes(Buffer.from("https://podcast.example/"))).toBe(true);
-  });
+        article: {
+          title: "Waarom AI wél werkt",
+          dek: "Een compact artikel met een controleerbare bron.",
+          readingTimeMinutes: 4,
+          styleNote: "Direct, praktisch en zorgvuldig.",
+          sections: [
+            {
+              heading: "De kern",
+              paragraphs: [
+                {
+                  text: "Dit is de inhoud van de eerste alinea.",
+                  sources: ["t-00001"],
+                },
+                {
+                  kind: "quote",
+                  text: "Een bronfragment.",
+                  sources: ["t-00001"],
+                },
+              ],
+            },
+          ],
+          takeaways: [
+            {
+              text: "Controleer altijd de oorspronkelijke bron.",
+              sources: ["t-00001"],
+            },
+          ],
+        },
+      };
+      const pdf = Buffer.from(
+        await generateArticlePdf(job, "https://podcast.example", language),
+      );
+      expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
+      expect(pdf.byteLength).toBeGreaterThan(1_000);
+      expect(pdf.includes(Buffer.from("https://podcast.example/"))).toBe(true);
+      expect(
+        pdf.includes(
+          Buffer.from(
+            language === "nl" ? "Brongetrouw artikel" : "Source-linked article",
+          ),
+        ),
+      ).toBe(true);
+    },
+  );
 });

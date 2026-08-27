@@ -1,3 +1,12 @@
+import {
+  t,
+  countText,
+  locale,
+  localizedFetch,
+  errorText,
+  LocalizedError,
+} from "./localize.js";
+
 const $ = (selector) => document.querySelector(selector);
 
 function html(strings, ...values) {
@@ -13,7 +22,7 @@ window.fetch = async (...arguments_) => {
   const response = await browserFetch(...arguments_);
   if (response.status === 401) {
     location.assign("/login");
-    throw new Error("Je sessie is verlopen. Log opnieuw in.");
+    throw new LocalizedError(t("error.sessionExpired"));
   }
   return response;
 };
@@ -92,12 +101,15 @@ async function flushReadingPosition(keepalive = false) {
     return;
   }
   try {
-    const response = await fetch(`/api/jobs/${jobId}/reading-position`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sectionIndex: pendingSectionIndex }),
-      keepalive,
-    });
+    const response = await localizedFetch(
+      `/api/jobs/${jobId}/reading-position`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sectionIndex: pendingSectionIndex }),
+        keepalive,
+      },
+    );
     if (!response.ok) {
       lastSavedReadingSectionIndex = undefined;
     }
@@ -247,7 +259,7 @@ function updateArticleReadingProgress() {
   );
   articleReadingProgress.setAttribute(
     "aria-valuetext",
-    `${progressPercentage} procent gelezen`,
+    t("progress.read", { count: progressPercentage }),
   );
   if (shouldTrackReadingPosition) {
     trackReadingPosition();
@@ -272,7 +284,7 @@ pageScroll.addEventListener(
 );
 window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
 
-fetch("/api/auth")
+localizedFetch("/api/auth")
   .then((response) => response.json())
   .then(({ enabled }) => {
     if (enabled) {
@@ -287,11 +299,11 @@ const sourceLabels = {
   "google-drive": "Google Drive",
 };
 const processingStageLabels = {
-  queued: "In wachtrij",
-  resolving: "Bron controleren",
-  downloading: "Downloaden",
-  transcribing: "Transcriberen",
-  writing: "Artikel schrijven",
+  queued: t("stage.queued"),
+  resolving: t("stage.resolving"),
+  downloading: t("stage.downloading"),
+  transcribing: t("stage.transcribing"),
+  writing: t("stage.writing"),
 };
 
 const escapeHtml = (value = "") =>
@@ -324,8 +336,8 @@ function showFormError(message, existingJobId, existingStage) {
   existingJobLink.href = `/#job=${existingJobId}`;
   existingJobLink.textContent =
     existingStage === "complete"
-      ? "Open bestaand artikel →"
-      : "Bekijk verwerking →";
+      ? t("duplicate.openArticle")
+      : t("duplicate.viewProgress");
   existingJobLink.addEventListener("click", (event) => {
     event.preventDefault();
     location.hash = `job=${existingJobId}`;
@@ -339,7 +351,7 @@ form.addEventListener("submit", async (event) => {
   $("#form-error").textContent = "";
   const data = Object.fromEntries(new FormData(form));
   try {
-    const response = await fetch("/api/jobs", {
+    const response = await localizedFetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -350,13 +362,13 @@ form.addEventListener("submit", async (event) => {
         showFormError(body.error, body.existingJobId, body.existingStage);
         return;
       }
-      throw new Error(body.error || "De opdracht kon niet starten.");
+      throw new LocalizedError(body.error || t("error.jobStart"));
     }
     location.hash = `job=${body.id}`;
     showProgress(body);
     poll(body.id);
   } catch (error) {
-    showFormError(error.message);
+    showFormError(errorText(error));
   }
 });
 
@@ -376,9 +388,9 @@ function showProgress(job) {
 
 async function poll(id) {
   try {
-    const response = await fetch(`/api/jobs/${id}`);
+    const response = await localizedFetch(`/api/jobs/${id}`);
     if (!response.ok) {
-      throw new Error("Opdracht niet gevonden.");
+      throw new LocalizedError(t("error.jobNotFound"));
     }
     const job = await response.json();
     showProgress(job);
@@ -386,13 +398,13 @@ async function poll(id) {
       return renderResult(job);
     }
     if (job.stage === "failed") {
-      throw new Error(job.error || "Verwerking mislukt.");
+      throw new LocalizedError(job.error || t("error.processingFailed"));
     }
     setTimeout(() => poll(id), 1800);
   } catch (error) {
     progressView.classList.add("hidden");
     landing.classList.remove("hidden");
-    $("#form-error").textContent = error.message;
+    $("#form-error").textContent = errorText(error);
   }
 }
 
@@ -407,8 +419,12 @@ function sourceButtons(ids, transcript) {
                 <button
                   class="source-link"
                   data-source="${id}"
-                  aria-label="Ga naar transcript op ${time(item.start)}"
-                  title="Ga naar transcript op ${time(item.start)}"
+                  aria-label="${escapeHtml(
+                    t("source.jump", { time: time(item.start) }),
+                  )}"
+                  title="${escapeHtml(
+                    t("source.jump", { time: time(item.start) }),
+                  )}"
                 >
                   ${time(item.start)}
                 </button>
@@ -453,22 +469,22 @@ function renderResult(job) {
     article = job.article,
     transcript = job.transcript;
   const sourceName =
-    episode.sourceName || episode.podcast || "Oorspronkelijke bron";
+    episode.sourceName || episode.podcast || t("source.original");
   const sourceUrl = episode.sourceUrl || episode.spotifyUrl;
   const sourceLinkLabel =
     episode.sourceType === "google-drive"
-      ? "Bekijk in Google Drive ↗"
+      ? t("source.viewDrive")
       : episode.sourceType === "youtube"
-        ? "Bekijk op YouTube ↗"
-        : "Bekijk op Spotify ↗";
+        ? t("source.viewYoutube")
+        : t("source.viewSpotify");
   const details = [
     episode.publishedAt
-      ? new Date(episode.publishedAt).toLocaleDateString("nl-NL", {
+      ? new Date(episode.publishedAt).toLocaleDateString(locale, {
           dateStyle: "long",
         })
       : "",
     episode.durationSeconds
-      ? `${Math.round(episode.durationSeconds / 60)} minuten`
+      ? countText("duration", Math.round(episode.durationSeconds / 60))
       : "",
   ].filter(Boolean);
   $("#episode-hero").innerHTML = html`
@@ -476,7 +492,7 @@ function renderResult(job) {
       ? html`
           <img
             src="${escapeHtml(episode.imageUrl)}"
-            alt="Afbeelding van ${escapeHtml(sourceName)}"
+            alt="${escapeHtml(t("source.image", { name: sourceName }))}"
           />
         `
       : ""}
@@ -513,13 +529,17 @@ function renderResult(job) {
     <h1>${escapeHtml(article.title)}</h1>
     <p class="dek">${escapeHtml(article.dek)}</p>
     <p class="byline">
-      ${article.readingTimeMinutes} minuten leestijd · gebaseerd op
-      ${transcript.length} bronfragmenten
+      ${escapeHtml(
+        t("article.byline", {
+          reading: countText("reading", article.readingTimeMinutes),
+          sources: countText("sources", transcript.length),
+        }),
+      )}
     </p>
     <p class="style-note">${escapeHtml(article.styleNote)}</p>
     ${sections}
     <div class="takeaways">
-      <h2>Kernpunten</h2>
+      <h2>${t("article.takeaways")}</h2>
       <ul>
         ${article.takeaways
           .map(
@@ -640,15 +660,15 @@ async function exportToPdf() {
     button.disabled = true;
     const label = button.querySelector("span");
     if (label) {
-      label.textContent = "PDF maken…";
+      label.textContent = t("pdf.creating");
     }
   });
   setArticleActionStatus("");
   try {
-    const response = await fetch(`/api/jobs/${job.id}/pdf`);
+    const response = await localizedFetch(`/api/jobs/${job.id}/pdf`);
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      throw new Error(body.error || "PDF-export is mislukt.");
+      throw new LocalizedError(body.error || t("error.pdfExport"));
     }
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
@@ -658,22 +678,22 @@ async function exportToPdf() {
         .replace(/[\\/:*?\"<>|]+/g, " ")
         .replace(/\s+/g, " ")
         .trim()
-        .slice(0, 120) || "artikel";
+        .slice(0, 120) || t("article.filename");
     link.href = url;
     link.download = `${title}.pdf`;
     document.body.append(link);
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setArticleActionStatus("PDF gedownload.", true);
+    setArticleActionStatus(t("pdf.downloaded"), true);
   } catch (error) {
-    setArticleActionStatus(error.message);
+    setArticleActionStatus(errorText(error));
   } finally {
     buttons.forEach((button) => {
       button.disabled = false;
       const label = button.querySelector("span");
       if (label) {
-        label.textContent = "Download PDF";
+        label.textContent = t("article.downloadPdf");
       }
     });
   }
@@ -693,7 +713,7 @@ async function copyToClipboard(value) {
   const copied = document.execCommand("copy");
   input.remove();
   if (!copied) {
-    throw new Error("Kopiëren is niet gelukt.");
+    throw new LocalizedError(t("error.copy"));
   }
 }
 
@@ -707,21 +727,24 @@ async function shareArticle() {
   });
   setArticleActionStatus("");
   try {
-    const response = await fetch(`/api/jobs/${currentJob.id}/share`, {
+    const response = await localizedFetch(`/api/jobs/${currentJob.id}/share`, {
       method: "POST",
     });
     const body = await response.json();
     if (!response.ok) {
-      throw new Error(body.error || "Permalink kon niet worden aangemaakt.");
+      throw new LocalizedError(body.error || t("error.shareCreate"));
     }
     if (matchMedia("(max-width: 600px)").matches && navigator.share) {
       try {
         await navigator.share({
           title: currentJob.article.title,
-          text: `Lees “${currentJob.article.title}” op Podcast2Article: ${body.url}`,
+          text: t("share.message", {
+            title: currentJob.article.title,
+            url: body.url,
+          }),
           url: body.url,
         });
-        setArticleActionStatus("Artikel gedeeld.", true);
+        setArticleActionStatus(t("share.completed"), true);
         return;
       } catch (error) {
         if (error?.name === "AbortError") {
@@ -730,9 +753,9 @@ async function shareArticle() {
       }
     }
     await copyToClipboard(body.url);
-    setArticleActionStatus("Deelbare link gekopieerd.", true);
+    setArticleActionStatus(t("share.copied"), true);
   } catch (error) {
-    setArticleActionStatus(error.message);
+    setArticleActionStatus(errorText(error));
   } finally {
     buttons.forEach((button) => {
       button.disabled = false;
@@ -749,8 +772,8 @@ $("#toggle-transcript").addEventListener("click", () => {
   const transcript = $("#transcript");
   transcript.classList.toggle("hidden");
   $("#toggle-transcript").textContent = transcript.classList.contains("hidden")
-    ? "Toon"
-    : "Verberg";
+    ? t("transcript.show")
+    : t("transcript.hide");
 });
 document
   .querySelectorAll("[data-pdf-export]")
@@ -760,14 +783,14 @@ document
   .forEach((button) => button.addEventListener("click", shareArticle));
 
 async function updateArticleRead(id, read) {
-  const response = await fetch(`/api/articles/${id}`, {
+  const response = await localizedFetch(`/api/articles/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ read }),
   });
   const body = await response.json();
   if (!response.ok) {
-    throw new Error(body.error || "Leesstatus kon niet worden opgeslagen.");
+    throw new LocalizedError(body.error || t("error.readState"));
   }
   return body;
 }
@@ -779,11 +802,11 @@ function updateReadButtons() {
     button.setAttribute("aria-pressed", String(isRead));
     button.setAttribute(
       "aria-label",
-      isRead ? "Zet artikel terug op ongelezen" : "Markeer artikel als gelezen",
+      isRead ? t("article.markUnreadLabel") : t("article.markReadLabel"),
     );
     button.querySelector("span").textContent = isRead
-      ? "Gelezen"
-      : "Markeer als gelezen";
+      ? t("article.readStatus")
+      : t("article.markRead");
   });
 }
 
@@ -810,7 +833,7 @@ async function toggleCurrentArticleRead(event) {
       await showArticles();
     }
   } catch (error) {
-    setArticleActionStatus(error.message);
+    setArticleActionStatus(errorText(error));
   } finally {
     buttons.forEach((button) => {
       button.disabled = false;
@@ -826,12 +849,42 @@ document
 
 function articleDate(article) {
   const value = article.publishedAt || article.completedAt;
-  return new Date(value).toLocaleDateString("nl-NL", {
+  return new Date(value).toLocaleDateString(locale, {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 }
+
+async function deleteCurrentArticle() {
+  if (!currentJob) {
+    return;
+  }
+  const button = $("#delete-article");
+  const status = $("#article-delete-status");
+  button.disabled = true;
+  status.textContent = "";
+  try {
+    const response = await localizedFetch(`/api/articles/${currentJob.id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      const body = await response.json();
+      throw new LocalizedError(body.error || t("error.articleDelete"));
+    }
+    $("#audio").pause();
+    clearTimeout(readingPositionSaveTimer);
+    pendingReadingSectionIndex = undefined;
+    hideContinueReading();
+    currentJob = undefined;
+    location.replace("/articles");
+  } catch (error) {
+    status.textContent = errorText(error);
+    button.disabled = false;
+  }
+}
+
+$("#delete-article").addEventListener("click", deleteCurrentArticle);
 
 function articleCard(article) {
   const articleId = escapeHtml(article.id);
@@ -847,7 +900,7 @@ function articleCard(article) {
           ? ""
           : "article-card-placeholder"}"
         href="${articleUrl}"
-        aria-label="Lees ${escapeHtml(article.title)}"
+        aria-label="${escapeHtml(t("article.read", { title: article.title }))}"
       >
         ${article.imageUrl
           ? html`<img src="${escapeHtml(article.imageUrl)}" alt="" />`
@@ -861,7 +914,7 @@ function articleCard(article) {
             )}
           </span>
           ${escapeHtml(articleDate(article))} · ${article.readingTimeMinutes}
-          min.
+          ${t("duration.abbreviation")}
         </p>
         <a class="article-card-title" href="${articleUrl}">
           <h3>${escapeHtml(article.title)}</h3>
@@ -870,21 +923,23 @@ function articleCard(article) {
         <div class="article-card-footer">
           <span>${escapeHtml(article.sourceName)}</span>
           <div class="article-card-actions">
-            <a href="${articleUrl}"> Lees <span aria-hidden="true">→</span> </a>
+            <a href="${articleUrl}">
+              ${t("article.readAction")} <span aria-hidden="true">→</span>
+            </a>
             <button
               type="button"
               data-read-toggle
               data-article-id="${articleId}"
               data-read="${isRead}"
               aria-label="${isRead
-                ? "Zet op ongelezen"
-                : "Markeer als gelezen"}"
+                ? t("article.markUnread")
+                : t("article.markRead")}"
               aria-pressed="${isRead}"
             >
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="m5 12 4 4L19 6" />
               </svg>
-              ${isRead ? "Gelezen" : "Markeer gelezen"}
+              ${isRead ? t("article.readStatus") : t("article.markRead")}
             </button>
           </div>
         </div>
@@ -969,7 +1024,9 @@ function processingCard(job) {
         </div>
         <div
           class="processing-track"
-          aria-label="${Math.round(job.progress)} procent voltooid"
+          aria-label="${escapeHtml(
+            t("progress.complete", { count: Math.round(job.progress) }),
+          )}"
         >
           <i style="width: ${Math.max(0, Math.min(100, job.progress))}%"></i>
         </div>
@@ -982,7 +1039,7 @@ function processingShelf() {
   return html`
     <section class="article-shelf processing-shelf">
       <div class="article-shelf-heading">
-        <h2>In verwerking</h2>
+        <h2>${t("overview.processing")}</h2>
         <span class="article-shelf-count">${processingState.length}</span>
       </div>
       ${processingState.length
@@ -992,9 +1049,7 @@ function processingShelf() {
             </div>
           `
         : html`
-            <p class="article-shelf-empty">
-              Er wordt op dit moment niets verwerkt.
-            </p>
+            <p class="article-shelf-empty">${t("overview.noProcessing")}</p>
           `}
     </section>
   `;
@@ -1005,17 +1060,20 @@ function renderArticlesOverview() {
   const unread = articlesState.filter((article) => !article.readAt);
   const read = articlesState.filter((article) => article.readAt);
   if (articlesState.length === 0 && processingState.length === 0) {
-    $("#articles-count").textContent = "0 artikelen";
+    $("#articles-count").textContent = t("overview.noArticles");
     $("#articles-content").innerHTML = processingShelf();
     $("#articles-empty").classList.remove("hidden");
     return;
   }
-  $("#articles-count").textContent =
-    `${processingState.length} in verwerking · ${unread.length} nog te lezen · ${read.length} gelezen`;
+  $("#articles-count").textContent = t("overview.count", {
+    processing: processingState.length,
+    unread: unread.length,
+    read: read.length,
+  });
   $("#articles-content").innerHTML =
     processingShelf() +
-    articleShelf("Nog te lezen", unread, "Je bent helemaal bij.") +
-    articleShelf("Gelezen", read, "Nog geen artikelen afgevinkt.", true);
+    articleShelf(t("overview.unread"), unread, t("overview.caughtUp")) +
+    articleShelf(t("article.readStatus"), read, t("overview.noRead"), true);
   $("#articles-empty").classList.add("hidden");
 }
 
@@ -1043,7 +1101,7 @@ articlesView.addEventListener("click", async (event) => {
     );
     renderArticlesOverview();
   } catch (error) {
-    $("#articles-error").textContent = error.message;
+    $("#articles-error").textContent = errorText(error);
     button.disabled = false;
   }
 });
@@ -1056,18 +1114,18 @@ async function showArticles(showLoading = true) {
   articlesView.classList.remove("hidden");
   if (showLoading) {
     $("#articles-content").innerHTML = html`
-      <p class="articles-loading">Artikelen ophalen…</p>
+      <p class="articles-loading">${t("overview.loading")}</p>
     `;
     $("#articles-empty").classList.add("hidden");
   }
   $("#articles-error").textContent = "";
   try {
     const [articlesResponse, processingResponse] = await Promise.all([
-      fetch("/api/articles"),
-      fetch("/api/jobs"),
+      localizedFetch("/api/articles"),
+      localizedFetch("/api/jobs"),
     ]);
     if (!articlesResponse.ok || !processingResponse.ok) {
-      throw new Error("Het overzicht kon niet worden opgehaald.");
+      throw new LocalizedError(t("error.overviewLoad"));
     }
     [articlesState, processingState] = await Promise.all([
       articlesResponse.json(),
@@ -1080,7 +1138,7 @@ async function showArticles(showLoading = true) {
       $("#articles-content").innerHTML = "";
       $("#articles-count").textContent = "";
     }
-    $("#articles-error").textContent = error.message;
+    $("#articles-error").textContent = errorText(error);
   }
 }
 

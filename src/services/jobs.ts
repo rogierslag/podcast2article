@@ -117,11 +117,11 @@ async function persist(username: string, job: Job): Promise<void> {
   const jobDirectory = path.join(userDirectory(username), "jobs");
   await mkdir(jobDirectory, { recursive: true });
   job.updatedAt = new Date().toISOString();
-  memory.set(jobKey(username, job.id), job);
   await writeFile(
     path.join(jobDirectory, `${job.id}.json`),
     JSON.stringify(job, null, 2),
   );
+  memory.set(jobKey(username, job.id), job);
 }
 
 async function update(
@@ -150,7 +150,7 @@ export function findDuplicateJob(
     return undefined;
   }
   return [...jobs]
-    .filter((job) => job.stage !== "failed")
+    .filter((job) => !job.deletedAt && job.stage !== "failed")
     .sort((left, right) => {
       if (left.stage === "complete" && right.stage !== "complete") {
         return -1;
@@ -213,7 +213,7 @@ export async function createJob(
   return job;
 }
 
-export async function getJob(
+async function getStoredJob(
   username: string,
   id: string,
 ): Promise<Job | undefined> {
@@ -238,8 +238,38 @@ export async function getJob(
   }
 }
 
-export function toArticleSummary(job: Job): ArticleSummary | undefined {
+export async function getJob(
+  username: string,
+  id: string,
+): Promise<Job | undefined> {
+  const job = await getStoredJob(username, id);
+  return job?.deletedAt ? undefined : job;
+}
+
+export async function deleteArticle(
+  username: string,
+  id: string,
+): Promise<void> {
+  const job = await getStoredJob(username, id);
+  if (!job) {
+    throw new Error("Opdracht niet gevonden.");
+  }
+  if (job.deletedAt) {
+    return;
+  }
   if (job.stage !== "complete" || !job.article || !job.episode) {
+    throw new Error("Dit artikel is nog niet klaar om te verwijderen.");
+  }
+  await persist(username, { ...job, deletedAt: new Date().toISOString() });
+}
+
+export function toArticleSummary(job: Job): ArticleSummary | undefined {
+  if (
+    job.deletedAt ||
+    job.stage !== "complete" ||
+    !job.article ||
+    !job.episode
+  ) {
     return undefined;
   }
   return {
@@ -285,7 +315,7 @@ export function listReadyArticles(username: string): ArticleSummary[] {
 export function toProcessingJobSummary(
   job: Job,
 ): ProcessingJobSummary | undefined {
-  if (job.stage === "complete" || job.stage === "failed") {
+  if (job.deletedAt || job.stage === "complete" || job.stage === "failed") {
     return undefined;
   }
   return {
@@ -392,6 +422,7 @@ export function getSharedArticle(
   for (const [key, job] of memory.entries()) {
     if (
       job.shareToken === token &&
+      !job.deletedAt &&
       job.stage === "complete" &&
       job.article &&
       job.episode &&
@@ -448,7 +479,11 @@ export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
           ) as Job,
         );
         memory.set(jobKey(username, job.id), job);
-        if (job.stage === "complete" || job.stage === "failed") {
+        if (
+          job.deletedAt ||
+          job.stage === "complete" ||
+          job.stage === "failed"
+        ) {
           continue;
         }
         const previousStage = job.stage;
