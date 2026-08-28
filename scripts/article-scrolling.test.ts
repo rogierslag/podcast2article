@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import { createContext, runInContext } from "node:vm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { translate } from "../public/i18n.js";
 
 // Run the reading controller without loading jobs or starting network requests.
 // Native iOS status-bar gestures and safe-area painting require simulator tests.
-const controller = readFileSync("public/app.js", "utf8").split(
-  'fetch("/api/auth")',
-)[0];
+const controller = readFileSync("public/app.js", "utf8")
+  .replace(/^import\s*\{[^}]*\}\s*from "\.\/localize\.js";\s*/, "")
+  .split('localizedFetch("/api/auth")')[0];
 
 function setupReadingController(
   viewportHeight = 844,
@@ -63,7 +64,9 @@ function setupReadingController(
   ]);
   const context = createContext({
     window,
-    fetch: window.fetch,
+    localizedFetch: window.fetch,
+    t: (key: string, values?: Record<string, string | number>) =>
+      translate("nl", key, values),
     document: {
       querySelector: (selector: string) => elements.get(selector),
       querySelectorAll: () => headings,

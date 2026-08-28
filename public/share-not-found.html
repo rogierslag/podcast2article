@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl">
+<html lang="{{language}}">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -7,15 +7,18 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="robots" content="noindex" />
-    <title>Artikel niet gevonden — Podcast2Article</title>
+    <title data-i18n="notFound.title">{{notFound.title}}</title>
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/share.css" />
+    <script type="module" src="/localize.js"></script>
   </head>
   <body class="shared-page">
     <main class="shared-error">
-      <span class="kicker">Niet beschikbaar</span>
-      <h1>Dit gedeelde artikel kon niet worden gevonden.</h1>
-      <p>Controleer of je de volledige permalink hebt geopend.</p>
+      <span class="kicker" data-i18n="notFound.kicker"
+        >{{notFound.kicker}}</span
+      >
+      <h1 data-i18n="notFound.heading">{{notFound.heading}}</h1>
+      <p data-i18n="notFound.description">{{notFound.description}}</p>
     </main>
   </body>
 </html>

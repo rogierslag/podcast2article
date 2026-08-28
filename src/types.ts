@@ -72,6 +72,8 @@ export interface Job {
   completedAt?: string;
   readAt?: string;
   readingPosition?: ArticleReadingPosition;
+  /** Soft deletion hides the article without removing its stored content or media. */
+  deletedAt?: string;
   /** High-entropy capability token for the article's anonymous public permalink. */
   shareToken?: string;
   episode?: Episode;

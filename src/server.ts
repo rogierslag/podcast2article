@@ -5,6 +5,14 @@ import path from "node:path";
 import { z } from "zod";
 import { resolveGitSha } from "./lib/git.js";
 import {
+  localizeJob,
+  localizeProcessingJob,
+  localizeTemplate,
+  requestLanguage,
+  translateStoredMessage,
+} from "./lib/i18n.js";
+import { translate } from "../public/i18n.js";
+import {
   createUserAuth,
   expiredSessionCookie,
   readCookie,
@@ -15,6 +23,7 @@ import {
   createArticleShare,
   createJob,
   DuplicateJobError,
+  deleteArticle,
   getJob,
   getSharedArticle,
   listProcessingJobs,
@@ -48,8 +57,45 @@ const loginBlockMs = 15 * 60 * 1_000;
 
 app.disable("x-powered-by");
 app.set("trust proxy", "loopback");
+app.use((_request, response, next) => {
+  // Cached responses must not mix UI languages between visitors.
+  response.vary("Accept-Language");
+  next();
+});
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: false, limit: "2kb" }));
+
+function responseLanguage(response: express.Response) {
+  return requestLanguage(response.req.get("Accept-Language"));
+}
+
+function localizeError(
+  response: express.Response,
+  message: unknown,
+  fallback = "error.generic",
+): string {
+  return translateStoredMessage(responseLanguage(response), message, fallback);
+}
+
+function renderPage(response: express.Response, template: string): string {
+  const language = responseLanguage(response);
+  response.setHeader("Content-Language", language);
+  return localizeTemplate(template, language);
+}
+
+async function sendIndex(
+  _request: express.Request,
+  response: express.Response,
+) {
+  response.setHeader("Cache-Control", "no-store");
+  response.type("html");
+  return response.send(
+    renderPage(
+      response,
+      await readFile(path.join(publicDirectory, "index.html"), "utf8"),
+    ),
+  );
+}
 
 function authenticatedUser(
   cookieHeader: string | undefined,
@@ -78,12 +124,13 @@ function htmlAttribute(value: string): string {
   );
 }
 
-function loginBuildMarkup(): string {
+function loginBuildMarkup(response: express.Response): string {
   if (!gitSha) {
     return "";
   }
   const shortSha = gitSha.slice(0, 7);
-  return `<p class="build-sha" title="Git commit ${gitSha}" aria-label="Git-commit ${gitSha}">build ${shortSha}</p>`;
+  const language = responseLanguage(response);
+  return `<p class="build-sha" data-build-sha="${gitSha}" aria-label="${translate(language, "build.label", { sha: gitSha })}">${translate(language, "build", { sha: shortSha })}</p>`;
 }
 
 app.get("/api/health", (_request, response) => {
@@ -97,9 +144,12 @@ app.get("/s/:token", async (request, response) => {
     return response
       .status(404)
       .send(
-        await readFile(
-          path.join(publicDirectory, "share-not-found.html"),
-          "utf8",
+        renderPage(
+          response,
+          await readFile(
+            path.join(publicDirectory, "share-not-found.html"),
+            "utf8",
+          ),
         ),
       );
   }
@@ -113,7 +163,6 @@ app.get("/s/:token", async (request, response) => {
     `<meta name="description" content="${htmlAttribute(description)}">`,
     `<link rel="canonical" href="${htmlAttribute(url)}">`,
     `<meta property="og:type" content="article">`,
-    `<meta property="og:locale" content="nl_NL">`,
     `<meta property="og:site_name" content="Podcast2Article">`,
     `<meta property="og:title" content="${htmlAttribute(title)}">`,
     `<meta property="og:description" content="${htmlAttribute(description)}">`,
@@ -137,15 +186,17 @@ app.get("/s/:token", async (request, response) => {
   );
   response.setHeader("Cache-Control", "public, max-age=300");
   response.type("html");
-  return response.send(template.replace("<!-- SHARE_METADATA -->", metadata));
+  return response.send(
+    renderPage(response, template).replace("<!-- SHARE_METADATA -->", metadata),
+  );
 });
 
 app.get("/api/shared/:token", (request, response) => {
   const shared = getSharedArticle(request.params.token);
   if (!shared) {
-    return response
-      .status(404)
-      .json({ error: "Gedeeld artikel niet gevonden." });
+    return response.status(404).json({
+      error: localizeError(response, "error.sharedNotFound"),
+    });
   }
   const { job } = shared;
   response.setHeader("Cache-Control", "public, max-age=300");
@@ -167,11 +218,15 @@ app.get("/api/shared/:token", (request, response) => {
 app.get("/api/shared/:token/audio", async (request, response) => {
   const shared = getSharedArticle(request.params.token);
   if (!shared) {
-    return response.status(404).json({ error: "Audio niet gevonden." });
+    return response
+      .status(404)
+      .json({ error: localizeError(response, "error.audioNotFound") });
   }
   const file = playbackFileForJob(shared.username, shared.job.id);
   if (!file) {
-    return response.status(404).json({ error: "Audio niet gevonden." });
+    return response
+      .status(404)
+      .json({ error: localizeError(response, "error.audioNotFound") });
   }
   try {
     const fileStats = await stat(file);
@@ -180,13 +235,17 @@ app.get("/api/shared/:token/audio", async (request, response) => {
     response.type("audio/mpeg");
     return createReadStream(file).pipe(response);
   } catch {
-    return response.status(404).json({ error: "Audio niet gevonden." });
+    return response
+      .status(404)
+      .json({ error: localizeError(response, "error.audioNotFound") });
   }
 });
 
 app.get(
   [
     "/share.js",
+    "/i18n.js",
+    "/localize.js",
     "/share.css",
     "/styles.css",
     "/favicon.svg",
@@ -216,7 +275,10 @@ app.get("/login", (request, response) => {
   }
   response.type("html");
   return response.send(
-    loginTemplate.replace("<!-- GIT_SHA -->", loginBuildMarkup()),
+    renderPage(response, loginTemplate).replace(
+      "<!-- GIT_SHA -->",
+      loginBuildMarkup(response),
+    ),
   );
 });
 
@@ -242,9 +304,7 @@ app.post("/login", (request, response) => {
     );
     return response
       .status(429)
-      .send(
-        "Te veel mislukte pogingen. Probeer het over een kwartier opnieuw.",
-      );
+      .send(localizeError(response, "error.loginRateLimit"));
   }
   const username =
     typeof request.body?.username === "string"
@@ -275,13 +335,13 @@ app.use((request, response, next) => {
   }
   response.setHeader("Cache-Control", "no-store");
   if (request.path.startsWith("/api/")) {
-    return response
-      .status(401)
-      .json({ error: "Log opnieuw in om verder te gaan." });
+    return response.status(401).json({
+      error: localizeError(response, "error.loginRequired"),
+    });
   }
   return request.method === "GET"
     ? response.redirect(303, "/login")
-    : response.status(401).send("Log opnieuw in om verder te gaan.");
+    : response.status(401).send(localizeError(response, "error.loginRequired"));
 });
 
 app.post("/logout", (request, response) => {
@@ -294,7 +354,15 @@ app.get("/api/auth", (_request, response) => {
   response.json({ enabled: auth.enabled, username: response.locals.username });
 });
 
-app.use(express.static(publicDirectory, { extensions: ["html"] }));
+app.get(["/", "/index.html", "/articles"], sendIndex);
+app.use((request, response, next) => {
+  // HTML files are templates, never serve their untranslated placeholders as static assets.
+  if (request.path.endsWith(".html")) {
+    return sendIndex(request, response);
+  }
+  next();
+});
+app.use(express.static(publicDirectory, { index: false }));
 
 const requestSchema = z
   .object({
@@ -342,15 +410,19 @@ app.get("/api/articles", (_request, response) => {
 
 app.get("/api/jobs", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  response.json(listProcessingJobs(response.locals.username));
+  response.json(
+    listProcessingJobs(response.locals.username).map((job) =>
+      localizeProcessingJob(job, responseLanguage(response)),
+    ),
+  );
 });
 
 app.patch("/api/articles/:id", async (request, response) => {
   const parsed = readingStateSchema.safeParse(request.body);
   if (!parsed.success) {
-    return response
-      .status(400)
-      .json({ error: "Geef een geldige leesstatus op." });
+    return response.status(400).json({
+      error: localizeError(response, "error.readStateInvalid"),
+    });
   }
   try {
     return response.json(
@@ -367,7 +439,30 @@ app.patch("/api/articles/:id", async (request, response) => {
         : "Leesstatus kon niet worden opgeslagen.";
     return response
       .status(message === "Opdracht niet gevonden." ? 404 : 409)
-      .json({ error: message });
+      .json({ error: localizeError(response, message) });
+  }
+});
+
+app.delete("/api/articles/:id", async (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  try {
+    await deleteArticle(response.locals.username, request.params.id);
+    return response.status(204).end();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "Opdracht niet gevonden.") {
+      return response
+        .status(404)
+        .json({ error: localizeError(response, message) });
+    }
+    if (message === "Dit artikel is nog niet klaar om te verwijderen.") {
+      return response
+        .status(409)
+        .json({ error: localizeError(response, message) });
+    }
+    return response.status(503).json({
+      error: localizeError(response, "error.articleDeleteRetry"),
+    });
   }
 });
 
@@ -376,7 +471,7 @@ app.patch("/api/jobs/:id/reading-position", async (request, response) => {
   if (!parsed.success) {
     return response
       .status(400)
-      .json({ error: "Geef een geldige leespositie op." });
+      .json({ error: localizeError(response, "error.readingPositionInvalid") });
   }
   try {
     return response.json({
@@ -393,7 +488,9 @@ app.patch("/api/jobs/:id/reading-position", async (request, response) => {
         : "Leespositie kon niet worden opgeslagen.";
     return response
       .status(message === "Opdracht niet gevonden." ? 404 : 409)
-      .json({ error: message });
+      .json({
+        error: localizeError(response, message, "error.readingPositionSave"),
+      });
   }
 });
 
@@ -413,29 +510,40 @@ app.post("/api/jobs/:id/share", async (request, response) => {
         : "Permalink kon niet worden aangemaakt.";
     return response
       .status(message === "Opdracht niet gevonden." ? 404 : 409)
-      .json({ error: message });
+      .json({ error: localizeError(response, message) });
   }
 });
 
 app.post("/api/jobs", async (request, response) => {
   const parsed = requestSchema.safeParse(request.body);
   if (!parsed.success) {
-    return response
-      .status(400)
-      .json({ error: parsed.error.issues[0]?.message ?? "Ongeldige invoer" });
+    return response.status(400).json({
+      error: localizeError(
+        response,
+        parsed.error.issues[0]?.message,
+        "error.input",
+      ),
+    });
   }
   if (!process.env.OPENAI_API_KEY) {
-    return response
-      .status(503)
-      .json({ error: "OPENAI_API_KEY ontbreekt in de CLI-omgeving." });
+    return response.status(503).json({
+      error: localizeError(response, "error.creationUnavailable"),
+    });
   }
   try {
     const job = await createJob(response.locals.username, parsed.data);
-    return response.status(202).json(job);
+    return response
+      .status(202)
+      .json(localizeJob(job, responseLanguage(response)));
   } catch (error) {
     if (error instanceof DuplicateJobError) {
       return response.status(409).json({
-        error: error.message,
+        error: localizeError(
+          response,
+          error.existingJob.stage === "complete"
+            ? "error.duplicateComplete"
+            : "error.duplicateProcessing",
+        ),
         existingJobId: error.existingJob.id,
         existingStage: error.existingJob.stage,
       });
@@ -445,45 +553,55 @@ app.post("/api/jobs", async (request, response) => {
 });
 
 app.get("/api/jobs/:id", async (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
   const job = await getJob(response.locals.username, request.params.id);
   return job
-    ? response.json(job)
-    : response.status(404).json({ error: "Opdracht niet gevonden" });
+    ? response.json(localizeJob(job, responseLanguage(response)))
+    : response
+        .status(404)
+        .json({ error: localizeError(response, "error.jobNotFound") });
 });
 
 app.get("/api/jobs/:id/audio", async (request, response) => {
   const job = await getJob(response.locals.username, request.params.id);
   const file = playbackFileForJob(response.locals.username, request.params.id);
   if (!job || !file) {
-    return response.status(404).json({ error: "Audio niet gevonden" });
+    return response
+      .status(404)
+      .json({ error: localizeError(response, "error.audioNotFound") });
   }
   try {
     await stat(file);
     response.setHeader("Cache-Control", "private, max-age=3600");
     return response.sendFile(file);
   } catch {
-    return response
-      .status(404)
-      .json({ error: "Audio is nog niet beschikbaar" });
+    return response.status(404).json({
+      error: localizeError(response, "error.audioNotReady"),
+    });
   }
 });
 
 app.get("/api/jobs/:id/pdf", async (request, response) => {
   const job = await getJob(response.locals.username, request.params.id);
   if (!job) {
-    return response.status(404).json({ error: "Opdracht niet gevonden" });
+    return response
+      .status(404)
+      .json({ error: localizeError(response, "error.jobNotFound") });
   }
   if (job.stage !== "complete" || !job.article || !job.episode) {
-    return response
-      .status(409)
-      .json({ error: "Dit artikel is nog niet klaar voor PDF-export." });
+    return response.status(409).json({
+      error: localizeError(response, "error.pdfNotReady"),
+    });
   }
   try {
     const pdf = await generateArticlePdf(
       job,
       `${request.protocol}://${request.get("host")}`,
+      responseLanguage(response),
     );
-    response.attachment(pdfDownloadName(job.article.title));
+    response.attachment(
+      pdfDownloadName(job.article.title, responseLanguage(response)),
+    );
     response.setHeader("Cache-Control", "no-store");
     response.setHeader("Content-Length", pdf.byteLength);
     return response.send(Buffer.from(pdf));
@@ -492,27 +610,55 @@ app.get("/api/jobs/:id/pdf", async (request, response) => {
       `${new Date().toISOString()} ERROR PDF-export mislukt · job=${JSON.stringify(job.id)}`,
       error,
     );
-    return response
-      .status(503)
-      .json({ error: "PDF-export is op dit moment niet beschikbaar." });
+    return response.status(503).json({
+      error: localizeError(response, "error.pdfUnavailable"),
+    });
   }
 });
 
 app.post("/api/jobs/:id/retry-article", async (request, response) => {
   try {
     const job = await retryArticle(response.locals.username, request.params.id);
-    return response.status(202).json(job);
+    return response
+      .status(202)
+      .json(localizeJob(job, responseLanguage(response)));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Artikelretry kon niet starten.";
     return response
       .status(message === "Opdracht niet gevonden." ? 404 : 409)
-      .json({ error: message });
+      .json({ error: localizeError(response, message) });
   }
 });
 
-app.use((_request, response) =>
-  response.sendFile(path.join(publicDirectory, "index.html")),
+app.use(sendIndex);
+
+app.use(
+  (
+    error: unknown,
+    _request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    if (response.headersSent) {
+      return next(error);
+    }
+    const invalidBody =
+      typeof error === "object" &&
+      error !== null &&
+      "type" in error &&
+      (error.type === "entity.parse.failed" ||
+        error.type === "entity.too.large");
+    if (!invalidBody) {
+      console.error("Request failed", error);
+    }
+    return response.status(invalidBody ? 400 : 503).json({
+      error: translate(
+        responseLanguage(response),
+        invalidBody ? "error.input" : "error.generic",
+      ),
+    });
+  },
 );
 
 await resumeIncompleteJobs(auth.enabled ? auth.usernames : ["local"]);

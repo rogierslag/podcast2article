@@ -101,7 +101,7 @@ body.scroll-shell {
   letter-spacing: 0.14em;
   color: var(--green);
 }
-.eyebrow span {
+.eyebrow span:empty {
   display: inline-block;
   width: 24px;
   height: 1px;
@@ -214,7 +214,7 @@ body.scroll-shell {
   color: var(--muted);
   text-transform: uppercase;
 }
-.privacy span {
+.privacy span:empty {
   display: inline-block;
   width: 7px;
   height: 7px;
@@ -331,6 +331,10 @@ body.scroll-shell {
   grid-template-columns: 140px 1fr;
   gap: 35px;
   align-items: center;
+}
+.episode-hero > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .episode-hero img {
   width: 140px;
@@ -498,6 +502,15 @@ body.scroll-shell {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.article {
+  /* Keep long words and URLs inside the reader without clipping content. */
+  overflow-wrap: anywhere;
+}
+.article h1,
+.article h2 {
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
 .article h1 {
   font: 600 clamp(44px, 6vw, 72px) / 1 var(--serif);
   letter-spacing: -0.045em;
@@ -631,6 +644,9 @@ body.scroll-shell {
 }
 .transcript-actions button {
   cursor: pointer;
+}
+.transcript-actions input {
+  width: 220px;
 }
 audio {
   width: 100%;
@@ -1224,6 +1240,41 @@ footer {
   padding: 28px 0;
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--line);
+}
+.article-delete-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font: 11px var(--mono);
+}
+.article-delete-footer button {
+  min-height: 44px;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.article-delete-footer button:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.article-delete-footer button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+.article-delete-footer button:disabled {
+  cursor: wait;
+}
+.article-delete-footer [role="status"] {
+  color: var(--muted);
+}
+@media print {
+  .article-delete-footer {
+    display: none;
+  }
 }
 .article-read-footer .kicker {
   display: block;
