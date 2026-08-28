@@ -22,7 +22,6 @@ const articlesView = $("#articles-view");
 const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const articleReadingProgress = $("#article-reading-progress");
-const pageScroll = $(".page-scroll");
 const form = $("#job-form");
 let currentJob;
 let articlesState = [];
@@ -45,9 +44,7 @@ function articleSectionHeadings() {
 
 function visibleReadingSectionIndex() {
   const headings = articleSectionHeadings();
-  const scrollViewportTop = pageScroll.getBoundingClientRect().top;
-  const readingLine =
-    scrollViewportTop + Math.min(pageScroll.clientHeight * 0.42, 320);
+  const readingLine = Math.min(window.innerHeight * 0.42, 320);
   let sectionIndex;
   headings.forEach((heading, index) => {
     if (heading.getBoundingClientRect().top <= readingLine) {
@@ -67,10 +64,7 @@ function resetArticleScroll() {
   readingTrackingEnabled = false;
   restoringReadingPosition = false;
   readingTrackingOrigin = 0;
-  const previousScrollBehavior = pageScroll.style.scrollBehavior;
-  pageScroll.style.scrollBehavior = "auto";
-  pageScroll.scrollTop = 0;
-  pageScroll.style.scrollBehavior = previousScrollBehavior;
+  window.scrollTo({ top: 0, behavior: "instant" });
 }
 
 function persistReadingPosition(sectionIndex) {
@@ -112,7 +106,7 @@ function trackReadingPosition() {
   if (restoringReadingPosition) {
     return;
   }
-  const scrollDistance = Math.abs(pageScroll.scrollTop - readingTrackingOrigin);
+  const scrollDistance = Math.abs(window.scrollY - readingTrackingOrigin);
   if (
     continuationSectionIndex !== undefined &&
     scrollDistance >= materialScrollDistance
@@ -135,7 +129,7 @@ function showContinueReading(readingPosition) {
   clearTimeout(readingPositionSaveTimer);
   pendingReadingSectionIndex = undefined;
   lastSavedReadingSectionIndex = readingPosition?.sectionIndex;
-  readingTrackingOrigin = pageScroll.scrollTop;
+  readingTrackingOrigin = window.scrollY;
   readingTrackingEnabled = false;
   const heading = articleSectionHeadings()[readingPosition?.sectionIndex];
   if (!heading) {
@@ -161,11 +155,11 @@ function drawAttentionToHeading(heading) {
 
 function afterReadingScroll(callback) {
   const startedAt = performance.now();
-  let previousScrollTop = pageScroll.scrollTop;
+  let previousScrollTop = window.scrollY;
   let stableFrames = 0;
 
   function checkPosition(now) {
-    const currentScrollTop = pageScroll.scrollTop;
+    const currentScrollTop = window.scrollY;
     stableFrames =
       Math.abs(currentScrollTop - previousScrollTop) < 1 ? stableFrames + 1 : 0;
     previousScrollTop = currentScrollTop;
@@ -190,19 +184,18 @@ $("#continue-reading").addEventListener("click", () => {
   readingTrackingEnabled = false;
   restoringReadingPosition = true;
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const headingOffset =
+    parseFloat(getComputedStyle(heading).scrollMarginTop) || 30;
   const headingTop =
-    heading.getBoundingClientRect().top -
-    pageScroll.getBoundingClientRect().top +
-    pageScroll.scrollTop -
-    30;
-  pageScroll.scrollTo({
+    heading.getBoundingClientRect().top + window.scrollY - headingOffset;
+  window.scrollTo({
     top: Math.max(0, headingTop),
-    behavior: reducedMotion ? "auto" : "smooth",
+    behavior: reducedMotion ? "instant" : "smooth",
   });
   afterReadingScroll(() => {
     drawAttentionToHeading(heading);
     readingPositionTrackingRequested = false;
-    readingTrackingOrigin = pageScroll.scrollTop;
+    readingTrackingOrigin = window.scrollY;
     readingTrackingEnabled = false;
     restoringReadingPosition = false;
   });
@@ -221,19 +214,15 @@ function updateArticleReadingProgress() {
     return;
   }
 
-  const pageScrollRect = pageScroll.getBoundingClientRect();
-  const articleTop =
-    article.getBoundingClientRect().top -
-    pageScrollRect.top +
-    pageScroll.scrollTop;
+  const articleTop = article.getBoundingClientRect().top + window.scrollY;
   const articleEnd = Math.max(
     articleTop,
-    articleTop + article.offsetHeight - pageScroll.clientHeight,
+    articleTop + article.offsetHeight - window.innerHeight,
   );
   const progressRatio =
     articleEnd === articleTop
-      ? Number(pageScroll.scrollTop >= articleTop)
-      : (pageScroll.scrollTop - articleTop) / (articleEnd - articleTop);
+      ? Number(window.scrollY >= articleTop)
+      : (window.scrollY - articleTop) / (articleEnd - articleTop);
   const progressPercentage = Math.round(
     Math.min(1, Math.max(0, progressRatio)) * 100,
   );
@@ -263,7 +252,7 @@ function scheduleArticleReadingProgressUpdate(trackPosition = false) {
   }
 }
 
-pageScroll.addEventListener(
+window.addEventListener(
   "scroll",
   () => scheduleArticleReadingProgressUpdate(true),
   {
@@ -806,7 +795,7 @@ async function toggleCurrentArticleRead(event) {
     updateReadButtons();
     if (returnToArticles && markAsRead) {
       history.replaceState({}, "", "/articles");
-      pageScroll.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
       await showArticles();
     }
   } catch (error) {

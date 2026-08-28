@@ -21,23 +21,25 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=ios-scroll-shell-v1" />
-    <script src="/app.js?v=duplicate-article-link-v1" defer></script>
+    <link rel="stylesheet" href="/styles.css?v=native-scroll-chrome-v1" />
+    <script src="/app.js?v=native-scroll-chrome-v1" defer></script>
   </head>
-  <body class="scroll-shell">
-    <div
-      id="article-reading-progress"
-      class="reading-progress hidden"
-      role="progressbar"
-      aria-label="Leesvoortgang van het artikel"
-      aria-valuemin="0"
-      aria-valuemax="100"
-      aria-valuenow="0"
-      aria-valuetext="0 procent gelezen"
-    >
-      <div class="reading-progress-value"></div>
+  <body class="native-scroll">
+    <div class="reading-chrome">
+      <div
+        id="article-reading-progress"
+        class="reading-progress hidden"
+        role="progressbar"
+        aria-label="Leesvoortgang van het artikel"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+        aria-valuetext="0 procent gelezen"
+      >
+        <div class="reading-progress-value"></div>
+      </div>
     </div>
-    <div class="page-scroll">
+    <div class="page-content">
       <header class="nav">
         <a class="brand" href="/" aria-label="Podcast2Article home">
           <span class="brand-mark" aria-hidden="true"
