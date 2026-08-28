@@ -748,6 +748,48 @@ footer {
   text-transform: uppercase;
   color: var(--muted);
 }
+.owner-footer {
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+.language-switcher {
+  display: flex;
+  gap: 6px;
+}
+.language-switcher button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: 11px var(--mono);
+  cursor: pointer;
+}
+.language-switcher button:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+.language-switcher button[aria-pressed="true"] {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--paper);
+}
+.language-switcher button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.language-switcher .language-flag {
+  font-size: 20px;
+  line-height: 1;
+}
 @media (max-width: 800px) {
   .landing {
     padding-top: 65px;

@@ -17,6 +17,23 @@ import type { Job, ProcessingJobSummary } from "../types.js";
 
 describe("device language", () => {
   it.each([
+    ["en-US", "p2a_ui_language=nl", "nl"],
+    ["nl-NL", "p2a_ui_language=en", "en"],
+    ["en-US", "other=value; p2a_ui_language=nl; another=value", "nl"],
+    ["nl-NL", "p2a_ui_language=fr", "nl"],
+    ["nl-NL", "p2a_ui_language=", "nl"],
+    ["en-US", "p2a_ui_language=nl-BE", "en"],
+    ["en-US", "p2a_ui_language=%6El", "en"],
+    ["en-US", "other_p2a_ui_language=nl", "en"],
+    ["en-US", "p2a_ui_language=<script>", "en"],
+  ])(
+    "uses only valid explicit preferences with %s and %s",
+    (header, cookie, expected) => {
+      expect(requestLanguage(header, cookie)).toBe(expected);
+    },
+  );
+
+  it.each([
     ["nl", "nl"],
     ["nl-NL", "nl"],
     ["nl-BE", "nl"],

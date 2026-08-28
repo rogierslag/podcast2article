@@ -60,13 +60,17 @@ app.set("trust proxy", "loopback");
 app.use((_request, response, next) => {
   // Cached responses must not mix UI languages between visitors.
   response.vary("Accept-Language");
+  response.vary("Cookie");
   next();
 });
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: false, limit: "2kb" }));
 
 function responseLanguage(response: express.Response) {
-  return requestLanguage(response.req.get("Accept-Language"));
+  return requestLanguage(
+    response.req.get("Accept-Language"),
+    response.req.headers.cookie,
+  );
 }
 
 function localizeError(

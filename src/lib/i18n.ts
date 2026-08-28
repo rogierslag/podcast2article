@@ -4,11 +4,19 @@ import {
   countLabel,
   messages,
   uiLanguage,
+  preferredUiLanguage,
   type UiLanguage,
 } from "../../public/i18n.js";
 
 /** Only the primary preference decides: a secondary Dutch preference is not a Dutch device. */
-export function requestLanguage(header?: string): UiLanguage {
+export function requestLanguage(
+  header?: string,
+  cookieHeader?: string,
+): UiLanguage {
+  const preference = preferredUiLanguage(cookieHeader);
+  if (preference) {
+    return preference;
+  }
   const preferences = (header ?? "")
     .split(",")
     .map((entry, index) => {

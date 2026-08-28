@@ -403,8 +403,33 @@
           </section>
         </section>
       </main>
-      <footer>
+      <footer class="owner-footer">
         <span>Podcast2Article</span><span data-i18n="footer">{{footer}}</span>
+        <div
+          class="language-switcher"
+          role="group"
+          aria-label="{{uiLanguage.label}}"
+          data-i18n-aria-label="uiLanguage.label"
+        >
+          <button
+            type="button"
+            data-ui-language="nl"
+            lang="nl"
+            aria-pressed="false"
+          >
+            <span class="language-flag" aria-hidden="true">🇳🇱</span>
+            Nederlands
+          </button>
+          <button
+            type="button"
+            data-ui-language="en"
+            lang="en"
+            aria-pressed="false"
+          >
+            <span class="language-flag" aria-hidden="true">🇬🇧</span>
+            English
+          </button>
+        </div>
       </footer>
     </div>
   </body>

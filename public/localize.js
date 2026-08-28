@@ -1,8 +1,15 @@
-import { countLabel, dateLocale, translate, uiLanguage } from "./i18n.js";
+import {
+  countLabel,
+  dateLocale,
+  translate,
+  uiLanguage,
+  preferredUiLanguage,
+  UI_LANGUAGE_COOKIE,
+} from "./i18n.js";
 
-export const language = uiLanguage(
-  navigator.language || navigator.languages?.[0],
-);
+export const language =
+  preferredUiLanguage(document.cookie) ??
+  uiLanguage(navigator.language || navigator.languages?.[0]);
 export const locale = dateLocale(language);
 export const t = (key, values) => translate(language, key, values);
 export const countText = (key, count) => countLabel(language, key, count);
@@ -49,3 +56,19 @@ export function localizedFetch(input, options = {}) {
 }
 
 localizePage();
+
+document.querySelectorAll("[data-ui-language]").forEach((button) => {
+  const selectedLanguage = button.dataset.uiLanguage;
+  button.setAttribute("aria-pressed", String(selectedLanguage === language));
+  button.addEventListener("click", () => {
+    if (selectedLanguage !== "nl" && selectedLanguage !== "en") {
+      return;
+    }
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${UI_LANGUAGE_COOKIE}=${selectedLanguage}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+    if (selectedLanguage !== language) {
+      // Reload the current route so dynamic content and API messages switch too.
+      location.reload();
+    }
+  });
+});
