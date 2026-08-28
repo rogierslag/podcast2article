@@ -91,9 +91,19 @@ describe("session cookies", () => {
     ).toBe("v2.test.value");
   });
 
-  it("uses browser security attributes", () => {
-    expect(sessionCookie("token", true)).toContain("HttpOnly; SameSite=Strict");
-    expect(sessionCookie("token", true)).toContain("Secure");
-    expect(expiredSessionCookie(false)).toContain("Max-Age=0");
-  });
+  it.each([false, true])(
+    "sets and clears Lax cookies with the same security attributes (secure=%s)",
+    (secure) => {
+      const cookie = sessionCookie("token", secure);
+      const expiredCookie = expiredSessionCookie(secure);
+
+      for (const value of [cookie, expiredCookie]) {
+        expect(value).toContain("Path=/; HttpOnly; SameSite=Lax");
+        expect(value.split("; ").includes("Secure")).toBe(secure);
+      }
+      expect(cookie).toContain("Max-Age=2592000");
+      expect(expiredCookie).toContain("p2a_session=;");
+      expect(expiredCookie).toContain("Max-Age=0");
+    },
+  );
 });

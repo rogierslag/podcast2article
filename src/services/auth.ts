@@ -184,7 +184,7 @@ export function sessionCookie(token: string, secure: boolean): string {
     `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Strict",
+    "SameSite=Lax",
     `Max-Age=${SESSION_MAX_AGE_SECONDS}`,
     ...(secure ? ["Secure"] : []),
   ].join("; ");
@@ -195,7 +195,7 @@ export function expiredSessionCookie(secure: boolean): string {
     `${SESSION_COOKIE_NAME}=`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Strict",
+    "SameSite=Lax",
     "Max-Age=0",
     ...(secure ? ["Secure"] : []),
   ].join("; ");
