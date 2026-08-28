@@ -1,5 +1,9 @@
 // Shared by the browser and server. Article and transcript content is never translated here.
 export const messages = {
+  "uiLanguage.label": {
+    nl: "Taal van de interface",
+    en: "Interface language",
+  },
   "readingPosition.resume": {
     nl: "Verder waar je gebleven was",
     en: "Pick up where you left off",
@@ -937,6 +941,17 @@ export const messages = {
     en: "Check the link, language, and article length.",
   },
 };
+
+export const UI_LANGUAGE_COOKIE = "p2a_ui_language";
+
+export function preferredUiLanguage(cookieHeader = "") {
+  const value = cookieHeader
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${UI_LANGUAGE_COOKIE}=`))
+    ?.slice(UI_LANGUAGE_COOKIE.length + 1);
+  return value === "nl" || value === "en" ? value : undefined;
+}
 
 export function uiLanguage(language) {
   return typeof language === "string" && /^nl(?:-|$)/i.test(language.trim())
