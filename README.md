@@ -1,7 +1,7 @@
 # Podcast2Article
 
 Podcast2Article is een open-source Node.js-app die een **publieke
-Spotify-podcastaflevering, YouTube-video of Google Meet-opname** omzet in:
+Spotify-podcastaflevering, YouTube-video, Fathom- of Google Meet-opname** omzet in:
 
 1. een transcript met sprekers en tijdcodes;
 2. een helder blogartikel in de herkenbare stijl van de opname;
@@ -27,6 +27,15 @@ Voor een Meet-opname plak je de Drive-link van het opnamebestand, bijvoorbeeld
 **Iedereen met de link** en zorg dat kijkers het bestand mogen downloaden. Een
 `meet.google.com/...`-link naar een vergaderruimte bevat geen opnamebestand en
 wordt daarom niet geaccepteerd.
+
+Voor Fathom gebruik je de publieke deellink `https://fathom.video/share/...`.
+Kopieer deze via **Share** en kies **Anyone with the link**. Interne
+`fathom.video/calls/...`-links vereisen aanmelding en worden niet geaccepteerd.
+De app gebruikt yt-dlp om de opname op te halen en maakt daarna hetzelfde lokale
+audio- en transcriptbestand als bij Drive. De bestaande Fathom-samenvatting en
+transcriptie worden niet geïmporteerd. Er is geen Fathom API-key nodig; cookies,
+privé-opnames en teamgebonden toegang worden niet ondersteund. De download valt
+onder `MAX_RECORDING_MB` en `MEDIA_DOWNLOAD_TIMEOUT_MS`.
 
 ## Snel starten
 
@@ -79,7 +88,7 @@ OPENAI_REGION=eu
 Spotify-afleveringslink       YouTube-videolink        publieke Drive-opnamelink
   → Spotify + Apple/RSS         → yt-dlp-metadata        → Drive-bestandsmetadata
   └─────────────────────────────┴────────────────────────┘
-                                → audio of video downloaden
+Fathom-deellink → yt-dlp-metadata → audio of video downloaden
   → compacte afspeelaudio maken en tijdelijk videobeeld verwijderen
   → comprimeren en opdelen met FFmpeg
   → gpt-4o-transcribe-diarize (sprekers + tijdcodes)
@@ -133,7 +142,7 @@ interfacetaal mee. Vernieuw de pagina na een wijziging van de browsertaal.
 | `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcriptiemodel                                                                |
 | `MAX_AUDIO_MB`                    | `500`                       | Maximale Spotify-audiodownload                                                   |
 | `MAX_YOUTUBE_MB`                  | `500`                       | Maximale YouTube-audiodownload                                                   |
-| `MAX_RECORDING_MB`                | `1500`                      | Maximale Google Drive-opnamedownload                                             |
+| `MAX_RECORDING_MB`                | `1500`                      | Maximale Google Drive- of Fathom-opnamedownload                                  |
 | `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | Timeout voor het lezen van YouTube-metadata (1 minuut)                           |
 | `MEDIA_DOWNLOAD_TIMEOUT_MS`       | `900000`                    | Timeout voor het downloaden van media (15 minuten)                               |
 | `AUDIO_CHUNK_SECONDS`             | `300`                       | Lengte van ieder audiofragment (5 minuten; toegestaan: 60–1200)                  |
@@ -161,7 +170,7 @@ curl -X POST http://localhost:3000/api/jobs/<job-id>/retry-article
 ## Beperkingen
 
 - Publieke `open.spotify.com/episode/...`-links, YouTube-video-, Shorts- en
-  afgeronde livestreamlinks, en Google Drive-links naar één publiek audio- of
+  afgeronde livestreamlinks, publieke Fathom-deellinks, en Google Drive-links naar één publiek audio- of
   videobestand worden geaccepteerd.
 - De aflevering moet ook in een openbare podcastindex/RSS-bron staan. Spotify-exclusives werken niet.
 - Titels die sterk afwijken tussen Spotify en de RSS-bron kunnen niet automatisch worden gekoppeld; de app kiest bij twijfel bewust geen bron.

@@ -18,6 +18,7 @@ import {
 } from "./audio.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource, validateSourceUrl } from "./resolver.js";
+import { downloadFathomRecording } from "./fathom.js";
 import { downloadYouTubeAudio } from "./youtube.js";
 import type {
   ArticleReadingPosition,
@@ -65,9 +66,10 @@ function jobKey(username: string, id: string): string {
 function mediaLimit(
   sourceType: NonNullable<Job["episode"]>["sourceType"],
 ): number {
-  const fallback = sourceType === "google-drive" ? 1_500 : 500;
+  const isRecording = sourceType === "google-drive" || sourceType === "fathom";
+  const fallback = isRecording ? 1_500 : 500;
   const value = Number(
-    sourceType === "google-drive"
+    isRecording
       ? (process.env.MAX_RECORDING_MB ?? process.env.MAX_MEDIA_MB ?? fallback)
       : sourceType === "youtube"
         ? (process.env.MAX_YOUTUBE_MB ??
@@ -679,6 +681,10 @@ async function processJob(
     const maxMegabytes = mediaLimit(episode.sourceType);
     if (episode.sourceType === "youtube") {
       await downloadYouTubeAudio(episode.sourceUrl, input, signal, {
+        maxMegabytes,
+      });
+    } else if (episode.sourceType === "fathom") {
+      await downloadFathomRecording(episode.sourceUrl, input, signal, {
         maxMegabytes,
       });
     } else {

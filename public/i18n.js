@@ -105,8 +105,8 @@ export const messages = {
     en: "Please log in again to continue.",
   },
   "error.sourceLinkRequired": {
-    nl: "Plak een link naar een openbare opname op Spotify, YouTube of Google Drive.",
-    en: "Paste a public Spotify, YouTube, or Google Drive link.",
+    nl: "Plak een link naar een openbare opname op Spotify, YouTube, Fathom of Google Drive.",
+    en: "Paste a public Spotify, YouTube, Fathom, or Google Drive link.",
   },
   "error.sourceLinkInvalid": {
     nl: "Deze link is niet geldig. Controleer of je de volledige link hebt geplakt.",
@@ -245,8 +245,8 @@ export const messages = {
     en: "Paste the Google Drive link to the recording, not the Meet room link.",
   },
   "error.sourceUnsupported": {
-    nl: "Alleen publieke Spotify-afleveringen, YouTube-video's en Google Drive-opnames worden ondersteund.",
-    en: "Only public Spotify episodes, YouTube videos, and Google Drive recordings are supported.",
+    nl: "Alleen publieke Spotify-afleveringen, YouTube-video's, Fathom-opnames en Google Drive-opnames worden ondersteund.",
+    en: "Only public Spotify episodes, YouTube videos, Fathom recordings, and Google Drive recordings are supported.",
   },
   "error.driveMetadataMissing": {
     nl: "Google Drive gaf geen bestandsgegevens terug. Controleer of iedereen met de link toegang heeft.",
@@ -327,6 +327,46 @@ export const messages = {
   "error.redirectDestinationMissing": {
     nl: "Redirect zonder bestemming ontvangen.",
     en: "A redirect without a destination was received.",
+  },
+  "error.fathomLinkRequired": {
+    nl: "Plak een publieke Fathom-deellink (fathom.video/share/…).",
+    en: "Paste a public Fathom share link (fathom.video/share/…).",
+  },
+  "error.fathomShareRequired": {
+    nl: "Deze Fathom-link vereist aanmelding. Kopieer de deellink via Share en kies ‘Anyone with the link’.",
+    en: "This Fathom link requires sign-in. Copy the link using Share and choose “Anyone with the link”.",
+  },
+  "error.fathomPrivate": {
+    nl: "Deze Fathom-opname is niet openbaar toegankelijk. Gebruik een deellink met toegang voor ‘Anyone with the link’.",
+    en: "This Fathom recording is not publicly accessible. Use a share link with access for “Anyone with the link”.",
+  },
+  "error.fathomMetadataMissing": {
+    nl: "Fathom gaf geen geldige opnamegegevens terug.",
+    en: "Fathom returned no valid recording details.",
+  },
+  "error.fathomUnreadable": {
+    nl: "Fathom kon deze opname niet openen. Controleer of de deellink zonder aanmelding werkt.",
+    en: "Fathom could not open this recording. Check that the share link works without signing in.",
+  },
+  "error.fathomTimeout": {
+    nl: "Fathom reageerde niet binnen de ingestelde tijd.",
+    en: "Fathom did not respond in time.",
+  },
+  "error.fathomDownloadEmpty": {
+    nl: "Fathom gaf een leeg opnamebestand terug.",
+    en: "Fathom returned an empty recording file.",
+  },
+  "error.fathomDownloadLimit": {
+    nl: "De Fathom-opname overschrijdt de ingestelde downloadlimiet.",
+    en: "The Fathom recording exceeds the configured download limit.",
+  },
+  "error.fathomDownloadFailed": {
+    nl: "De Fathom-opname kon niet worden gedownload. Controleer de toegang en de downloadlimiet.",
+    en: "The Fathom recording could not be downloaded. Check access and the download limit.",
+  },
+  "source.viewFathom": {
+    nl: "Bekijk op Fathom ↗",
+    en: "View on Fathom ↗",
   },
   "error.youtubeLinkRequired": {
     nl: "Plak een publieke YouTube-videolink.",
@@ -417,8 +457,8 @@ export const messages = {
     en: "Podcast2Article — from voice to story",
   },
   "page.description": {
-    nl: "Lees een openbare podcast, YouTube-video of Google Meet-opname als artikel, met verwijzingen naar het oorspronkelijke gesprek.",
-    en: "Read a public podcast, YouTube video, or Google Meet recording as an article, with links back to the original conversation.",
+    nl: "Lees een openbare podcast, YouTube-video, Fathom- of Google Meet-opname als artikel, met verwijzingen naar het oorspronkelijke gesprek.",
+    en: "Read a public podcast, YouTube video, Fathom recording, or Google Meet recording as an article, with links back to the original conversation.",
   },
   home: {
     nl: "Podcast2Article startpagina",
@@ -453,16 +493,16 @@ export const messages = {
     en: "than listen?",
   },
   intro: {
-    nl: "Plak een link naar een openbare Spotify-aflevering, YouTube-video of Google Meet-opname in Drive. We zetten het gesprek om in een artikel met verwijzingen naar de opname, zodat je kunt teruglezen wat er is gezegd en zelf de bron kunt beluisteren.",
-    en: "Paste a link to a public Spotify episode, YouTube video, or Google Meet recording in Drive. We turn the conversation into an article with links to the recording, so you can read what was said and listen to the source for yourself.",
+    nl: "Plak een link naar een openbare Spotify-aflevering, YouTube-video, Fathom-opname of Google Meet-opname in Drive. We zetten het gesprek om in een artikel met verwijzingen naar de opname, zodat je kunt teruglezen wat er is gezegd en zelf de bron kunt beluisteren.",
+    en: "Paste a link to a public Spotify episode, YouTube video, Fathom recording, or Google Meet recording in Drive. We turn the conversation into an article with links to the recording, so you can read what was said and listen to the source for yourself.",
   },
   "form.sourceLabel": {
     nl: "Openbare opname",
     en: "Public recording",
   },
   "form.sourcePlaceholder": {
-    nl: "Spotify-, YouTube- of Google Drive-link",
-    en: "Spotify, YouTube, or Google Drive link",
+    nl: "Spotify-, YouTube-, Fathom- of Google Drive-link",
+    en: "Spotify, YouTube, Fathom, or Google Drive link",
   },
   "form.submit": {
     nl: "Maak artikel",

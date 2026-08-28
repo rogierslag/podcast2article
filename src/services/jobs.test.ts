@@ -167,6 +167,26 @@ describe("duplicate source detection", () => {
     ).toBeUndefined();
   });
 
+  it("recognizes a Fathom share link despite tab and timestamp parameters", () => {
+    const fathomJob = {
+      ...baseJob,
+      sourceUrl: "https://fathom.video/share/Test_recording?tab=summary",
+    } satisfies Job;
+
+    expect(
+      findDuplicateJob(
+        [fathomJob],
+        "https://www.fathom.video/share/Test_recording?t=30",
+      ),
+    ).toBe(fathomJob);
+    expect(
+      findDuplicateJob(
+        [fathomJob],
+        "https://fathom.video/share/Another_recording",
+      ),
+    ).toBeUndefined();
+  });
+
   it("prefers the completed article when duplicate stored jobs already exist", () => {
     const processingJob = {
       ...baseJob,
