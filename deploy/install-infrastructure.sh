@@ -57,7 +57,7 @@ require_command() {
   }
 }
 
-for command_name in caddy corepack curl git install node rsync systemctl; do
+for command_name in caddy corepack curl flock git install node rsync systemctl tar; do
   require_command "$command_name"
 done
 
@@ -121,6 +121,18 @@ for unit in \
   install -o root -g root -m 0644 \
     "$repository_root/deploy/$unit" "/etc/systemd/system/$unit"
 done
+
+for runtime_file in ffmpeg-runtime.mjs media-smoke.mjs; do
+  install -o root -g root -m 0644 \
+    "$repository_root/scripts/$runtime_file" "/usr/local/lib/podcast2article/$runtime_file"
+done
+install -o root -g root -m 0644 \
+  "$repository_root/deploy/ffmpeg-release.json" /usr/local/lib/podcast2article/ffmpeg-release.json
+
+# Fresh hosts receive the pinned binary; existing overrides are preserved.
+# The first application release is media-tested by the updater before activation.
+node /usr/local/lib/podcast2article/ffmpeg-runtime.mjs ensure \
+  /usr/local/lib/podcast2article/ffmpeg-release.json
 
 install -o root -g root -m 0644 \
   "$repository_root/deploy/podcast2article-update.cron" \
@@ -210,6 +222,7 @@ fi
 if grep -Eq '^OPENAI_API_KEY=.+$' /etc/podcast2article.env && grep -Eq '^APP_USERS=.+$' /etc/podcast2article.env; then
   systemctl enable podcast2article.service
   if [[ -e /opt/podcast2article/current ]]; then
+    node /usr/local/lib/podcast2article/ffmpeg-runtime.mjs check /opt/podcast2article/current
     systemctl restart podcast2article.service
   else
     printf 'No current release exists; trigger podcast2article-update.service after reviewing configuration.\n'

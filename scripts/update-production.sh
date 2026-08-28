@@ -79,6 +79,11 @@ printf '%s\n' "$remote_commit" >"$new_release/.deployed-commit"
 chown -R root:root "$new_release"
 chmod -R u=rwX,go=rX "$new_release"
 
+log "Verifying production media processing before activation"
+# This process already holds the update lock. The check runs as the app user,
+# with the registered service's environment files and the new release's code.
+node "$new_release/scripts/ffmpeg-runtime.mjs" --locked check "$new_release"
+
 previous_target="$(readlink "$current_link" 2>/dev/null || true)"
 temporary_link="$application_root/.current.$release_name"
 ln -s "releases/$release_name" "$temporary_link"

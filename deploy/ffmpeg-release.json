@@ -1,0 +1,7 @@
+{
+  "id": "ffmpeg-20260827-n8.1.2-47-g156bb4d299",
+  "platform": "linux",
+  "architecture": "x64",
+  "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-27-16-45/ffmpeg-n8.1.2-47-g156bb4d299-linux64-gpl-8.1.tar.xz",
+  "sha256": "5422737149e93e157bd736b699be798e1f6d9ecbd97751a761e2518593004a89"
+}

@@ -44,8 +44,11 @@ sudo deploy/install-infrastructure.sh
 ```
 
 This installs application, webhook, updater, path, cron, logrotate, and Caddy
-configuration. It creates secret-free environment files only when they do not
-already exist.
+configuration and the pinned Linux x64 FFmpeg/ffprobe runtime. It creates
+secret-free environment files only when they do not already exist. An existing
+`90-ffmpeg-override.conf` remains selected; see [FFmpeg management](../docs/FFMPEG.md)
+for explicit activation and rollback. Coordinate installation while jobs are idle:
+the infrastructure installer restarts configured services.
 
 ## 3. Configure secrets
 
@@ -131,8 +134,10 @@ sudo tail -f /var/log/podcast2article-update.log
 ```
 
 The updater fetches the exact `main` commit, installs locked dependencies,
-builds, tests, creates an immutable release, switches the `current` symlink,
-starts the app, performs a health check, and rolls back on failure.
+builds, tests, creates an immutable release, and runs the real synthetic media
+pipeline with the production service environment. Only after this succeeds does
+it switch the `current` symlink, start the app, and perform a health check with
+rollback on failure.
 
 ## 7. Configure the GitHub webhook
 
@@ -184,6 +189,19 @@ sudo deploy/install-infrastructure.sh
 
 Use the hardening flags only when the corresponding host configuration should
 also be updated.
+
+### FFmpeg and deployment guard rollout
+
+The installer copies the runtime management tool, media test, pinned manifest,
+and updater onto the host. **An application push alone does not update the
+installed updater or enable its new media gate.** Apply the reviewed installer
+explicitly before relying on that gate for future releases.
+
+Fresh hosts select the pinned build. Existing `90-ffmpeg-override.conf` files,
+including the [incident mitigation](../docs/incidents/2026-08-28-fathom-ffmpeg.md),
+are preserved. FFmpeg activation and rollback are separate from application
+deployment; see the [runtime runbook](../docs/FFMPEG.md). No dependency update or
+automatic move to the latest upstream build is involved.
 
 ## 10. Do not commit
 
