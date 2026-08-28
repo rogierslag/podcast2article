@@ -1,0 +1,2610 @@
+[
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "google-drive",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 1412
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 1176,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 36,
+      "width": 97.6875,
+      "x": 115.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 56,
+      "width": 140,
+      "x": 115.1875,
+      "y": 1119
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 910,
+      "width": 140,
+      "x": 115.1875,
+      "y": 196
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "google-drive",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 794.328125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 546.328125,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 36,
+      "width": 97.6875,
+      "x": 64.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 56,
+      "width": 140,
+      "x": 64.078125,
+      "y": 489.328125
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 280.328125,
+      "width": 140,
+      "x": 64.078125,
+      "y": 196
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "google-drive",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 359.828125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 153.828125,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 756,
+      "x": 22,
+      "y": 100
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 185.03125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 41.03125,
+      "width": 756,
+      "x": 22,
+      "y": 130
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "google-drive",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 387.578125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 844,
+    "hero": {
+      "height": 177.578125,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 346,
+      "x": 22,
+      "y": 100
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 208.78125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 64.78125,
+      "width": 346,
+      "x": 22,
+      "y": 130
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "google-drive",
+    "actions": [],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 1455
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 1176,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 36,
+      "width": 97.6875,
+      "x": 115.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 56,
+      "width": 140,
+      "x": 115.1875,
+      "y": 1119
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 910,
+      "width": 140,
+      "x": 115.1875,
+      "y": 196
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "google-drive",
+    "actions": [],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 825.328125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 546.328125,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 36,
+      "width": 97.6875,
+      "x": 64.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 56,
+      "width": 140,
+      "x": 64.078125,
+      "y": 489.328125
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 280.328125,
+      "width": 140,
+      "x": 64.078125,
+      "y": 196
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "google-drive",
+    "actions": [],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 399.828125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 153.828125,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 756,
+      "x": 22,
+      "y": 100
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 185.03125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 41.03125,
+      "width": 756,
+      "x": 22,
+      "y": 130
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "google-drive",
+    "actions": [],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 441.578125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 844,
+    "hero": {
+      "height": 177.578125,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 346,
+      "x": 22,
+      "y": 100
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 208.78125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 64.78125,
+      "width": 346,
+      "x": 22,
+      "y": 130
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "spotify",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 584
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 115.1875,
+      "y": 180
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 348,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 290.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 327
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 140,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "spotify",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 536.09375
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 64.078125,
+      "y": 150.046875
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 288.09375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 239.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 267.09375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 80.09375,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 174
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "spotify",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 387.828125
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 181.828125,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 700,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 213.03125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 41.03125,
+      "width": 756,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "spotify",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 415.578125
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 844,
+    "hero": {
+      "height": 205.578125,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 290,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 236.78125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 64.78125,
+      "width": 346,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "spotify",
+    "actions": [],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 627
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 115.1875,
+      "y": 180
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 348,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 290.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 327
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 140,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "spotify",
+    "actions": [],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 567.09375
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 64.078125,
+      "y": 150.046875
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 288.09375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 239.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 267.09375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 80.09375,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 174
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "spotify",
+    "actions": [],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 427.828125
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 181.828125,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 700,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 213.03125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 41.03125,
+      "width": 756,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "spotify",
+    "actions": [],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 469.578125
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 844,
+    "hero": {
+      "height": 205.578125,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 290,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 236.78125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 64.78125,
+      "width": 346,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "youtube",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 724
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 115.1875,
+      "y": 250
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 488,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 537.25,
+      "x": 290.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 467
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 280,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "youtube",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 678.234375
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 64.078125,
+      "y": 221.109375
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 430.234375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 36,
+      "width": 431.421875,
+      "x": 239.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 409.234375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 200.234375,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 196
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "youtube",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 469.890625
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 263.890625,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 700,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 295.09375
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 123.09375,
+      "width": 756,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "before",
+    "surface": "owner",
+    "sourceType": "youtube",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 512.75
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 844,
+    "hero": {
+      "height": 302.75,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 32,
+      "width": 290,
+      "x": 78,
+      "y": 106
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 333.953125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 161.953125,
+      "width": 346,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "youtube",
+    "actions": [],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 767
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 115.1875,
+      "y": 250
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 488,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 537.25,
+      "x": 290.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 467
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 280,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "youtube",
+    "actions": [],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 709.234375
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 64.078125,
+      "y": 221.109375
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 430.234375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 36,
+      "width": 431.421875,
+      "x": 239.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 409.234375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 200.234375,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 196
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "youtube",
+    "actions": [],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 509.890625
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 263.890625,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 700,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 295.09375
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 123.09375,
+      "width": 756,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "before",
+    "surface": "shared",
+    "sourceType": "youtube",
+    "actions": [],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 566.75
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 844,
+    "hero": {
+      "height": 302.75,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 32,
+      "width": 290,
+      "x": 78,
+      "y": 106
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 333.953125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 161.953125,
+      "width": 346,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "google-drive",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 584
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 348,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 115.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1209.625,
+      "x": 115.1875,
+      "y": 327
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 140,
+      "width": 1209.625,
+      "x": 115.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "google-drive",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 536.09375
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 288.09375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 64.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 672.84375,
+      "x": 64.078125,
+      "y": 267.09375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 80.09375,
+      "width": 672.84375,
+      "x": 64.078125,
+      "y": 174
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "google-drive",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 359.828125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 153.828125,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 756,
+      "x": 22,
+      "y": 100
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 185.03125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 41.03125,
+      "width": 756,
+      "x": 22,
+      "y": 130
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "google-drive",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 387.578125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 844,
+    "hero": {
+      "height": 177.578125,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 346,
+      "x": 22,
+      "y": 100
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 208.78125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 64.78125,
+      "width": 346,
+      "x": 22,
+      "y": 130
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "google-drive",
+    "actions": [],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 627
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 348,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 115.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1209.625,
+      "x": 115.1875,
+      "y": 327
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 140,
+      "width": 1209.625,
+      "x": 115.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "google-drive",
+    "actions": [],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 567.09375
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 288.09375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 64.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 672.84375,
+      "x": 64.078125,
+      "y": 267.09375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 80.09375,
+      "width": 672.84375,
+      "x": 64.078125,
+      "y": 174
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "google-drive",
+    "actions": [],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 399.828125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 1000,
+    "hero": {
+      "height": 153.828125,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 756,
+      "x": 22,
+      "y": 100
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 185.03125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 41.03125,
+      "width": 756,
+      "x": 22,
+      "y": 130
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "google-drive",
+    "actions": [],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 441.578125
+    },
+    "cover": null,
+    "coverLoaded": null,
+    "height": 844,
+    "hero": {
+      "height": 177.578125,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 346,
+      "x": 22,
+      "y": 100
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 208.78125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 64.78125,
+      "width": 346,
+      "x": 22,
+      "y": 130
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "spotify",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 584
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 115.1875,
+      "y": 180
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 348,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 290.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 327
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 140,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "spotify",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 536.09375
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 64.078125,
+      "y": 150.046875
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 288.09375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 239.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 267.09375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 80.09375,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 174
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "spotify",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 387.828125
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 181.828125,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 700,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 213.03125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 41.03125,
+      "width": 756,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "spotify",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 415.578125
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 844,
+    "hero": {
+      "height": 205.578125,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 290,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 236.78125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 64.78125,
+      "width": 346,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "spotify",
+    "actions": [],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 627
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 115.1875,
+      "y": 180
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 348,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 290.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 327
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 140,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "spotify",
+    "actions": [],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 567.09375
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 64.078125,
+      "y": 150.046875
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 288.09375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 146.53125,
+      "x": 239.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 267.09375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 80.09375,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 174
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "spotify",
+    "actions": [],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 427.828125
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 181.828125,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 700,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 213.03125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 41.03125,
+      "width": 756,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "spotify",
+    "actions": [],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 469.578125
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 844,
+    "hero": {
+      "height": 205.578125,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 290,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 236.78125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 64.78125,
+      "width": 346,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "youtube",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 724
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 115.1875,
+      "y": 250
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 488,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 537.25,
+      "x": 290.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 467
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 280,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "youtube",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 678.234375
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 64.078125,
+      "y": 221.109375
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 430.234375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 36,
+      "width": 431.421875,
+      "x": 239.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 409.234375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 200.234375,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 196
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "youtube",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 469.890625
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 263.890625,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 700,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 295.09375
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 123.09375,
+      "width": 756,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "after",
+    "surface": "owner",
+    "sourceType": "youtube",
+    "actions": [
+      {
+        "display": "flex",
+        "label": "Markeer dit artikel als gelezen",
+        "text": "Markeer als gelezen"
+      },
+      {
+        "display": "flex",
+        "label": "Download dit artikel als PDF",
+        "text": "Download PDF"
+      },
+      {
+        "display": "flex",
+        "label": "Deel dit artikel",
+        "text": "Kopieer link"
+      }
+    ],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 512.75
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 844,
+    "hero": {
+      "height": 302.75,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 32,
+      "width": 290,
+      "x": 78,
+      "y": 106
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 333.953125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 161.953125,
+      "width": 346,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 390
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "youtube",
+    "actions": [],
+    "article": {
+      "height": 1005.046875,
+      "width": 760,
+      "x": 160,
+      "y": 767
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 115.1875,
+      "y": 250
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 488,
+      "width": 1440,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 14,
+      "width": 537.25,
+      "x": 290.1875,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 467
+    },
+    "overflow": false,
+    "paddingLeft": "115.2px",
+    "paddingRight": "115.2px",
+    "title": {
+      "height": 280,
+      "width": 1034.625,
+      "x": 290.1875,
+      "y": 174
+    },
+    "viewport": 1440
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "youtube",
+    "actions": [],
+    "article": {
+      "height": 1186.90625,
+      "width": 421,
+      "x": 30,
+      "y": 709.234375
+    },
+    "cover": {
+      "height": 140,
+      "width": 140,
+      "x": 64.078125,
+      "y": 221.109375
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 430.234375,
+      "width": 801,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 36,
+      "width": 431.421875,
+      "x": 239.078125,
+      "y": 146
+    },
+    "metadata": {
+      "height": 20,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 409.234375
+    },
+    "overflow": false,
+    "paddingLeft": "64.08px",
+    "paddingRight": "64.08px",
+    "title": {
+      "height": 200.234375,
+      "width": 497.84375,
+      "x": 239.078125,
+      "y": 196
+    },
+    "viewport": 801
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "youtube",
+    "actions": [],
+    "article": {
+      "height": 957.046875,
+      "width": 740,
+      "x": 30,
+      "y": 509.890625
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 1000,
+    "hero": {
+      "height": 263.890625,
+      "width": 800,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 16,
+      "width": 700,
+      "x": 78,
+      "y": 114
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 756,
+      "x": 22,
+      "y": 295.09375
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 123.09375,
+      "width": 756,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 800
+  },
+  {
+    "phase": "after",
+    "surface": "shared",
+    "sourceType": "youtube",
+    "actions": [],
+    "article": {
+      "height": 1394.09375,
+      "width": 330,
+      "x": 30,
+      "y": 566.75
+    },
+    "cover": {
+      "height": 44,
+      "width": 44,
+      "x": 22,
+      "y": 100
+    },
+    "coverLoaded": true,
+    "height": 844,
+    "hero": {
+      "height": 302.75,
+      "width": 390,
+      "x": 0,
+      "y": 76
+    },
+    "kicker": {
+      "height": 32,
+      "width": 290,
+      "x": 78,
+      "y": 106
+    },
+    "metadata": {
+      "height": 20.796875,
+      "width": 346,
+      "x": 22,
+      "y": 333.953125
+    },
+    "overflow": false,
+    "paddingLeft": "22px",
+    "paddingRight": "22px",
+    "title": {
+      "height": 161.953125,
+      "width": 346,
+      "x": 22,
+      "y": 158
+    },
+    "viewport": 390
+  }
+]
