@@ -332,6 +332,10 @@ body.scroll-shell {
   gap: 35px;
   align-items: center;
 }
+.episode-hero > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .episode-hero img {
   width: 140px;
   height: 140px;
@@ -481,6 +485,15 @@ body.scroll-shell {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.article {
+  /* Keep long words and URLs inside the reader without clipping content. */
+  overflow-wrap: anywhere;
+}
+.article h1,
+.article h2 {
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 .article h1 {
   font: 600 clamp(44px, 6vw, 72px) / 1 var(--serif);
