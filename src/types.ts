@@ -9,7 +9,7 @@ export type JobStage =
 
 export type ProcessingStage = Exclude<JobStage, "complete" | "failed">;
 
-export type SourceType = "spotify" | "google-drive" | "youtube";
+export type SourceType = "spotify" | "google-drive" | "youtube" | "fathom";
 
 export interface Episode {
   sourceType: SourceType;

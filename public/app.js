@@ -358,6 +358,7 @@ localizedFetch("/api/auth")
 const sourceLabels = {
   spotify: "Spotify",
   youtube: "YouTube",
+  fathom: "Fathom",
   "google-drive": "Google Drive",
 };
 const processingStageLabels = {
@@ -538,7 +539,9 @@ function renderResult(job) {
       ? t("source.viewDrive")
       : episode.sourceType === "youtube"
         ? t("source.viewYoutube")
-        : t("source.viewSpotify");
+        : episode.sourceType === "fathom"
+          ? t("source.viewFathom")
+          : t("source.viewSpotify");
   const details = [
     episode.publishedAt
       ? new Date(episode.publishedAt).toLocaleDateString(locale, {

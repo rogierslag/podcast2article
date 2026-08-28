@@ -2,6 +2,11 @@ import { similarity } from "../lib/format.js";
 import { safeFetch } from "../lib/network.js";
 import type { Episode } from "../types.js";
 import {
+  isFathomHost,
+  resolveFathomRecording,
+  validateFathomUrl,
+} from "./fathom.js";
+import {
   isYouTubeHost,
   resolveYouTubeVideo,
   validateYouTubeUrl,
@@ -87,6 +92,9 @@ export function validateGoogleDriveUrl(value: string): URL {
 export function validateSourceUrl(value: string): URL {
   const url = new URL(value);
   const host = url.hostname.toLowerCase();
+  if (isFathomHost(host)) {
+    return validateFathomUrl(value);
+  }
   if (DRIVE_HOSTS.has(host)) {
     return validateGoogleDriveUrl(value);
   }
@@ -105,9 +113,7 @@ export function validateSourceUrl(value: string): URL {
   if (isYouTubeHost(host)) {
     return validateYouTubeUrl(value);
   }
-  throw new Error(
-    "Alleen publieke Spotify-afleveringen, YouTube-video's en Google Drive-opnames worden ondersteund.",
-  );
+  throw new Error("error.sourceUnsupported");
 }
 
 function decodeHtml(value: string): string {
@@ -296,6 +302,9 @@ export async function resolveSource(
 ): Promise<Episode> {
   const url = validateSourceUrl(value);
   const host = url.hostname.toLowerCase();
+  if (isFathomHost(host)) {
+    return resolveFathomRecording(url.toString(), signal);
+  }
   if (DRIVE_HOSTS.has(host)) {
     return resolveGoogleDriveRecording(url.toString());
   }
