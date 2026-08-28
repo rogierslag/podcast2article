@@ -69,6 +69,10 @@
   .shared-source > div {
     flex: auto;
   }
+  .shared-source audio {
+    /* In a column, flex: 1 can collapse the native player's height to zero. */
+    flex: none;
+  }
   .shared-layout {
     grid-template-columns: 1fr;
   }

@@ -1,11 +1,4 @@
 :root {
-  --ink: #1b201d;
-  --cream: #f4f0e7;
-  --paper: #faf8f2;
-  --orange: #e85e2a;
-  --green: #376453;
-  --line: #d8d1c4;
-  --muted: #6d706b;
   --mono: "DM Mono", monospace;
   --sans: "Manrope", sans-serif;
   --serif: "Newsreader", serif;
@@ -124,7 +117,7 @@ body.scroll-shell {
   max-width: 650px;
   font-size: 18px;
   line-height: 1.7;
-  color: #515550;
+  color: var(--intro-text);
   margin: 0 0 48px;
 }
 .composer {
@@ -156,20 +149,22 @@ body.scroll-shell {
   flex: 1;
   border: 0;
   background: transparent;
+  color: var(--ink);
   font: 500 15px var(--mono);
   padding: 16px 0;
   outline: 0;
 }
 .url-row button {
   border: 0;
-  background: var(--ink);
-  color: white;
+  background: var(--action-surface);
+  color: var(--action-text);
   padding: 17px 24px;
   font: 600 13px var(--sans);
   cursor: pointer;
 }
 .url-row button:hover {
   background: var(--orange);
+  color: var(--accent-action-text);
 }
 .options {
   display: flex;
@@ -186,11 +181,11 @@ body.scroll-shell {
   display: block;
   min-height: 48px;
   margin-top: 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--control-border);
   border-radius: 0;
   appearance: none;
-  background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%231b201d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-color: var(--paper);
+  background-image: var(--select-arrow);
   background-repeat: no-repeat;
   background-position: right 14px center;
   padding: 12px 42px 12px 14px;
@@ -205,7 +200,7 @@ body.scroll-shell {
   width: 180px;
 }
 .options select:focus-visible {
-  outline: 3px solid #e85e2a66;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .privacy {
@@ -223,7 +218,7 @@ body.scroll-shell {
   margin-right: 6px;
 }
 .error {
-  color: #a33426;
+  color: var(--error);
   font-size: 13px;
   margin: 12px 0 0;
   min-height: 18px;
@@ -234,7 +229,7 @@ body.scroll-shell {
   text-underline-offset: 3px;
 }
 .error a:focus-visible {
-  outline: 3px solid #e85e2a66;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .promise-grid {
@@ -325,8 +320,8 @@ body.scroll-shell {
 }
 .episode-hero {
   padding: 64px clamp(22px, 8vw, 140px);
-  background: var(--ink);
-  color: white;
+  background: var(--inverse-surface);
+  color: var(--inverse-text);
   display: grid;
   grid-template-columns: 140px 1fr;
   gap: 35px;
@@ -346,7 +341,7 @@ body.scroll-shell {
   object-fit: cover;
 }
 .episode-hero .kicker {
-  color: #8eb4a2;
+  color: var(--inverse-green);
 }
 .episode-hero h1 {
   font: 600 clamp(38px, 5vw, 70px) / 1 var(--serif);
@@ -354,7 +349,7 @@ body.scroll-shell {
   margin: 12px 0;
 }
 .episode-hero p {
-  color: #b6b9b6;
+  color: var(--inverse-muted);
   font-size: 13px;
 }
 @media screen and (max-width: 800px) {
@@ -426,7 +421,7 @@ body.scroll-shell {
   inset: 0 0 auto;
   height: 4px;
   overflow: hidden;
-  background: rgb(216 209 196 / 72%);
+  background: var(--reading-track);
   pointer-events: none;
   transform: translate3d(0, 0, 0);
 }
@@ -455,8 +450,8 @@ body.scroll-shell {
   padding: 17px 18px;
   border: 1px solid var(--ink);
   box-shadow: 0 14px 40px rgb(31 36 32 / 22%);
-  background: var(--ink);
-  color: white;
+  background: var(--inverse-surface);
+  color: var(--inverse-text);
   text-align: left;
   cursor: pointer;
 }
@@ -464,7 +459,7 @@ body.scroll-shell {
   font: 500 9px/1.3 var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #b6b9b6;
+  color: var(--inverse-muted);
 }
 .continue-reading strong {
   overflow: hidden;
@@ -486,7 +481,7 @@ body.scroll-shell {
   border-color: var(--orange);
 }
 .continue-reading:focus-visible {
-  outline: 3px solid #e85e2a66;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .article h2.resume-highlight {
@@ -526,11 +521,11 @@ body.scroll-shell {
     color 0.2s;
 }
 .article-actions button:hover {
-  background: var(--ink);
-  color: white;
+  background: var(--action-surface);
+  color: var(--action-text);
 }
 .article-actions button:focus-visible {
-  outline: 3px solid #e85e2a66;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .article-actions svg {
@@ -558,7 +553,7 @@ body.scroll-shell {
 }
 .article .dek {
   font: 500 20px/1.55 var(--sans);
-  color: #50534f;
+  color: var(--dek-text);
   border-bottom: 1px solid var(--line);
   padding-bottom: 38px;
 }
@@ -579,7 +574,7 @@ body.scroll-shell {
 }
 .article p {
   font: 16px/1.85 var(--sans);
-  color: #343834;
+  color: var(--body-text);
   margin: 0 0 22px;
 }
 .article blockquote {
@@ -603,7 +598,7 @@ body.scroll-shell {
 }
 .source-link {
   border: 0;
-  background: #e1e7e1;
+  background: var(--source-surface);
   color: var(--green);
   font: 500 9px var(--mono);
   border-radius: 10px;
@@ -612,10 +607,10 @@ body.scroll-shell {
 }
 .source-link:hover {
   background: var(--green);
-  color: white;
+  color: var(--green-action-text);
 }
 .takeaways {
-  background: #e9e3d8;
+  background: var(--takeaway-surface);
   padding: 30px 34px;
   margin-top: 64px;
 }
@@ -677,8 +672,9 @@ body.scroll-shell {
 }
 .transcript-actions input,
 .transcript-actions button {
-  border: 1px solid var(--line);
-  background: white;
+  border: 1px solid var(--control-border);
+  background: var(--control-surface);
+  color: var(--ink);
   padding: 10px 13px;
   font: 11px var(--mono);
 }
@@ -714,7 +710,7 @@ audio {
 @keyframes flash {
   0%,
   35% {
-    background: #f7d7c7;
+    background: var(--transcript-flash);
   }
   100% {
     background: transparent;
@@ -739,7 +735,8 @@ audio {
   margin: 0;
 }
 .segment mark {
-  background: #f6ca79;
+  background: var(--search-highlight);
+  color: var(--search-highlight-text);
 }
 footer {
   border-top: 1px solid var(--line);
@@ -911,7 +908,7 @@ footer {
   }
   .episode-hero .kicker,
   .episode-hero p {
-    color: #50534f;
+    color: var(--dek-text);
   }
   .episode-hero h1 {
     font:
@@ -1084,7 +1081,7 @@ footer {
 .article-card-image {
   height: 180px;
   overflow: hidden;
-  background: #d9d1c3;
+  background: var(--image-surface);
 }
 .article-card-image img {
   display: block;
@@ -1099,8 +1096,8 @@ footer {
 .article-card-placeholder {
   display: grid;
   place-items: center;
-  background: var(--green);
-  color: #b9d2c7;
+  background: var(--placeholder-surface);
+  color: var(--placeholder-text);
 }
 .article-card-placeholder span {
   font: 500 12px var(--mono);
@@ -1188,8 +1185,8 @@ footer {
 }
 .articles-empty a {
   display: inline-block;
-  background: var(--ink);
-  color: white;
+  background: var(--action-surface);
+  color: var(--action-text);
   text-decoration: none;
   padding: 15px 20px;
   font: 600 12px var(--mono);
@@ -1288,7 +1285,7 @@ footer {
 }
 .article-action-status {
   margin-right: auto;
-  color: #a33426;
+  color: var(--error);
   font: 10px var(--mono);
 }
 .article-action-status.is-success {
@@ -1297,7 +1294,7 @@ footer {
 .article-actions button.is-read {
   background: var(--green);
   border-color: var(--green);
-  color: white;
+  color: var(--green-action-text);
 }
 .article-actions button:disabled,
 .article-card-actions button:disabled {
@@ -1373,8 +1370,8 @@ footer {
   align-items: center;
   gap: 9px;
   border: 1px solid var(--ink);
-  background: var(--ink);
-  color: white;
+  background: var(--action-surface);
+  color: var(--action-text);
   padding: 13px 17px;
   font: 600 11px var(--mono);
   cursor: pointer;
@@ -1386,14 +1383,16 @@ footer {
 .article-read-footer button:hover {
   background: var(--orange);
   border-color: var(--orange);
+  color: var(--accent-action-text);
 }
 .article-read-footer button:focus-visible {
-  outline: 3px solid #e85e2a66;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .article-read-footer button.is-read {
   background: var(--green);
   border-color: var(--green);
+  color: var(--green-action-text);
 }
 .article-read-footer button:disabled {
   cursor: wait;
@@ -1412,7 +1411,7 @@ footer {
   position: absolute;
   right: 0;
   bottom: 7px;
-  color: #a33426;
+  color: var(--error);
   font: 9px var(--mono);
 }
 .article-read-footer-status.is-success {
@@ -1538,8 +1537,8 @@ footer {
   gap: 7px;
   min-height: 40px;
   border: 1px solid var(--ink);
-  background: var(--ink);
-  color: white;
+  background: var(--action-surface);
+  color: var(--action-text);
   padding: 10px 13px;
   font: 600 10px var(--mono);
   text-transform: uppercase;
@@ -1552,12 +1551,12 @@ footer {
 .article-card-actions button:hover {
   background: var(--orange);
   border-color: var(--orange);
-  color: white;
+  color: var(--accent-action-text);
 }
 .article-card-actions button[aria-pressed="true"] {
   background: var(--green);
   border-color: var(--green);
-  color: white;
+  color: var(--green-action-text);
 }
 .article-card-actions svg {
   width: 15px;
@@ -1623,15 +1622,15 @@ footer {
     max-width: calc(100vw - 44px);
     margin: 0;
     transform: translateX(-50%);
-    background: var(--ink);
-    color: white;
+    background: var(--inverse-surface);
+    color: var(--inverse-text);
     padding: 10px 13px;
     box-shadow: 0 8px 28px #0003;
     text-align: center;
     white-space: nowrap;
   }
   .article-action-status.is-success:not(:empty) {
-    color: white;
+    color: var(--inverse-text);
   }
 }
 
@@ -1643,6 +1642,7 @@ footer {
 }
 .processing-shelf .article-shelf-heading span {
   background: var(--orange);
+  color: var(--accent-action-text);
 }
 .processing-grid {
   display: grid;
@@ -1669,7 +1669,7 @@ footer {
 }
 .processing-card-visual {
   height: 92px;
-  background: var(--ink);
+  background: var(--inverse-surface);
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -1690,7 +1690,7 @@ footer {
   display: block;
   width: 3px;
   border-radius: 3px;
-  background: var(--cream);
+  background: var(--inverse-text);
   animation: processing-wave 1s ease-in-out infinite alternate;
 }
 .processing-wave i:nth-child(1) {
@@ -1801,13 +1801,16 @@ footer {
     scroll-behavior: auto;
   }
   .collapsible-shelf summary svg,
-  .reading-progress-value {
+  .reading-progress-value,
+  .progress-track div {
     transition: none;
   }
   .article h2.resume-highlight {
     animation: none;
     color: var(--orange);
   }
+  .record,
+  .segment.flash,
   .processing-wave i {
     animation: none;
   }
@@ -1838,4 +1841,19 @@ footer {
     width: 46px;
     padding: 0;
   }
+}
+
+:where(a, button, input, select, summary):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.url-row input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+input::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }

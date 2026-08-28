@@ -1,0 +1,89 @@
+/* Surface and foreground roles stay separate: a dark header is not text ink. */
+:root {
+  color-scheme: light;
+  --ink: #1b201d;
+  --cream: #f4f0e7;
+  --paper: #faf8f2;
+  --orange: #e85e2a;
+  --green: #376453;
+  --line: #d8d1c4;
+  --muted: #6d706b;
+  --body-text: #343834;
+  --intro-text: #515550;
+  --dek-text: #50534f;
+  --inverse-surface: #1b201d;
+  --inverse-text: #fff;
+  --inverse-muted: #b6b9b6;
+  --inverse-green: #8eb4a2;
+  --action-surface: #1b201d;
+  --action-text: #fff;
+  --accent-action-text: #1b201d;
+  --green-action-text: #fff;
+  --control-surface: #fff;
+  --control-border: var(--line);
+  --focus: #b94419;
+  --error: #a33426;
+  --error-surface: #f9e9e3;
+  --source-surface: #e1e7e1;
+  --takeaway-surface: #e9e3d8;
+  --image-surface: #d9d1c3;
+  --placeholder-surface: #376453;
+  --placeholder-text: #b9d2c7;
+  --reading-track: rgb(216 209 196 / 72%);
+  --transcript-flash: #f7d7c7;
+  --search-highlight: #f6ca79;
+  --search-highlight-text: #1b201d;
+  --login-glow: #fff7ea;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%231b201d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* Preserve the login page's existing light palette. */
+:root.login-page {
+  --cream: #f4f0e8;
+  --paper: #fffdf8;
+  --ink: #18211d;
+  --muted: #69726d;
+  --line: #d8d4ca;
+  --action-surface: #18211d;
+}
+
+/* Screen-only overrides leave browser printing on the original light palette. */
+@media screen and (prefers-color-scheme: dark) {
+  :root,
+  :root.login-page {
+    color-scheme: dark;
+    --ink: #eee9de;
+    --cream: #1c1b19;
+    --paper: #252420;
+    --orange: #ef7745;
+    --green: #9bc3ad;
+    --line: #46423b;
+    --muted: #aaa69d;
+    --body-text: #d6d1c7;
+    --intro-text: #c8c3b9;
+    --dek-text: #c8c3b9;
+    --inverse-surface: #141412;
+    --inverse-text: #eee9de;
+    --inverse-muted: #aaa69d;
+    --inverse-green: #9bc3ad;
+    --action-surface: #eee9de;
+    --action-text: #1c1b19;
+    --accent-action-text: #1c1b19;
+    --green-action-text: #1c1b19;
+    --control-surface: #1c1b19;
+    --control-border: #827b70;
+    --focus: #ef7745;
+    --error: #f3a08f;
+    --error-surface: #3c2722;
+    --source-surface: #30372f;
+    --takeaway-surface: #252420;
+    --image-surface: #302e29;
+    --placeholder-surface: #302e29;
+    --placeholder-text: #d6d1c7;
+    --reading-track: #46423b;
+    --transcript-flash: #473025;
+    --search-highlight: #e8b65e;
+    --login-glow: transparent;
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23eee9de' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}

@@ -11,7 +11,18 @@
       content="{{page.description}}"
       data-i18n-content="page.description"
     />
-    <meta name="theme-color" content="#e85e2a" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#e85e2a"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#1c1b19"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link rel="stylesheet" href="/theme.css?v=system-dark-v1" />
     <title data-i18n="page.title">{{page.title}}</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
@@ -22,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=native-scroll-chrome-v1" />
+    <link rel="stylesheet" href="/styles.css?v=system-dark-v1" />
     <script src="/app.js?v=natural-reading-position-v1" type="module"></script>
   </head>
   <body class="native-scroll">

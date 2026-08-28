@@ -1,23 +1,26 @@
 <!doctype html>
-<html lang="{{language}}">
+<html lang="{{language}}" class="login-page">
   <head>
     <meta charset="utf-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#e85e2a" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#e85e2a"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#1c1b19"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link rel="stylesheet" href="/theme.css?v=system-dark-v1" />
     <title data-i18n="login.title">{{login.title}}</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <style>
-      :root {
-        --cream: #f4f0e8;
-        --paper: #fffdf8;
-        --ink: #18211d;
-        --muted: #69726d;
-        --orange: #e85e2a;
-        --line: #d8d4ca;
-      }
       * {
         box-sizing: border-box;
       }
@@ -42,7 +45,11 @@
           max(24px, env(safe-area-inset-bottom))
           max(24px, env(safe-area-inset-left));
         background:
-          radial-gradient(circle at 15% 10%, #fff7ea 0, transparent 34%),
+          radial-gradient(
+            circle at 15% 10%,
+            var(--login-glow) 0,
+            transparent 34%
+          ),
           var(--cream);
       }
       main {
@@ -103,8 +110,9 @@
         display: block;
         width: 100%;
         height: 52px;
-        border: 1px solid var(--line);
-        background: white;
+        border: 1px solid var(--control-border);
+        background: var(--control-surface);
+        color: var(--ink);
         padding: 0 15px;
         font-family: inherit;
         font-size: 16px;
@@ -114,15 +122,15 @@
         appearance: none;
       }
       input:focus {
-        outline: 3px solid #e85e2a35;
+        outline: 3px solid var(--focus);
         border-color: var(--orange);
       }
       button {
         width: 100%;
         height: 52px;
         border: 0;
-        background: var(--ink);
-        color: white;
+        background: var(--action-surface);
+        color: var(--action-text);
         font-family: inherit;
         font-size: 13px;
         font-weight: 700;
@@ -132,11 +140,16 @@
       }
       button:hover {
         background: var(--orange);
+        color: var(--accent-action-text);
+      }
+      button:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 3px;
       }
       .error {
         display: none;
-        color: #a33426;
-        background: #f9e9e3;
+        color: var(--error);
+        background: var(--error-surface);
         padding: 11px 13px;
         margin: 0 0 20px;
         font-size: 13px;
@@ -159,7 +172,7 @@
       }
       .access-note a:focus-visible,
       .maker-links a:focus-visible {
-        outline: 3px solid #e85e2a55;
+        outline: 3px solid var(--focus);
         outline-offset: 2px;
       }
       .maker-note {
