@@ -36,7 +36,56 @@ let readingTrackingOrigin = 0;
 let readingTrackingEnabled = false;
 let restoringReadingPosition = false;
 let continuationSectionIndex;
+let naturalReadingScroll = false;
+let naturalReadingScrollMoved = false;
+let readingScrollEndTimer;
 const materialScrollDistance = 120;
+
+function stopNaturalReadingScroll() {
+  clearTimeout(readingScrollEndTimer);
+  naturalReadingScroll = false;
+  naturalReadingScrollMoved = false;
+  readingPositionTrackingRequested = false;
+}
+
+function finishNaturalReadingScroll() {
+  // Save the settled reading location, never sections passed on the way to
+  // the navigation at the top (including a status-bar tap during momentum).
+  if (naturalReadingScrollMoved && window.scrollY > 0) {
+    trackReadingPosition(true);
+  }
+  stopNaturalReadingScroll();
+}
+
+function beginNaturalReadingScroll(event) {
+  if (event.defaultPrevented || restoringReadingPosition) {
+    return;
+  }
+  naturalReadingScroll = true;
+  clearTimeout(readingScrollEndTimer);
+  readingScrollEndTimer = setTimeout(finishNaturalReadingScroll, 200);
+}
+
+function handleReadingScrollKey(event) {
+  if (
+    event.defaultPrevented ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.target.closest?.(
+      'input, textarea, select, button, a, [contenteditable]:not([contenteditable="false"]), [role="slider"]',
+    )
+  ) {
+    return;
+  }
+  if (event.key === "Home" || event.key === "End") {
+    stopNaturalReadingScroll();
+    return;
+  }
+  if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", " "].includes(event.key)) {
+    beginNaturalReadingScroll(event);
+  }
+}
 
 function articleSectionHeadings() {
   return [...document.querySelectorAll("#article section > h2")];
@@ -60,6 +109,7 @@ function hideContinueReading() {
 }
 
 function resetArticleScroll() {
+  stopNaturalReadingScroll();
   readingPositionTrackingRequested = false;
   readingTrackingEnabled = false;
   restoringReadingPosition = false;
@@ -100,9 +150,12 @@ async function flushReadingPosition(keepalive = false) {
   }
 }
 
-window.addEventListener("pagehide", () => void flushReadingPosition(true));
+window.addEventListener("pagehide", () => {
+  finishNaturalReadingScroll();
+  void flushReadingPosition(true);
+});
 
-function trackReadingPosition() {
+function trackReadingPosition(savePosition = false) {
   if (restoringReadingPosition) {
     return;
   }
@@ -120,12 +173,13 @@ function trackReadingPosition() {
     return;
   }
   const sectionIndex = visibleReadingSectionIndex();
-  if (sectionIndex !== undefined) {
+  if (savePosition && sectionIndex !== undefined) {
     persistReadingPosition(sectionIndex);
   }
 }
 
 function showContinueReading(readingPosition) {
+  stopNaturalReadingScroll();
   clearTimeout(readingPositionSaveTimer);
   pendingReadingSectionIndex = undefined;
   lastSavedReadingSectionIndex = readingPosition?.sectionIndex;
@@ -181,6 +235,7 @@ $("#continue-reading").addEventListener("click", () => {
     return;
   }
   hideContinueReading();
+  stopNaturalReadingScroll();
   readingTrackingEnabled = false;
   restoringReadingPosition = true;
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -252,13 +307,31 @@ function scheduleArticleReadingProgressUpdate(trackPosition = false) {
   }
 }
 
+function handleArticleScroll() {
+  scheduleArticleReadingProgressUpdate(naturalReadingScroll);
+  if (naturalReadingScroll) {
+    naturalReadingScrollMoved = true;
+    clearTimeout(readingScrollEndTimer);
+    // Fallback for browsers without scrollend; keep momentum in the gesture.
+    readingScrollEndTimer = setTimeout(finishNaturalReadingScroll, 200);
+  }
+}
+
+window.addEventListener("touchmove", beginNaturalReadingScroll, {
+  passive: true,
+});
 window.addEventListener(
-  "scroll",
-  () => scheduleArticleReadingProgressUpdate(true),
-  {
-    passive: true,
+  "wheel",
+  (event) => {
+    if (!event.ctrlKey && event.deltaY !== 0) {
+      beginNaturalReadingScroll(event);
+    }
   },
+  { passive: true },
 );
+window.addEventListener("keydown", handleReadingScrollKey);
+window.addEventListener("scrollend", finishNaturalReadingScroll);
+window.addEventListener("scroll", handleArticleScroll, { passive: true });
 window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
 
 fetch("/api/auth")

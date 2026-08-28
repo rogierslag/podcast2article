@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createContext, runInContext } from "node:vm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Run the reading controller without loading jobs or starting network requests.
 // Native iOS status-bar gestures and safe-area painting require simulator tests.
@@ -13,17 +13,19 @@ function setupReadingController(
   reducedMotion = false,
   safeAreaTop = 0,
 ) {
-  const listeners = new Map<string, () => void>();
+  vi.useFakeTimers();
+  const listeners = new Map<string, (event?: object) => void>();
   const frames: Array<() => void> = [];
   const attributes = new Map<string, string>();
   const progressValue = { style: { transform: "" } };
   const hidden = new Set<string>();
+  const fetch = vi.fn(async () => ({ ok: true, status: 200 }));
   const window = {
-    fetch: vi.fn(),
+    fetch,
     scrollY: 0,
     innerHeight: viewportHeight,
     scrollTo: vi.fn(),
-    addEventListener: (event: string, callback: () => void) =>
+    addEventListener: (event: string, callback: (event?: object) => void) =>
       listeners.set(event, callback),
   };
   const article = {
@@ -61,6 +63,7 @@ function setupReadingController(
   ]);
   const context = createContext({
     window,
+    fetch: window.fetch,
     document: {
       querySelector: (selector: string) => elements.get(selector),
       querySelectorAll: () => headings,
@@ -69,8 +72,8 @@ function setupReadingController(
       frames.push(callback);
       return frames.length;
     },
-    clearTimeout: vi.fn(),
-    setTimeout: vi.fn(),
+    clearTimeout,
+    setTimeout,
     matchMedia: () => ({ matches: reducedMotion }),
     getComputedStyle: () => ({ scrollMarginTop: `${30 + safeAreaTop}px` }),
     performance: { now: () => 0 },
@@ -78,16 +81,164 @@ function setupReadingController(
   runInContext(controller ?? "", context);
   return {
     window,
+    fetch,
     article,
     attributes,
     progressValue,
     listeners,
     frames,
+    scroll: (top: number) => {
+      window.scrollY = top;
+      listeners.get("scroll")?.();
+      frames.shift()?.();
+    },
     run: (source: string) => runInContext(source, context),
   };
 }
 
+afterEach(() => vi.useRealTimers());
+
 describe("article native scrolling", () => {
+  it.each(["touchmove", "wheel", "keydown"])(
+    "saves the settled reading section after %s input",
+    async (input) => {
+      const reader = setupReadingController();
+      reader.run('currentJob = { id: "reading-test" }');
+
+      reader.listeners.get(input)?.({
+        deltaY: 400,
+        key: "PageDown",
+        target: { closest: () => null },
+      });
+      reader.scroll(1450);
+      reader.listeners.get("scrollend")?.();
+      await reader.run("flushReadingPosition()");
+
+      expect(reader.fetch).toHaveBeenCalledWith(
+        "/api/jobs/reading-test/reading-position",
+        expect.objectContaining({ body: '{"sectionIndex":1}' }),
+      );
+    },
+  );
+
+  it("keeps the saved section while a native jump passes earlier sections", async () => {
+    const reader = setupReadingController();
+    reader.run(
+      'currentJob = { id: "reading-test" }; showContinueReading({ sectionIndex: 2 })',
+    );
+    reader.window.scrollY = 2500;
+
+    for (const position of [1700, 900, 0]) {
+      reader.scroll(position);
+      await vi.advanceTimersByTimeAsync(800);
+    }
+    reader.listeners.get("pagehide")?.();
+
+    expect(reader.fetch).not.toHaveBeenCalled();
+    expect(reader.attributes.get("aria-valuenow")).toBe("0");
+  });
+
+  it("discards intermediate sections when a gesture ends at the navigation", async () => {
+    const reader = setupReadingController();
+    reader.run(
+      'currentJob = { id: "reading-test" }; showContinueReading({ sectionIndex: 2 })',
+    );
+    reader.window.scrollY = 2500;
+
+    reader.listeners.get("touchmove")?.({});
+    reader.scroll(1700);
+    reader.scroll(900);
+    reader.scroll(0);
+    reader.listeners.get("scrollend")?.();
+    await reader.run("flushReadingPosition()");
+
+    expect(reader.fetch).not.toHaveBeenCalled();
+  });
+
+  it("still saves deliberate backward reading", async () => {
+    const reader = setupReadingController();
+    reader.run(
+      'currentJob = { id: "reading-test" }; showContinueReading({ sectionIndex: 2 })',
+    );
+    reader.window.scrollY = 2500;
+
+    reader.listeners.get("touchmove")?.({});
+    reader.scroll(900);
+    reader.listeners.get("scrollend")?.();
+    await reader.run("flushReadingPosition()");
+
+    expect(reader.fetch).toHaveBeenCalledWith(
+      "/api/jobs/reading-test/reading-position",
+      expect.objectContaining({ body: '{"sectionIndex":0}' }),
+    );
+  });
+
+  it("ends momentum tracking without scrollend and ignores a later native jump", async () => {
+    const reader = setupReadingController();
+    reader.run('currentJob = { id: "reading-test" }');
+
+    reader.listeners.get("touchmove")?.({});
+    reader.scroll(900);
+    await vi.advanceTimersByTimeAsync(100);
+    reader.scroll(1700);
+    await vi.advanceTimersByTimeAsync(200);
+    reader.scroll(900);
+    reader.scroll(0);
+    reader.listeners.get("pagehide")?.();
+
+    expect(reader.fetch).toHaveBeenCalledExactlyOnceWith(
+      "/api/jobs/reading-test/reading-position",
+      expect.objectContaining({ body: '{"sectionIndex":1}', keepalive: true }),
+    );
+  });
+
+  it("flushes the natural reading position when leaving before scrollend", () => {
+    const reader = setupReadingController();
+    reader.run('currentJob = { id: "reading-test" }');
+
+    reader.listeners.get("touchmove")?.({});
+    reader.scroll(1700);
+    reader.listeners.get("pagehide")?.();
+
+    expect(reader.fetch).toHaveBeenCalledWith(
+      "/api/jobs/reading-test/reading-position",
+      expect.objectContaining({ body: '{"sectionIndex":1}', keepalive: true }),
+    );
+  });
+
+  it.each(["Home", "End", "Enter"])(
+    "does not treat %s as reading input",
+    async (key) => {
+      const reader = setupReadingController();
+      reader.run('currentJob = { id: "reading-test" }');
+
+      reader.listeners.get("keydown")?.({
+        key,
+        target: { closest: () => null },
+      });
+      reader.scroll(1700);
+      reader.listeners.get("scrollend")?.();
+      await reader.run("flushReadingPosition()");
+
+      expect(reader.fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not treat keys in an interactive control as reading input", async () => {
+    const reader = setupReadingController();
+    reader.run('currentJob = { id: "reading-test" }');
+
+    reader.listeners.get("keydown")?.({
+      key: "ArrowDown",
+      target: { closest: () => ({}) },
+    });
+    reader.scroll(1700);
+    reader.listeners.get("scrollend")?.();
+    await reader.run("flushReadingPosition()");
+
+    expect(reader.fetch).not.toHaveBeenCalled();
+  });
+
   it.each([844, 1000])(
     "tracks progress from the document at viewport height %i",
     (height) => {
