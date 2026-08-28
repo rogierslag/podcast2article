@@ -110,6 +110,9 @@ describe("localized server messages", () => {
     ["Artikelretry kon niet starten.", "error.articleRetry"],
     ["Leesstatus kon niet worden opgeslagen.", "error.readState"],
     ["Server herstart; opdracht wordt hervat", "job.resuming"],
+    ["Opdracht staat klaar", "job.queued"],
+    ["Opname veilig downloaden", "job.downloading"],
+    ["Brongebonden blogartikel schrijven", "job.writing"],
   ])(
     "translates the stored message %s after its visible copy changes",
     (stored, key) => {

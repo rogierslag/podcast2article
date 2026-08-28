@@ -173,8 +173,8 @@ export const messages = {
     en: "The transcript is incomplete, so we can’t rewrite the article yet.",
   },
   "job.queued": {
-    nl: "Opdracht staat klaar",
-    en: "The request is queued",
+    nl: "Opname staat in de wachtrij",
+    en: "The recording is queued",
   },
   "job.regenerating": {
     nl: "We schrijven het artikel opnieuw met het bestaande transcript.",
@@ -201,7 +201,7 @@ export const messages = {
     en: "Recording found",
   },
   "job.downloading": {
-    nl: "Opname veilig downloaden",
+    nl: "Opname downloaden",
     en: "Downloading the recording",
   },
   "job.extractingAudio": {
@@ -221,8 +221,8 @@ export const messages = {
     en: "The server stopped. We’ll continue with your recording once it’s running again.",
   },
   "job.writing": {
-    nl: "Brongebonden blogartikel schrijven",
-    en: "Writing a source-linked article",
+    nl: "Artikel schrijven",
+    en: "Writing the article",
   },
   "error.spotifyLinkRequired": {
     nl: "Plak een publieke open.spotify.com-link.",
@@ -485,8 +485,8 @@ export const messages = {
     en: "Log out",
   },
   "hero.kicker": {
-    nl: "Van opname naar publicatie",
-    en: "From recording to publication",
+    nl: "Van opname naar artikel",
+    en: "From recording to article",
   },
   "hero.start": {
     nl: "Liever lezen",
@@ -497,8 +497,8 @@ export const messages = {
     en: "than listen?",
   },
   intro: {
-    nl: "Plak een link naar een openbare Spotify-aflevering, YouTube-video, Fathom-opname of Google Meet-opname in Drive. We zetten het gesprek om in een artikel met verwijzingen naar de opname, zodat je kunt teruglezen wat er is gezegd en zelf de bron kunt beluisteren.",
-    en: "Paste a link to a public Spotify episode, YouTube video, Fathom recording, or Google Meet recording in Drive. We turn the conversation into an article with links to the recording, so you can read what was said and listen to the source for yourself.",
+    nl: "Plak een link naar een openbare podcast, video of opname. Wij maken er een artikel van. Benieuwd hoe iets precies werd gezegd? Via de bronverwijzingen luister je dat stukje terug.",
+    en: "Paste a link to a public podcast, video, or recording. We’ll turn it into an article. Curious how something was actually said? Follow the source links to listen back to that part.",
   },
   "form.sourceLabel": {
     nl: "Openbare opname",

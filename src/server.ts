@@ -252,6 +252,7 @@ app.get(
     "/localize.js",
     "/share.css",
     "/styles.css",
+    "/theme.css",
     "/favicon.svg",
     "/favicon-32.png",
     "/apple-touch-icon.png",
