@@ -189,8 +189,26 @@ not accepted.
 
 ### 3.6 Media pipeline
 
-`src/services/audio.ts` uses `ffmpeg-static`, so no system FFmpeg package is
-required.
+`src/services/audio.ts` uses `ffmpeg-static` to resolve the executable. By
+default this is the bundled binary; `FFMPEG_BIN` selects an alternative absolute
+path. `src/services/fathom.ts` uses the same resolver for yt-dlp's FFmpeg
+location. A system FFmpeg package is not required. The production installer
+provisions a versioned Linux x64 build from a checksum-pinned manifest; local
+development continues to use the bundled binary unless explicitly overridden.
+
+Fathom HLS downloads can invoke FFmpeg inside yt-dlp to remux MPEG-TS into MP4
+before the application starts audio normalization. A failure in that
+postprocessing step therefore appears in the application's `downloading` stage.
+Postprocessing errors have a separate, localized error key from access or size
+failures; raw downloader diagnostics and signed URLs are never returned.
+
+The updater runs a synthetic MPEG-TS → MP4 → MP3 → playable chunks test as the
+application user, using the registered service environment and candidate release
+code, before switching the live symlink. A native crash therefore blocks
+activation even when unit tests and HTTP health pass. FFmpeg selection survives
+application rollbacks and has its own guarded rollback. See the
+[runtime runbook](docs/FFMPEG.md) and
+[2026-08-28 incident](docs/incidents/2026-08-28-fathom-ffmpeg.md).
 
 For each job:
 
@@ -313,25 +331,26 @@ Production application configuration is stored in
 `/etc/podcast2article.env`. Values must never be committed or copied into this
 document.
 
-| Variable                          | Role                                           |
-| --------------------------------- | ---------------------------------------------- |
-| `OPENAI_API_KEY`                  | OpenAI API credential                          |
-| `APP_USERS`                       | JSON object with fixed username/password pairs |
-| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint           |
-| `HOST`                            | Production bind address; currently loopback    |
-| `PORT`                            | Production HTTP port; currently 3000           |
-| `NODE_ENV`                        | Production runtime mode                        |
-| `ARTICLE_MODEL`                   | Article-generation model                       |
-| `TRANSCRIPTION_MODEL`             | Diarized transcription model                   |
-| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                       |
-| `MAX_YOUTUBE_MB`                  | YouTube source limit                           |
-| `MAX_RECORDING_MB`                | Google Drive recording limit                   |
-| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                               |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                               |
-| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                      |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                          |
-| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                            |
-| `LOG_STACKS`                      | Enable full stack traces in logs               |
+| Variable                          | Role                                                            |
+| --------------------------------- | --------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | OpenAI API credential                                           |
+| `APP_USERS`                       | JSON object with fixed username/password pairs                  |
+| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint                            |
+| `HOST`                            | Production bind address; currently loopback                     |
+| `PORT`                            | Production HTTP port; currently 3000                            |
+| `NODE_ENV`                        | Production runtime mode                                         |
+| `ARTICLE_MODEL`                   | Article-generation model                                        |
+| `TRANSCRIPTION_MODEL`             | Diarized transcription model                                    |
+| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                                        |
+| `MAX_YOUTUBE_MB`                  | YouTube source limit                                            |
+| `MAX_RECORDING_MB`                | Google Drive recording limit                                    |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                                                |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                                                |
+| `FFMPEG_BIN`                      | Optional absolute path overriding the bundled FFmpeg executable |
+| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                       |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                           |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                             |
+| `LOG_STACKS`                      | Enable full stack traces in logs                                |
 
 ## 7. Dependency model
 

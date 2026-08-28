@@ -197,6 +197,78 @@ describe("Fathom recording download", () => {
     );
   });
 
+  it.each([
+    "[download] File is larger than max-filesize (1500M). Aborting.",
+    "File is larger than the allowed size",
+  ])(
+    "identifies an explicit size-limit skip without requiring an output file",
+    async (output) => {
+      downloader.mockResolvedValue(output);
+
+      await expect(downloadFathomRecording(sourceUrl, target)).rejects.toThrow(
+        "error.fathomDownloadLimit",
+      );
+    },
+  );
+
+  it.each([
+    [
+      "ERROR: Postprocessing: libpostproc 58.1.100",
+      "error.fathomProcessingFailed",
+    ],
+    [
+      "ERROR: Postprocessing: failed /private/tmp/source.media https://cdn.example/private?signature=secret",
+      "error.fathomProcessingFailed",
+    ],
+    ["ERROR: ffmpeg exited with code 1", "error.fathomProcessingFailed"],
+    [
+      "HTTP Error 403: Forbidden https://cdn.example/?signature=secret",
+      "error.fathomPrivate",
+    ],
+    ["File is larger than max-filesize", "error.fathomDownloadLimit"],
+    [
+      "Cannot open /private/tmp/source.media https://cdn.example/private?signature=secret",
+      "error.fathomDownloadFailed",
+    ],
+    [
+      "Unknown download error https://cdn.example/?signature=secret",
+      "error.fathomDownloadFailed",
+    ],
+  ])(
+    "classifies downloader failures without exposing private diagnostics",
+    async (stderr, expected) => {
+      downloader.mockImplementation(async () => {
+        await writeFile(target, "partial");
+        throw Object.assign(new Error(stderr), { stderr });
+      });
+
+      const failure = await downloadFathomRecording(sourceUrl, target).catch(
+        (error) => error,
+      );
+
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure.message).toBe(expected);
+      expect(failure.stack).not.toContain("signature=secret");
+      expect(failure.cause).toBeUndefined();
+      await expect(stat(target)).rejects.toThrow();
+    },
+  );
+
+  it("does not pass through unrecognized error keys or appended private details", async () => {
+    downloader.mockRejectedValue(
+      new Error(
+        "error.fathomDownloadLimit https://cdn.example/?signature=secret",
+      ),
+    );
+
+    const failure = await downloadFathomRecording(sourceUrl, target).catch(
+      (error) => error,
+    );
+
+    expect(failure.message).toBe("error.fathomDownloadFailed");
+    expect(failure.stack).not.toContain("signature=secret");
+  });
+
   it("removes partial downloads and preserves cancellation", async () => {
     const controller = new AbortController();
     downloader.mockImplementation(async () => {

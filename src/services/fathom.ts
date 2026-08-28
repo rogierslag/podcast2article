@@ -80,16 +80,51 @@ function positiveSetting(value: unknown, fallback: number): number {
   return Number.isFinite(number) && number > 0 ? number : fallback;
 }
 
+const fathomErrorKeys = new Set([
+  "error.fathomLinkRequired",
+  "error.fathomShareRequired",
+  "error.fathomPrivate",
+  "error.fathomMetadataMissing",
+  "error.fathomUnreadable",
+  "error.fathomTimeout",
+  "error.fathomDownloadEmpty",
+  "error.fathomDownloadLimit",
+  "error.fathomDownloadFailed",
+  "error.fathomProcessingFailed",
+]);
+
+function exceedsDownloadLimit(message: string): boolean {
+  return /larger than max-filesize|file is larger than|maximum file size exceeded/i.test(
+    message,
+  );
+}
+
 function fathomFailure(error: unknown, fallback: string): Error {
-  if (error instanceof Error && error.message.startsWith("error.fathom")) {
-    return error;
+  if (error instanceof Error && fathomErrorKeys.has(error.message)) {
+    return new Error(error.message);
   }
   const details =
     error && typeof error === "object" && "stderr" in error
       ? String(error.stderr)
       : String(error);
-  const message = details.replace(/https?:\/\/\S+/g, "");
-  if (/sign.?in|log.?in|private|password|\b403\b|\b401\b/i.test(message)) {
+  const message = details.replace(/https?:\/\/\S+/gi, "");
+  // yt-dlp wraps FFmpeg failures as postprocessing errors, even when the
+  // underlying crash leaves only a version banner. Do not blame permissions.
+  if (
+    /(?:^|\n)\s*ERROR:\s*Postprocessing:|ffmpeg (?:exited|failed|not found)|ffmpeg.*(?:SIGSEGV|segmentation fault)/i.test(
+      message,
+    )
+  ) {
+    return new Error("error.fathomProcessingFailed");
+  }
+  if (exceedsDownloadLimit(message)) {
+    return new Error("error.fathomDownloadLimit");
+  }
+  if (
+    /sign.?in|log.?in|private (?:recording|video)|(?:recording|video) is private|password(?:[ -]protected| required)|\bHTTP(?: Error)?\s+(?:403|401)\b/i.test(
+      message,
+    )
+  ) {
     return new Error("error.fathomPrivate");
   }
   // Never expose downloader stderr: it can contain signed media URLs.
@@ -150,7 +185,7 @@ export async function downloadFathomRecording(
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
   try {
     requestSignal.throwIfAborted();
-    await youtubeDl(
+    const output = await youtubeDl(
       sourceUrl,
       {
         format: "bestaudio/best",
@@ -169,6 +204,11 @@ export async function downloadFathomRecording(
       },
       { signal: requestSignal },
     );
+    // yt-dlp can skip oversized media successfully, writing only a size message.
+    // Inspect that explicit signal rather than calling every missing file a limit.
+    if (typeof output === "string" && exceedsDownloadLimit(output)) {
+      throw new Error("error.fathomDownloadLimit");
+    }
     const file = await stat(target);
     if (!file.size) {
       throw new Error("error.fathomDownloadEmpty");

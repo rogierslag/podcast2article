@@ -1,12 +1,14 @@
 # Podcast2Article Operations
 
-Document version: 2026-08-23
+Document version: 2026-08-28
 
 This document is the production operations template for Podcast2Article.
 Replace documentation addresses and example identifiers with the values for the
 actual host. Re-verify commands and paths after material infrastructure changes.
 
 Application internals are documented in `../ARCHITECTURE.md`.
+
+Incident records: [2026-08-28 Fathom FFmpeg crash and reversible override](incidents/2026-08-28-fathom-ffmpeg.md).
 
 ## 1. Production summary
 
@@ -267,6 +269,27 @@ Behavior:
 - has a read-only system view except for `/var/lib/podcast2article`;
 - cannot read home directories.
 
+#### FFmpeg override
+
+An operator can select a separately provisioned executable through `FFMPEG_BIN`.
+Keep the executable root-owned and outside both application releases and user
+data. Preserve the bundled binary for rollback. The production override installed
+on 2026-08-28 adds a systemd drop-in with a non-secret `EnvironmentFile` after
+the existing application environment file; credentials remain unchanged.
+
+Inspect the registered drop-ins with:
+
+```bash
+systemctl show podcast2article.service -p DropInPaths
+```
+
+The installer now provisions a checksum-pinned Linux x64 FFmpeg/ffprobe build
+and selects it on fresh hosts. Existing `90-ffmpeg-override.conf` files remain
+unchanged. See [FFmpeg management](FFMPEG.md) for installation, activation,
+synthetic media verification, and rollback. The
+[incident record](incidents/2026-08-28-fathom-ffmpeg.md) documents the earlier
+manual mitigation and its separate recovery script.
+
 ### `podcast2article-webhook.service`
 
 Runs the signed GitHub webhook receiver on `127.0.0.1:9000`.
@@ -387,16 +410,20 @@ The daily check recovers from a missed or delayed webhook.
 8. creates a new immutable release directory;
 9. installs locked production dependencies;
 10. links `data` to `/var/lib/podcast2article`;
-11. atomically changes `/opt/podcast2article/current`;
-12. restarts the application;
-13. waits up to 30 seconds for systemd and `/api/health`;
-14. keeps the new release on success;
-15. restores the previous symlink and restarts on failure;
-16. retains the three newest successful release directories.
+11. runs synthetic MPEG-TS remuxing, MP3 normalization, chunking, and decoding
+    as the application user with the service environment and new release code;
+12. atomically changes `/opt/podcast2article/current` only if media checks pass;
+13. restarts the application;
+14. waits up to 30 seconds for systemd and `/api/health`;
+15. keeps the new release on success;
+16. restores the previous symlink and restarts on failure;
+17. retains the three newest successful release directories.
 
 The application continues serving from the old release while a new release is
 being downloaded, built, and tested. Downtime is limited to the final graceful
-restart.
+restart. A media preflight failure leaves the existing symlink and process
+untouched. Applying this guard to an existing host requires explicitly
+reinstalling the infrastructure updater; application pushes do not replace it.
 
 ### Logs
 
@@ -453,6 +480,10 @@ curl -I https://production.example.nl/login
 
 Use an exact release name. Never recursively delete `/opt/podcast2article` or
 `/var/lib/podcast2article` during rollback.
+
+Application release rollback does not revert an external FFmpeg installation or
+its systemd override. Those survive release switches and require their own
+[rollback procedure](FFMPEG.md#activation-and-rollback).
 
 ## 13. Secrets and rotation
 

@@ -361,8 +361,12 @@ export const messages = {
     en: "The Fathom recording exceeds the configured download limit.",
   },
   "error.fathomDownloadFailed": {
-    nl: "De Fathom-opname kon niet worden gedownload. Controleer de toegang en de downloadlimiet.",
-    en: "The Fathom recording could not be downloaded. Check access and the download limit.",
+    nl: "De Fathom-opname kon niet worden gedownload. Probeer het opnieuw. Blijft dit gebeuren, neem dan contact op met de beheerder.",
+    en: "The Fathom recording could not be downloaded. Try again. If this keeps happening, contact the administrator.",
+  },
+  "error.fathomProcessingFailed": {
+    nl: "De Fathom-opname kon op de server niet worden verwerkt. Neem contact op met de beheerder om de FFmpeg-installatie te controleren.",
+    en: "The Fathom recording could not be processed on the server. Contact the administrator to check the FFmpeg installation.",
   },
   "source.viewFathom": {
     nl: "Bekijk op Fathom ↗",

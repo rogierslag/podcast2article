@@ -44,6 +44,15 @@ FFmpeg en yt-dlp worden als Node-dependencies meegeleverd. Python wordt door
 yt-dlp gebruikt op macOS en Linux. PDF's worden rechtstreeks in Node.js
 opgebouwd; daarvoor is geen browser op de server nodig.
 
+Met `FFMPEG_BIN` kun je een absoluut pad naar een apart geïnstalleerde FFmpeg
+instellen; zonder die variabele gebruikt de app de meegeleverde binary. De
+productie-installer installeert op Linux x64 een vastgelegde FFmpeg/ffprobe-build
+met SHA-256-controle. Een bestaande `90-ffmpeg-override.conf` blijft behouden;
+een andere versie activeren is een expliciete, terug te draaien beheeractie.
+Iedere nieuwe release doorloopt vóór activering een echte mediatest. Zie het
+[beheer- en rollback-draaiboek](docs/FFMPEG.md) en het
+[incidentverslag](docs/incidents/2026-08-28-fathom-ffmpeg.md).
+
 ```bash
 npm install
 OPENAI_API_KEY='jouw-sleutel' npm run dev
@@ -131,24 +140,25 @@ De server gebruikt
 `Accept-Language` voor de eerste HTML-weergave; browserverzoeken sturen de gekozen
 interfacetaal mee. Vernieuw de pagina na een wijziging van de browsertaal.
 
-| Variabele                         | Standaard                   | Betekenis                                                                        |
-| --------------------------------- | --------------------------- | -------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`                  | vereist                     | Via de CLI meegegeven OpenAI API-key                                             |
-| `APP_USERS`                       | leeg                        | JSON-object met gebruikersnaam/wachtwoord-paren; leeg schakelt authenticatie uit |
-| `OPENAI_REGION`                   | `global`                    | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us`                     |
-| `HOST`                            | `127.0.0.1`                 | Netwerkinterface; gebruik alleen in een container eventueel `0.0.0.0`            |
-| `PORT`                            | `3000`                      | HTTP-poort                                                                       |
-| `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Model voor het artikel                                                           |
-| `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcriptiemodel                                                                |
-| `MAX_AUDIO_MB`                    | `500`                       | Maximale Spotify-audiodownload                                                   |
-| `MAX_YOUTUBE_MB`                  | `500`                       | Maximale YouTube-audiodownload                                                   |
-| `MAX_RECORDING_MB`                | `1500`                      | Maximale Google Drive- of Fathom-opnamedownload                                  |
-| `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | Timeout voor het lezen van YouTube-metadata (1 minuut)                           |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | `900000`                    | Timeout voor het downloaden van media (15 minuten)                               |
-| `AUDIO_CHUNK_SECONDS`             | `300`                       | Lengte van ieder audiofragment (5 minuten; toegestaan: 60–1200)                  |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcriptiefragment (10 minuten)                                    |
-| `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Timeout voor artikelgeneratie (10 minuten)                                       |
-| `LOG_STACKS`                      | `false`                     | Toon volledige foutstacks in de CLI                                              |
+| Variabele                         | Standaard                   | Betekenis                                                                                                |
+| --------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | vereist                     | Via de CLI meegegeven OpenAI API-key                                                                     |
+| `APP_USERS`                       | leeg                        | JSON-object met gebruikersnaam/wachtwoord-paren; leeg schakelt authenticatie uit                         |
+| `OPENAI_REGION`                   | `global`                    | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us`                                             |
+| `HOST`                            | `127.0.0.1`                 | Netwerkinterface; gebruik alleen in een container eventueel `0.0.0.0`                                    |
+| `PORT`                            | `3000`                      | HTTP-poort                                                                                               |
+| `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Model voor het artikel                                                                                   |
+| `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcriptiemodel                                                                                        |
+| `MAX_AUDIO_MB`                    | `500`                       | Maximale Spotify-audiodownload                                                                           |
+| `MAX_YOUTUBE_MB`                  | `500`                       | Maximale YouTube-audiodownload                                                                           |
+| `MAX_RECORDING_MB`                | `1500`                      | Maximale Google Drive- of Fathom-opnamedownload                                                          |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | Timeout voor het lezen van YouTube-metadata (1 minuut)                                                   |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | `900000`                    | Timeout voor het downloaden van media (15 minuten)                                                       |
+| `FFMPEG_BIN`                      | meegeleverde binary         | Absoluut pad naar een alternatief FFmpeg-executable voor normalisatie, splitsen en Fathom-postprocessing |
+| `AUDIO_CHUNK_SECONDS`             | `300`                       | Lengte van ieder audiofragment (5 minuten; toegestaan: 60–1200)                                          |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcriptiefragment (10 minuten)                                                            |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Timeout voor artikelgeneratie (10 minuten)                                                               |
+| `LOG_STACKS`                      | `false`                     | Toon volledige foutstacks in de CLI                                                                      |
 
 De CLI toont per job de bronresolutie, download- en FFmpeg-duur, chunkgroottes,
 OpenAI-start- en eindmomenten en iedere 30 seconden een heartbeat zolang een
