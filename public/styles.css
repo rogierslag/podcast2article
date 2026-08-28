@@ -364,6 +364,22 @@ body.scroll-shell {
 .article-column {
   min-width: 0;
 }
+/* WebKit samples below the top edge and ignores backgrounds <= 10px high.
+   Give it an opaque 12px backdrop to extend behind the iOS status bar, while
+   the progress indicator itself stays 4px high. Keep this layer on all views
+   so navigation does not remove the status-bar background. */
+.reading-chrome {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: calc(env(safe-area-inset-top) + 12px);
+  background: var(--cream);
+  pointer-events: none;
+}
+.reading-chrome > .reading-progress {
+  position: absolute;
+  inset: env(safe-area-inset-top) 0 auto;
+}
 .reading-progress {
   position: fixed;
   z-index: 50;
@@ -517,6 +533,9 @@ body.scroll-shell {
   font: 600 33px/1.1 var(--serif);
   margin: 62px 0 20px;
   scroll-margin-top: 30px;
+}
+.native-scroll .article h2 {
+  scroll-margin-top: calc(30px + env(safe-area-inset-top));
 }
 .article p {
   font: 16px/1.85 var(--sans);
@@ -795,6 +814,7 @@ footer {
     print-color-adjust: exact;
   }
   .nav,
+  .reading-chrome,
   .reading-progress,
   .continue-reading,
   .article-actions,
@@ -1703,6 +1723,9 @@ footer {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   .collapsible-shelf summary svg,
   .reading-progress-value {
     transition: none;
