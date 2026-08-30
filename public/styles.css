@@ -548,8 +548,10 @@ body.scroll-shell {
 }
 .article h1,
 .article h2 {
-  -webkit-hyphens: auto;
-  hyphens: auto;
+  /* Prefer wrapping at spaces; only split a word when it cannot fit on a line. */
+  -webkit-hyphens: manual;
+  hyphens: manual;
+  overflow-wrap: anywhere;
 }
 .article h1 {
   font: 600 clamp(44px, 6vw, 72px) / 1 var(--serif);
