@@ -39,7 +39,7 @@ onder `MAX_RECORDING_MB` en `MEDIA_DOWNLOAD_TIMEOUT_MS`.
 
 ## Snel starten
 
-Vereisten: Node.js 22+, Python 3.9+ en een OpenAI API-key.
+Vereisten: Node.js 24+, Python 3.11+ en een OpenAI API-key.
 FFmpeg en yt-dlp worden als Node-dependencies meegeleverd. Python wordt door
 yt-dlp gebruikt op macOS en Linux. PDF's worden rechtstreeks in Node.js
 opgebouwd; daarvoor is geen browser op de server nodig.

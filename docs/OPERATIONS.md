@@ -28,7 +28,7 @@ Incident records: [2026-08-28 Fathom FFmpeg crash and reversible override](incid
 | Application port  | `127.0.0.1:3000`                                               |
 | Webhook port      | `127.0.0.1:9000`                                               |
 | Reverse proxy     | Caddy 2.6.2                                                    |
-| Runtime           | Node.js 22+, Python 3.9+                                       |
+| Runtime           | Node.js 24+, Python 3.11+                                      |
 | Deployment source | `https://github.com/rogierslag/podcast2article`, branch `main` |
 
 At the time of verification, disk use was about 6.4 GiB of 96 GiB and the
@@ -669,7 +669,7 @@ For complete VPS loss:
 1. provision an Ubuntu VPS;
 2. restore SSH key access and firewall rules;
 3. recreate DNS A and AAAA records if addresses changed;
-4. install Node.js 22+, Python, Caddy, Git, rsync, and Corepack/Yarn;
+4. install Node.js 24+, Python 3.11+, Caddy, Git, rsync, and Corepack/Yarn;
 5. recreate service accounts;
 6. restore encrypted environment files;
 7. restore `/var/lib/podcast2article`;

@@ -57,13 +57,18 @@ require_command() {
   }
 }
 
-for command_name in caddy corepack curl flock git install node rsync systemctl tar; do
+for command_name in caddy corepack curl flock git install node python3 rsync systemctl tar; do
   require_command "$command_name"
 done
 
 node_major="$(node --version | sed -E 's/^v([0-9]+).*/\1/')"
-if [[ ! "$node_major" =~ ^[0-9]+$ ]] || ((node_major < 22)); then
-  printf 'Node.js 22 or newer is required. Found: %s\n' "$(node --version)" >&2
+if [[ ! "$node_major" =~ ^[0-9]+$ ]] || ((node_major < 24)); then
+  printf 'Node.js 24 or newer is required. Found: %s\n' "$(node --version)" >&2
+  exit 1
+fi
+
+if ! python3 -c 'import sys; raise SystemExit(sys.version_info < (3, 11))'; then
+  printf 'Python 3.11 or newer is required. Found: %s\n' "$(python3 --version)" >&2
   exit 1
 fi
 

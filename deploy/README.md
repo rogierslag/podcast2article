@@ -1,7 +1,7 @@
 # Production deployment
 
 This directory contains the non-secret configuration used by the native
-systemd deployment. The current production host uses Ubuntu, Node.js 22,
+systemd deployment. The current production host uses Ubuntu, Node.js 24,
 Python, Caddy, Git, rsync, Corepack/Yarn, cron, UFW, and a 2 GiB swapfile.
 
 The installer is intentionally conservative:
@@ -20,8 +20,8 @@ operational runbook is in `../docs/OPERATIONS.md`.
 Install and verify:
 
 ```bash
-node --version       # 22 or newer
-python3 --version    # 3.9 or newer
+node --version       # 24 or newer
+python3 --version    # 3.11 or newer
 caddy version
 git --version
 rsync --version
