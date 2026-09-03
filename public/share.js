@@ -337,14 +337,16 @@ function renderSharedArticle(shared, token) {
           ? t("source.viewFathom")
           : t("source.viewSpotify");
   $("#episode-hero").innerHTML = html`
-    ${episode.imageUrl
-      ? html`
-          <img
-            src="${escapeHtml(episode.imageUrl)}"
-            alt="${escapeHtml(t("source.image", { name: episode.sourceName }))}"
-          />
-        `
-      : ""}
+    ${
+      episode.imageUrl
+        ? html`
+            <img
+              src="${escapeHtml(episode.imageUrl)}"
+              alt="${escapeHtml(t("source.image", { name: episode.sourceName }))}"
+            />
+          `
+        : ""
+    }
     <div>
       <span class="kicker">${escapeHtml(episode.sourceName)}</span>
       <h1>${escapeHtml(episode.title)}</h1>

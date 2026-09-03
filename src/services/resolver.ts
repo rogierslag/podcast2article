@@ -152,8 +152,8 @@ export function parseGoogleDriveMetadata(html: string): DriveMetadata {
   const mimeType = html.match(/"docs-dm"\s*:\s*"([^"]+)"/i)?.[1];
   const supportedMimeType = Boolean(
     mimeType &&
-      (mimeType.toLowerCase().startsWith("audio/") ||
-        mimeType.toLowerCase().startsWith("video/")),
+    (mimeType.toLowerCase().startsWith("audio/") ||
+      mimeType.toLowerCase().startsWith("video/")),
   );
   if (!MEDIA_EXTENSION.test(title) && !supportedMimeType) {
     throw new Error(

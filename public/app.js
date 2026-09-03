@@ -553,14 +553,16 @@ function renderResult(job) {
       : "",
   ].filter(Boolean);
   $("#episode-hero").innerHTML = html`
-    ${episode.imageUrl
-      ? html`
-          <img
-            src="${escapeHtml(episode.imageUrl)}"
-            alt="${escapeHtml(t("source.image", { name: sourceName }))}"
-          />
-        `
-      : ""}
+    ${
+      episode.imageUrl
+        ? html`
+            <img
+              src="${escapeHtml(episode.imageUrl)}"
+              alt="${escapeHtml(t("source.image", { name: sourceName }))}"
+            />
+          `
+        : ""
+    }
     <div>
       <span class="kicker">${escapeHtml(sourceName)}</span>
       <h1>${escapeHtml(episode.title)}</h1>
@@ -964,15 +966,17 @@ function articleCard(article) {
   return html`
     <article class="article-card ${isRead ? "is-read" : ""}">
       <a
-        class="article-card-image ${article.imageUrl
-          ? ""
-          : "article-card-placeholder"}"
+        class="article-card-image ${
+          article.imageUrl ? "" : "article-card-placeholder"
+        }"
         href="${articleUrl}"
         aria-label="${escapeHtml(t("article.read", { title: article.title }))}"
       >
-        ${article.imageUrl
-          ? html`<img src="${escapeHtml(article.imageUrl)}" alt="" />`
-          : html`<span>${number}</span>`}
+        ${
+          article.imageUrl
+            ? html`<img src="${escapeHtml(article.imageUrl)}" alt="" />`
+            : html`<span>${number}</span>`
+        }
       </a>
       <div class="article-card-body">
         <p class="article-card-meta">
@@ -999,9 +1003,9 @@ function articleCard(article) {
               data-read-toggle
               data-article-id="${articleId}"
               data-read="${isRead}"
-              aria-label="${isRead
-                ? t("article.markUnread")
-                : t("article.markRead")}"
+              aria-label="${
+                isRead ? t("article.markUnread") : t("article.markRead")
+              }"
               aria-pressed="${isRead}"
             >
               <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -1070,13 +1074,15 @@ function processingCard(job) {
   return html`
     <a class="processing-card" href="${jobUrl}">
       <div class="processing-card-visual">
-        ${job.imageUrl
-          ? html`<img src="${escapeHtml(job.imageUrl)}" alt="" />`
-          : html`
-              <span class="processing-wave" aria-hidden="true">
-                <i></i><i></i><i></i><i></i>
-              </span>
-            `}
+        ${
+          job.imageUrl
+            ? html`<img src="${escapeHtml(job.imageUrl)}" alt="" />`
+            : html`
+                <span class="processing-wave" aria-hidden="true">
+                  <i></i><i></i><i></i><i></i>
+                </span>
+              `
+        }
       </div>
       <div class="processing-card-body">
         <p>
@@ -1110,15 +1116,17 @@ function processingShelf() {
         <h2>${t("overview.processing")}</h2>
         <span class="article-shelf-count">${processingState.length}</span>
       </div>
-      ${processingState.length
-        ? html`
-            <div class="processing-grid">
-              ${processingState.map(processingCard).join("")}
-            </div>
-          `
-        : html`
-            <p class="article-shelf-empty">${t("overview.noProcessing")}</p>
-          `}
+      ${
+        processingState.length
+          ? html`
+              <div class="processing-grid">
+                ${processingState.map(processingCard).join("")}
+              </div>
+            `
+          : html`
+              <p class="article-shelf-empty">${t("overview.noProcessing")}</p>
+            `
+      }
     </section>
   `;
 }

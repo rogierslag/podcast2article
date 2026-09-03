@@ -366,8 +366,8 @@ Production dependencies:
 
 Runtime requirements:
 
-- Node.js 22 or newer;
-- Python 3.9 or newer for yt-dlp;
+- Node.js 24 or newer;
+- Python 3.11 or newer for yt-dlp;
 - outbound HTTPS access.
 
 No database, browser engine, container runtime, or system FFmpeg is required.
