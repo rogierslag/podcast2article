@@ -28,6 +28,13 @@ rsync --version
 corepack --version
 ```
 
+Install the Node.js major version required by `package.json` before deploying
+application changes that raise that requirement. Updating `.nvmrc` or merging a
+runtime change does not upgrade the VPS. Both the application and the media
+preflight execute `/usr/bin/node`; a runtime installed only in an SSH user's
+shell is insufficient. See the [runtime upgrade procedure](../docs/OPERATIONS.md#nodejs-runtime-upgrades)
+for package installation, Corepack recovery, and deployment verification.
+
 Point the production hostname's A and AAAA records at the VPS. Allow inbound
 TCP ports 22, 80, and 443 in the provider firewall.
 
