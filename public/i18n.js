@@ -1,3 +1,5 @@
+import { formatArticleWordRange } from "./article-length.js";
+
 // Shared by the browser and server. Article and transcript content is never translated here.
 export const messages = {
   "uiLanguage.label": {
@@ -545,16 +547,16 @@ export const messages = {
     en: "Spanish",
   },
   "length.short": {
-    nl: "Compact · 700–1.000 woorden",
-    en: "Short · 700–1,000 words",
+    nl: `Compact · ${formatArticleWordRange("compact", "nl-NL")} woorden`,
+    en: `Short · ${formatArticleWordRange("compact", "en-GB")} words`,
   },
   "length.standard": {
-    nl: "Standaard · 1.100–1.700 woorden",
-    en: "Standard · 1,100–1,700 words",
+    nl: `Standaard · ${formatArticleWordRange("standard", "nl-NL")} woorden`,
+    en: `Standard · ${formatArticleWordRange("standard", "en-GB")} words`,
   },
   "length.long": {
-    nl: "Uitgebreid · 1.800–2.600 woorden",
-    en: "Long · 1,800–2,600 words",
+    nl: `Uitgebreid · ${formatArticleWordRange("long", "nl-NL")} woorden`,
+    en: `Long · ${formatArticleWordRange("long", "en-GB")} words`,
   },
   "form.lengthHint": {
     nl: "De woordenaantallen zijn een richtlijn.",
