@@ -396,8 +396,10 @@
             </div>
             <aside class="side-nav">
               <div>
-                <span data-i18n="article.contents">{{article.contents}}</span>
-                <nav id="toc"></nav>
+                <span id="toc-title" data-i18n="article.contents"
+                  >{{article.contents}}</span
+                >
+                <nav id="toc" aria-labelledby="toc-title"></nav>
               </div>
             </aside>
           </div>
@@ -413,9 +415,16 @@
                 <input
                   id="transcript-search"
                   type="search"
+                  aria-label="{{transcript.searchLabel}}"
+                  data-i18n-aria-label="transcript.searchLabel"
                   placeholder="{{transcript.search}}"
                   data-i18n-placeholder="transcript.search"
-                /><button id="toggle-transcript" data-i18n="transcript.hide">
+                /><button
+                  id="toggle-transcript"
+                  data-i18n="transcript.hide"
+                  aria-expanded="true"
+                  aria-controls="transcript"
+                >
                   {{transcript.hide}}
                 </button>
               </div>
@@ -423,7 +432,19 @@
             <div class="source-audio-home">
               <audio id="audio" controls preload="metadata"></audio>
             </div>
-            <div id="transcript" class="transcript"></div>
+            <div id="transcript" class="transcript">
+              <div id="transcript-segments"></div>
+              <div id="transcript-empty" class="transcript-empty" hidden>
+                <p id="transcript-search-status" role="status"></p>
+                <button
+                  id="clear-transcript-search"
+                  type="button"
+                  data-i18n="transcript.clearSearch"
+                >
+                  {{transcript.clearSearch}}
+                </button>
+              </div>
+            </div>
           </section>
         </section>
       </main>

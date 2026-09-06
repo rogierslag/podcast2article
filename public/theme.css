@@ -1,13 +1,16 @@
 /* Surface and foreground roles stay separate: a dark header is not text ink. */
 :root {
   color-scheme: light;
+  --control-radius: 3px;
+  --dialog-radius: 4px;
   --ink: #1b201d;
   --cream: #f4f0e7;
   --paper: #faf8f2;
   --orange: #e85e2a;
+  --accent-text: #a63d17;
   --green: #376453;
   --line: #d8d1c4;
-  --muted: #6d706b;
+  --muted: #646761;
   --body-text: #343834;
   --intro-text: #515550;
   --dek-text: #50534f;
@@ -20,7 +23,7 @@
   --accent-action-text: #1b201d;
   --green-action-text: #fff;
   --control-surface: #fff;
-  --control-border: var(--line);
+  --control-border: #80796d;
   --focus: #b94419;
   --error: #a33426;
   --error-surface: #f9e9e3;
@@ -42,7 +45,7 @@
   --cream: #f4f0e8;
   --paper: #fffdf8;
   --ink: #18211d;
-  --muted: #69726d;
+  --muted: #646761;
   --line: #d8d4ca;
   --action-surface: #18211d;
 }
@@ -56,6 +59,7 @@
     --cream: #1c1b19;
     --paper: #252420;
     --orange: #ef7745;
+    --accent-text: #f58b60;
     --green: #9bc3ad;
     --line: #46423b;
     --muted: #aaa69d;
