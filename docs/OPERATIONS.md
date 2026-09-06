@@ -1,6 +1,6 @@
 # Podcast2Article Operations
 
-Document version: 2026-08-28
+Document version: 2026-09-06
 
 This document is the production operations template for Podcast2Article.
 Replace documentation addresses and example identifiers with the values for the
@@ -451,6 +451,30 @@ sudo tail -n 100 /var/log/podcast2article-update.log
 Do not run two ad-hoc copies of the update script. The lock prevents overlap,
 but systemd is the canonical invocation path.
 
+### A successful webhook is not a successful deployment
+
+HTTP `202` from the webhook confirms that the receiver accepted the delivery.
+GitHub Actions checks the code on its own runner. Neither proves that the VPS
+installed or activated that commit. Compare the current release's
+`.deployed-commit` with GitHub `main`, then inspect the update service and log.
+The public `/login` page also exposes the running build in `data-build-sha`.
+`/api/health` reports availability, not whether the release is current.
+
+On 2026-09-06, production remained on `857b546` while pushes and CI succeeded.
+Every update failed during dependency installation: the host ran Node.js
+22.22.1, but `package.json` required Node.js 24 or newer. The existing release
+continued serving normally. Upgrade the host runtime before retrying this
+failure; clearing a browser cache or redelivering the webhook cannot fix it.
+
+Recovery completed at 15:17 CEST on 2026-09-06: Node.js 24.20.0 and repaired
+Yarn shims allowed the updater to deploy `85aa3a4`. The public login build and
+theme stylesheet matched that commit. Health, anonymous API rejection, and a
+separate synthetic media check passed; the webhook was restarted afterward.
+The installed updater at recovery time still lacked the repository's media
+preflight, so this manual check does not establish that future deployments run
+that gate. Installing the updated updater remains an explicit infrastructure
+rollout as described in [FFmpeg management](FFMPEG.md).
+
 ## 12. Manual rollback
 
 Automatic rollback occurs when a newly activated application fails its local
@@ -597,6 +621,84 @@ sudo journalctl -p warning --since today
 API keys, webhook secrets, passwords, and transcript text should not be logged.
 
 ## 16. OS maintenance
+
+### Node.js runtime upgrades
+
+Runtime packages are host infrastructure. Application deployments and changes to
+`.nvmrc` do not install them. Check `package.json` and `.nvmrc` before merging a
+runtime requirement change, and upgrade the host first where compatible with
+the running release. The application and synthetic media service use
+`/usr/bin/node`; check that binary as well as the updater's PATH.
+
+Production moved from Ubuntu's Node.js 22 package to the signed NodeSource
+24.x APT repository on 2026-09-06. The selected package was
+`24.20.0-1nodesource1`, matching `.nvmrc` at the time. The repository tracks
+major version 24; the installation command selects an exact package version
+without freezing future security updates with an APT hold.
+
+For an Ubuntu amd64 host, inspect existing package sources before adding this
+repository. Review the [NodeSource instructions](https://github.com/nodesource/distributions)
+and signing key when repeating the procedure:
+
+```bash
+/usr/bin/node --version
+command -v node corepack yarn
+apt-cache policy nodejs
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /tmp/nodesource.key
+gpg --show-keys --with-fingerprint /tmp/nodesource.key
+gpg --dearmor --yes --output /tmp/nodesource.gpg /tmp/nodesource.key
+sudo install -m 0644 /tmp/nodesource.gpg /usr/share/keyrings/nodesource.gpg
+printf '%s\n' 'deb [arch=amd64 signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main' \
+  | sudo tee /etc/apt/sources.list.d/nodesource.list
+sudo apt-get update
+apt-cache policy nodejs
+sudo apt-get -s install nodejs=24.20.0-1nodesource1
+```
+
+Review the simulation before installing. On this host the replacement removed
+Ubuntu's npm, Corepack, and their distribution JavaScript dependencies; the
+application uses its own locked dependencies in each release. Do not run
+`autoremove` as part of this upgrade. Avoid unrelated service restarts during
+package installation, then restore Corepack if the replacement removed it:
+
+```bash
+sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l \
+  apt-get install -y nodejs=24.20.0-1nodesource1
+/usr/bin/node --version
+npm --version
+# Only if Corepack is missing:
+sudo npm install -g corepack@0.35.0
+# Remove only dangling shims left by Ubuntu's removed Corepack package:
+for link in /usr/bin/yarn /usr/bin/yarnpkg; do
+  if [ -L "$link" ] && [ ! -e "$link" ]; then
+    sudo rm -- "$link"
+  fi
+done
+sudo corepack enable
+sudo corepack prepare yarn@1.22.22 --activate
+corepack --version
+corepack yarn --version
+sudo systemctl start podcast2article-update.service
+sudo systemctl status podcast2article-update.service
+sudo tail -n 100 /var/log/podcast2article-update.log
+cat /opt/podcast2article/current/.deployed-commit
+curl -fsS http://127.0.0.1:3000/api/health
+```
+
+The running process retains its old runtime until restarted. Let the guarded
+updater validate and activate the release, then verify the process runtime via
+`sudo /proc/<MainPID>/exe --version`, using the PID from
+`systemctl show podcast2article -p MainPID --value`. Check the public login
+build and stylesheet against the intended commit. Restart the webhook service
+afterward so it also uses the upgraded runtime, and verify its listener and the
+update path unit remain active.
+
+An application rollback only changes the release symlink; it does not undo an
+APT runtime upgrade. If the runtime itself must be rolled back, explicitly
+review and restore the previous package source and compatible runtime packages,
+then verify the app and webhook again. Do not bypass package engine checks.
+
+### Routine system updates
 
 Ubuntu unattended security upgrades are enabled. Check with:
 
