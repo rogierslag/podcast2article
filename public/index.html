@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=system-dark-v1" />
+    <link rel="stylesheet" href="/styles.css?v=sound-to-text-v2" />
     <script src="/app.js?v=natural-reading-position-v1" type="module"></script>
   </head>
   <body class="native-scroll">
@@ -81,17 +81,56 @@
 
       <main>
         <section id="landing" class="landing">
-          <div class="eyebrow">
-            <span></span>
-            <span data-i18n="hero.kicker">{{hero.kicker}}</span>
-          </div>
-          <h1>
-            <span data-i18n="hero.start">{{hero.start}}</span><br /><em
-              data-i18n="hero.end"
-              >{{hero.end}}</em
+          <div class="landing-opening">
+            <div class="eyebrow landing-kicker">
+              <svg
+                class="sound-to-text"
+                width="60"
+                height="20"
+                viewBox="0 0 60 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  class="sound-to-text-wave"
+                  d="M2 7v6M8 4v12M14 1v18M20 7v6"
+                />
+                <path d="M30 5h20M30 10h17M30 15h20" />
+                <path class="sound-to-text-reference" d="M55 5h3v10h-3" />
+              </svg>
+              <span data-i18n="hero.kicker">{{hero.kicker}}</span>
+            </div>
+            <h1>
+              <span data-i18n="hero.start">{{hero.start}}</span><br /><em
+                data-i18n="hero.end"
+                >{{hero.end}}</em
+              >
+            </h1>
+            <p class="intro" data-i18n="intro">{{intro}}</p>
+            <svg
+              class="landing-sound-art"
+              width="340"
+              height="220"
+              viewBox="0 0 340 220"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              aria-hidden="true"
+              focusable="false"
             >
-          </h1>
-          <p class="intro" data-i18n="intro">{{intro}}</p>
+              <path
+                class="landing-sound-art-wave"
+                d="M10 106v8M18 100v20M26 90v40M34 78v64M42 94v32M50 62v96M58 82v56M66 42v136M74 70v80M82 94v32M90 84v52M98 72v76M106 94v32M114 100v20M122 88v44M130 98v24M138 104v12"
+              />
+              <path class="landing-sound-art-reference" d="M155 95v30" />
+              <path
+                d="M174 82h146M174 96h130M174 110h146M174 124h116M174 138h138"
+              />
+            </svg>
+          </div>
 
           <form id="job-form" class="composer">
             <label for="source-url" data-i18n="form.sourceLabel"

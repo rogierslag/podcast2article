@@ -87,6 +87,31 @@ body.scroll-shell {
   max-width: 1440px;
   margin: auto;
 }
+.landing-opening {
+  position: relative;
+}
+.landing-sound-art {
+  display: none;
+}
+@media screen and (min-width: 1200px) {
+  .landing-sound-art {
+    display: block;
+    position: absolute;
+    top: 65px;
+    right: 0;
+    width: 28%;
+    height: auto;
+    color: var(--ink);
+    pointer-events: none;
+  }
+}
+.landing-sound-art-wave {
+  stroke: var(--green);
+  stroke-linecap: round;
+}
+.landing-sound-art-reference {
+  stroke: var(--orange);
+}
 .eyebrow,
 .kicker {
   font: 500 11px var(--mono);
@@ -101,6 +126,20 @@ body.scroll-shell {
   background: currentColor;
   vertical-align: middle;
   margin-right: 9px;
+}
+.landing-kicker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sound-to-text {
+  flex: none;
+}
+.sound-to-text-wave {
+  stroke-linecap: round;
+}
+.sound-to-text-reference {
+  stroke: var(--orange);
 }
 .landing h1,
 .progress-view h1 {
