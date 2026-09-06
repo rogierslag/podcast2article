@@ -217,6 +217,20 @@ opname.
 
 ## Ontwikkelen
 
+GitHub Actions voert bij iedere pull request en push naar `main` automatisch
+de formatteringscontrole, ESLint, de TypeScript-build en alle tests uit. Deze
+controles draaien als vier onafhankelijke jobs, zodat een fout in één controle
+de andere resultaten niet tegenhoudt. De buildjob controleert ook de syntaxis
+van de browsercode. De workflow kan handmatig worden
+gestart via **Actions → Tests → Run workflow**. Hij gebruikt de Node.js-versie
+uit `.nvmrc` en installeert dependencies met het bestaande `yarn.lock`.
+
+De workflow gebruikt een standaard Linux-runner. Dat is
+[gratis voor publieke repositories](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+Er zijn geen repository secrets of betaalde API-aanroepen nodig voor deze checks.
+Een run stopt na maximaal 15 minuten; een nieuwe run op dezelfde branch of pull
+request annuleert de vorige run.
+
 ```bash
 npm test
 npm run check
