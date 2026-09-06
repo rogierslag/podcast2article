@@ -141,6 +141,7 @@ describe("duplicate source detection", () => {
       findDuplicateJob(
         [baseJob],
         "https://open.spotify.com/episode/abc123?si=tracking",
+        baseJob,
       ),
     ).toBe(baseJob);
   });
@@ -155,6 +156,7 @@ describe("duplicate source detection", () => {
       findDuplicateJob(
         [youtubeJob],
         "https://www.youtube.com/watch?v=jNQXAC9IVRw&feature=share",
+        baseJob,
       ),
     ).toBe(youtubeJob);
   });
@@ -163,7 +165,11 @@ describe("duplicate source detection", () => {
     const failedJob = { ...baseJob, stage: "failed" } satisfies Job;
 
     expect(
-      findDuplicateJob([failedJob], "https://open.spotify.com/episode/abc123"),
+      findDuplicateJob(
+        [failedJob],
+        "https://open.spotify.com/episode/abc123",
+        baseJob,
+      ),
     ).toBeUndefined();
   });
 
@@ -177,12 +183,14 @@ describe("duplicate source detection", () => {
       findDuplicateJob(
         [fathomJob],
         "https://www.fathom.video/share/Test_recording?t=30",
+        baseJob,
       ),
     ).toBe(fathomJob);
     expect(
       findDuplicateJob(
         [fathomJob],
         "https://fathom.video/share/Another_recording",
+        baseJob,
       ),
     ).toBeUndefined();
   });
@@ -199,8 +207,51 @@ describe("duplicate source detection", () => {
       findDuplicateJob(
         [processingJob, baseJob],
         "https://open.spotify.com/episode/abc123",
+        baseJob,
       ),
     ).toBe(baseJob);
+  });
+  it.each([
+    { language: "en", articleLength: "standard" },
+    { language: "auto", articleLength: "standard" },
+    { language: "nl", articleLength: "compact" },
+    { language: "nl", articleLength: "long" },
+    { language: "en", articleLength: "long" },
+  ] satisfies Array<Pick<Job, "language" | "articleLength">>)(
+    "allows another version with $language and $articleLength",
+    (options) => {
+      const duplicate = findDuplicateJob([baseJob], baseJob.sourceUrl, options);
+
+      expect(duplicate).toBeUndefined();
+    },
+  );
+
+  it.each(["queued", "writing", "complete"] as const)(
+    "blocks the same source, language and length when %s",
+    (stage) => {
+      const existing = { ...baseJob, stage };
+
+      const duplicate = findDuplicateJob(
+        [existing],
+        baseJob.sourceUrl,
+        baseJob,
+      );
+
+      expect(duplicate).toBe(existing);
+    },
+  );
+
+  it("finds the matching version among articles in other languages and lengths", () => {
+    const otherLanguage = { ...baseJob, language: "en" };
+    const otherLength = { ...baseJob, articleLength: "compact" } satisfies Job;
+
+    const duplicate = findDuplicateJob(
+      [otherLanguage, otherLength, baseJob],
+      baseJob.sourceUrl,
+      baseJob,
+    );
+
+    expect(duplicate).toBe(baseJob);
   });
 });
 

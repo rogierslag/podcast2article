@@ -1,5 +1,6 @@
 import { createReadStream } from "node:fs";
 import OpenAI from "openai";
+import { formatArticleWordRange } from "../../public/article-length.js";
 import { audioChunkSeconds } from "./audio.js";
 import type { Article, TranscriptSegment } from "../types.js";
 
@@ -335,12 +336,7 @@ export async function writeArticle(
         `[${part.id}] ${part.speaker} ${part.start.toFixed(1)}-${part.end.toFixed(1)}: ${part.text}`,
     )
     .join("\n");
-  const targetWords =
-    metadata.length === "compact"
-      ? "700-1000"
-      : metadata.length === "long"
-        ? "1800-2600"
-        : "1100-1700";
+  const targetWords = formatArticleWordRange(metadata.length);
   const startedAt = Date.now();
   const timeoutMs = Number(process.env.OPENAI_ARTICLE_TIMEOUT_MS ?? 600_000);
   onStatus("OpenAI-artikelverzoek gestart", {

@@ -177,6 +177,13 @@ hergebruikt:
 curl -X POST http://localhost:3000/api/jobs/<job-id>/retry-article
 ```
 
+De lengtekeuze toont de beoogde woordenaantallen: compact (700–1.000),
+standaard (1.100–1.700) en uitgebreid (1.800–2.600). Dit zijn richtlijnen voor
+de generatie, geen gegarandeerde aantallen. Dezelfde bron kan in een andere
+taal of lengte opnieuw worden verwerkt. Alleen een bestaande of lopende
+opdracht met dezelfde bron, taalkeuze en lengte geldt als duplicaat.
+Automatische taalherkenning blijft een aparte keuze naast een expliciete taal.
+
 ## Beperkingen
 
 - Publieke `open.spotify.com/episode/...`-links, YouTube-video-, Shorts- en

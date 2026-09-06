@@ -168,8 +168,9 @@ body.scroll-shell {
 }
 .options {
   display: flex;
+  flex-wrap: wrap;
   gap: 28px;
-  align-items: end;
+  align-items: start;
   padding-top: 22px;
 }
 .options label {
@@ -197,7 +198,17 @@ body.scroll-shell {
   width: 310px;
 }
 .options label:nth-child(2) select {
-  width: 180px;
+  width: 310px;
+}
+.options .option-hint {
+  display: block;
+  margin-top: 8px;
+  font: 400 12px/1.5 var(--sans);
+  letter-spacing: normal;
+  text-transform: none;
+}
+.options .privacy {
+  align-self: center;
 }
 .options select:focus-visible {
   outline: 3px solid var(--focus);

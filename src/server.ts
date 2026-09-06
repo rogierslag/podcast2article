@@ -249,6 +249,7 @@ app.get(
   [
     "/share.js",
     "/i18n.js",
+    "/article-length.js",
     "/localize.js",
     "/share.css",
     "/styles.css",
