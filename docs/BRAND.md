@@ -1,15 +1,41 @@
-# Brand and visual design
+# Podcast2Article brand identity
 
 Podcast2Article turns recordings into articles that people can read comfortably
 and check against the source. The interface should make that purpose visible:
 give the article room, keep its references close, and make the next action clear.
 
-This guide defines the intended design for the owner application, public reader,
+This guide defines the intended brand experience for the owner application, public reader,
 login, and supporting dialogs. It guides future changes; it is not a claim that
 every existing component already follows every rule. Use [AGENTS.md](../AGENTS.md)
 for implementation, accessibility, and visual verification requirements.
 
-## Character
+## Intended impression
+
+Podcast2Article should feel like a thoughtful publication with useful tools close
+at hand. The reader should feel welcome, able to settle into an article, and free
+to check what the original recording actually said. This is the intended
+impression, not a measured claim about how every reader experiences the app.
+
+- **Calm:** give reading time and space. Keep secondary actions quiet, show
+  progress clearly, and avoid competing demands for attention.
+- **Thoughtful and editorial:** treat hierarchy, typography, source attribution,
+  and small interaction details as part of the quality of the article experience.
+- **Warm and approachable:** use familiar language, comfortable spacing, warm
+  surfaces, and subtly softened controls. The interface should be easy to enter
+  without feeling casual about the content.
+- **Trustworthy and transparent:** make sources easy to inspect and state errors
+  or limitations plainly. A polished article must not imply that its generated
+  claims are guaranteed to be accurate.
+- **Capable and restrained:** make useful actions easy to find and predictable to
+  use. Let the experience demonstrate care without promotional language or
+  decorative complexity.
+
+These qualities guide both appearance and behavior. A rounded button can support
+approachability; a clear label and reliable action must support it too. Source
+access, readable text, and respectful interactions carry the brand as much as
+the palette does.
+
+## Visual expression
 
 The app has an editorial character: warm paper surfaces, expressive serif
 headings, readable article text, compact metadata, and fine dividing lines.
@@ -106,7 +132,8 @@ clear and respect the anonymous nature of public article pages.
 
 ## Applying the guide
 
-For a visual change, identify the component's role before choosing its shape,
+For a design or copy change, identify the intended impression and the component's
+role before choosing its wording, shape,
 type, or color. Reuse existing styles and semantic properties, and update this
 guide when a deliberate design decision changes the rules.
 
