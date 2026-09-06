@@ -7,6 +7,7 @@ This file applies to the entire repository.
 - Podcast2Article turns public Spotify episodes, YouTube videos, and Google Drive recordings into source-linked articles.
 - User-facing copy is Dutch unless the surrounding UI explicitly uses another language.
 - Preserve the editorial visual style in `public/styles.css`: warm paper colors, serif article typography, compact monospace metadata, and restrained controls.
+- Read [docs/BRAND.md](docs/BRAND.md) before changing user-facing design or copy. It defines the intended visual identity, component roles, and corner-radius rules; distinguish its planned control-radius update from the current implementation.
 - Keep accessibility intact: semantic elements, useful `aria-label` values, keyboard focus styles, and sufficient contrast.
 
 ## UI changes and screenshots
