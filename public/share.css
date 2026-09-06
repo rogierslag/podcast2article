@@ -29,8 +29,11 @@
   font-size: 12px;
   line-height: 1.5;
 }
-.shared-source audio {
+.shared-source > .source-audio-home {
   flex: 1;
+  min-width: 0;
+}
+.shared-source audio {
   margin: 0;
 }
 .shared-layout {

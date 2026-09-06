@@ -14,6 +14,12 @@ opgeslagen en kan ook weer worden teruggedraaid. Opdrachten die nog in de
 wachtrij staan of worden verwerkt verschijnen bovenaan met hun actuele stap en
 voortgang; dit deel van het overzicht wordt automatisch ververst.
 
+Bronverwijzingen openen een venster bij het artikel, met het betreffende
+transcriptfragment en audio vanaf de gekozen tijdcode. Sluiten of Escape pauzeert
+de audio en brengt je terug naar dezelfde verwijzing. Gedeelde artikelen tonen
+alleen de afspeelbediening; het privétranscript blijft afgeschermd. Links in de
+inhoudsopgave bewaren zowel het artikel als de sectie, ook na vernieuwen.
+
 De audio wordt niet uit Spotify gedownload. De app gebruikt de Spotify-link alleen om de aflevering te herkennen en zoekt vervolgens dezelfde aflevering via de openbare Apple Podcasts-index en de oorspronkelijke publieke audiobron.
 Van een publieke YouTube-video wordt alleen de beste beschikbare audiostream
 opgehaald; afspeellijsten, actieve livestreams en video's waarvoor aanmelding

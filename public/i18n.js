@@ -870,9 +870,29 @@ export const messages = {
     nl: "{reading} · anoniem gedeeld",
     en: "{reading} · anonymously shared",
   },
+  "sourcePreview.title": {
+    nl: "Bij de bron",
+    en: "Check the source",
+  },
+  "sourcePreview.return": {
+    nl: "Verder lezen",
+    en: "Continue reading",
+  },
+  "sourcePreview.loading": {
+    nl: "Audio laden…",
+    en: "Loading audio…",
+  },
+  "sourcePreview.playManually": {
+    nl: "Druk op afspelen om de bron te beluisteren.",
+    en: "Press play to listen to the source.",
+  },
+  "sourcePreview.audioError": {
+    nl: "De audio kon niet worden geladen. Sluit dit venster en probeer het opnieuw.",
+    en: "The audio could not be loaded. Close this panel and try again.",
+  },
   "source.jump": {
-    nl: "Ga naar het transcript op {time}",
-    en: "Go to the transcript at {time}",
+    nl: "Bekijk en beluister de bron vanaf {time}",
+    en: "Read and listen to the source from {time}",
   },
   "source.listen": {
     nl: "Luister vanaf {time}",

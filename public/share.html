@@ -92,7 +92,9 @@
               >
               <p data-i18n="shared.source">{{shared.source}}</p>
             </div>
-            <audio id="audio" controls preload="metadata"></audio>
+            <div class="source-audio-home">
+              <audio id="audio" controls preload="metadata"></audio>
+            </div>
           </div>
           <div class="content-layout shared-layout">
             <article id="article" class="article"></article>
@@ -117,5 +119,29 @@
         ><span data-i18n="shared.footer">{{shared.footer}}</span>
       </footer>
     </div>
+
+    <dialog
+      id="source-preview"
+      class="source-preview"
+      aria-labelledby="source-preview-title"
+    >
+      <div class="source-preview-header">
+        <h2 id="source-preview-title" data-i18n="sourcePreview.title">
+          {{sourcePreview.title}}
+        </h2>
+        <button
+          type="button"
+          data-preview-close
+          autofocus
+          data-i18n="sourcePreview.return"
+        >
+          {{sourcePreview.return}}
+        </button>
+      </div>
+      <p class="source-preview-metadata" data-preview-metadata></p>
+      <p class="source-preview-transcript" data-preview-transcript hidden></p>
+      <div class="source-preview-player" data-preview-player></div>
+      <p class="source-preview-status" data-preview-status role="status"></p>
+    </dialog>
   </body>
 </html>

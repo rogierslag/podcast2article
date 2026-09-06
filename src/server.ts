@@ -1,5 +1,4 @@
 import express from "express";
-import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
@@ -233,11 +232,9 @@ app.get("/api/shared/:token/audio", async (request, response) => {
       .json({ error: localizeError(response, "error.audioNotFound") });
   }
   try {
-    const fileStats = await stat(file);
+    await stat(file);
     response.setHeader("Cache-Control", "public, max-age=3600");
-    response.setHeader("Content-Length", fileStats.size);
-    response.type("audio/mpeg");
-    return createReadStream(file).pipe(response);
+    return response.sendFile(path.basename(file), { root: path.dirname(file) });
   } catch {
     return response
       .status(404)
@@ -248,6 +245,7 @@ app.get("/api/shared/:token/audio", async (request, response) => {
 app.get(
   [
     "/share.js",
+    "/source-preview.js",
     "/i18n.js",
     "/article-length.js",
     "/localize.js",
@@ -579,7 +577,7 @@ app.get("/api/jobs/:id/audio", async (request, response) => {
   try {
     await stat(file);
     response.setHeader("Cache-Control", "private, max-age=3600");
-    return response.sendFile(file);
+    return response.sendFile(path.basename(file), { root: path.dirname(file) });
   } catch {
     return response.status(404).json({
       error: localizeError(response, "error.audioNotReady"),

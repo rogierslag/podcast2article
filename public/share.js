@@ -1,5 +1,7 @@
 import { t, countText, locale, localizedFetch } from "./localize.js";
 
+import { createSourcePreview } from "./source-preview.js";
+
 const $ = (selector) => document.querySelector(selector);
 
 function html(strings, ...values) {
@@ -158,7 +160,6 @@ function drawAttentionToHeading(heading) {
   heading.focus({ preventScroll: true });
   setTimeout(() => {
     heading.classList.remove("resume-highlight");
-    heading.removeAttribute("tabindex");
   }, 2200);
 }
 
@@ -419,6 +420,14 @@ function renderSharedArticle(shared, token) {
   sharedReadingStorageKey = `podcast2article:reading-position:${token}`;
   resetArticleScroll();
   showContinueReading(storedReadingPosition());
+  const heading = articleSectionHeadings().find(
+    (item) => `#${item.id}` === location.hash,
+  );
+  if (heading) {
+    hideContinueReading();
+    heading.scrollIntoView({ behavior: "instant", block: "start" });
+    drawAttentionToHeading(heading);
+  }
   scheduleArticleReadingProgressUpdate();
 }
 
@@ -427,11 +436,11 @@ $("#shared-main").addEventListener("click", (event) => {
   if (!button) {
     return;
   }
-  const audio = $("#audio");
-  audio.currentTime = Number(button.dataset.time);
-  audio.play().catch(() => undefined);
-  audio.scrollIntoView({ behavior: "smooth", block: "center" });
+  const start = Number(button.dataset.time);
+  sourcePreview.open({ start, label: time(start) }, button);
 });
+
+const sourcePreview = createSourcePreview($("#source-preview"), $("#audio"));
 
 const token = location.pathname.split("/").filter(Boolean).at(-1);
 localizedFetch(`/api/shared/${encodeURIComponent(token)}`)
