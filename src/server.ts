@@ -2,6 +2,7 @@ import express from "express";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { deploymentFailed } from "./services/deployment.js";
 import { resolveGitSha } from "./lib/git.js";
 import {
   localizeJob,
@@ -356,6 +357,11 @@ app.post("/logout", (request, response) => {
 app.get("/api/auth", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.json({ enabled: auth.enabled, username: response.locals.username });
+});
+
+app.get("/api/deployment-status", async (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  response.json({ failed: auth.enabled && (await deploymentFailed()) });
 });
 
 app.get(["/", "/index.html", "/articles"], sendIndex);

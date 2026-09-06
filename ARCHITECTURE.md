@@ -312,6 +312,7 @@ Detailed flow:
 | `GET`   | `/login`                      | Login form                   | No             |
 | `POST`  | `/login`                      | Create session               | No             |
 | `POST`  | `/logout`                     | Expire session               | Yes            |
+| `GET`   | `/api/deployment-status`      | Deployment failure flag      | Yes            |
 | `GET`   | `/api/auth`                   | Report auth state            | Yes            |
 | `GET`   | `/api/articles`               | List completed articles      | Yes            |
 | `PATCH` | `/api/articles/:id`           | Set read/unread state        | Yes            |

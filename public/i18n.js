@@ -998,6 +998,10 @@ export const messages = {
     nl: "Nog geen artikelen als gelezen gemarkeerd.",
     en: "No articles marked as read yet.",
   },
+  "overview.deploymentFailed": {
+    nl: "De laatste update van de app is mislukt. Probeer het later opnieuw als iets niet werkt.",
+    en: "The latest app update failed. If something is not working, try again later.",
+  },
   "overview.loading": {
     nl: "Artikelen ophalen…",
     en: "Loading articles…",

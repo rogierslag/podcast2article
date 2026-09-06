@@ -31,6 +31,7 @@ window.fetch = async (...arguments_) => {
 };
 const landing = $("#landing");
 const articlesView = $("#articles-view");
+const deploymentAlert = $("#deployment-alert");
 const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const articleReadingProgress = $("#article-reading-progress");
@@ -1212,7 +1213,18 @@ articlesView.addEventListener("click", async (event) => {
   }
 });
 
+async function refreshDeploymentAlert() {
+  try {
+    const response = await localizedFetch("/api/deployment-status");
+    const status = response.ok ? await response.json() : undefined;
+    deploymentAlert.classList.toggle("hidden", status?.failed !== true);
+  } catch {
+    deploymentAlert.classList.add("hidden");
+  }
+}
+
 async function showArticles(showLoading = true) {
+  void refreshDeploymentAlert();
   landing.classList.add("hidden");
   progressView.classList.add("hidden");
   resultView.classList.add("hidden");
