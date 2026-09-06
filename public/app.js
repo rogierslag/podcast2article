@@ -7,6 +7,9 @@ import {
   LocalizedError,
 } from "./localize.js";
 
+import { createSourcePreview } from "./source-preview.js";
+import { articleHash, readArticleLocation } from "./article-location.js";
+
 const $ = (selector) => document.querySelector(selector);
 
 function html(strings, ...values) {
@@ -215,7 +218,6 @@ function drawAttentionToHeading(heading) {
   heading.focus({ preventScroll: true });
   setTimeout(() => {
     heading.classList.remove("resume-highlight");
-    heading.removeAttribute("tabindex");
   }, 2200);
 }
 
@@ -355,6 +357,10 @@ localizedFetch("/api/auth")
   })
   .catch(() => undefined);
 
+const sourcePreview = createSourcePreview($("#source-preview"), $("#audio"));
+let routeVersion = 0;
+let jobPollTimer;
+
 const sourceLabels = {
   spotify: "Spotify",
   youtube: "YouTube",
@@ -403,8 +409,7 @@ function showFormError(message, existingJobId, existingStage) {
       : t("duplicate.viewProgress");
   existingJobLink.addEventListener("click", (event) => {
     event.preventDefault();
-    location.hash = `job=${existingJobId}`;
-    poll(existingJobId);
+    openArticleJob(existingJobId);
   });
   formError.append(existingJobLink);
 }
@@ -427,9 +432,8 @@ form.addEventListener("submit", async (event) => {
       }
       throw new LocalizedError(body.error || t("error.jobStart"));
     }
-    location.hash = `job=${body.id}`;
     showProgress(body);
-    poll(body.id);
+    openArticleJob(body.id);
   } catch (error) {
     showFormError(errorText(error));
   }
@@ -449,13 +453,17 @@ function showProgress(job) {
   }
 }
 
-async function poll(id) {
+async function poll(id, version = ++routeVersion) {
+  clearTimeout(jobPollTimer);
   try {
     const response = await localizedFetch(`/api/jobs/${id}`);
     if (!response.ok) {
       throw new LocalizedError(t("error.jobNotFound"));
     }
     const job = await response.json();
+    if (version !== routeVersion) {
+      return;
+    }
     showProgress(job);
     if (job.stage === "complete") {
       return renderResult(job);
@@ -463,8 +471,11 @@ async function poll(id) {
     if (job.stage === "failed") {
       throw new LocalizedError(job.error || t("error.processingFailed"));
     }
-    setTimeout(() => poll(id), 1800);
+    jobPollTimer = setTimeout(() => poll(id, version), 1800);
   } catch (error) {
+    if (version !== routeVersion) {
+      return;
+    }
     progressView.classList.add("hidden");
     landing.classList.remove("hidden");
     $("#form-error").textContent = errorText(error);
@@ -522,6 +533,7 @@ function slug(value, index) {
 }
 
 function renderResult(job) {
+  sourcePreview.close();
   currentJob = job;
   progressView.classList.add("hidden");
   landing.classList.add("hidden");
@@ -624,16 +636,14 @@ function renderResult(job) {
   $("#toc").innerHTML = article.sections
     .map(
       (section, index) => html`
-        <a href="#${slug(section.heading, index)}">
+        <a href="${articleHash(job.id, slug(section.heading, index))}">
           ${escapeHtml(section.heading)}
         </a>
       `,
     )
     .join("");
   $("#audio").src = episode.playbackUrl || episode.audioUrl || episode.mediaUrl;
-  const requestedTime = Number(
-    new URLSearchParams(location.hash.slice(1)).get("time"),
-  );
+  const requestedTime = readArticleLocation(location.hash).time;
   if (Number.isFinite(requestedTime) && requestedTime >= 0) {
     $("#audio").addEventListener(
       "loadedmetadata",
@@ -646,9 +656,10 @@ function renderResult(job) {
   setArticleActionStatus("");
   updateReadButtons();
   renderTranscript(transcript, "");
-  document.addEventListener("click", sourceClick);
+
   resetArticleScroll();
   showContinueReading(job.readingPosition);
+  restoreArticleSection();
   scheduleArticleReadingProgressUpdate();
 }
 
@@ -683,23 +694,17 @@ function renderTranscript(transcript, query) {
 
 function sourceClick(event) {
   const source = event.target.closest("[data-source]");
-  const timestamp = event.target.closest("[data-time]");
   if (source) {
-    const segment = document.getElementById(source.dataset.source);
+    const segment = currentJob?.transcript.find(
+      (part) => part.id === source.dataset.source,
+    );
     if (segment) {
-      segment.hidden = false;
-      segment.scrollIntoView({ behavior: "smooth", block: "center" });
-      segment.classList.remove("flash");
-      void segment.offsetWidth;
-      segment.classList.add("flash");
-      const part = currentJob.transcript.find(
-        (item) => item.id === source.dataset.source,
-      );
-      if (part) {
-        seek(part.start);
-      }
+      stopNaturalReadingScroll();
+      sourcePreview.open({ ...segment, label: time(segment.start) }, source);
     }
+    return;
   }
+  const timestamp = event.target.closest("[data-time]");
   if (timestamp) {
     seek(Number(timestamp.dataset.time));
   }
@@ -829,7 +834,7 @@ async function shareArticle() {
     });
   }
 }
-$("#transcript").addEventListener("click", sourceClick);
+resultView.addEventListener("click", sourceClick);
 $("#transcript-search").addEventListener(
   "input",
   (event) =>
@@ -1218,10 +1223,55 @@ async function showArticles(showLoading = true) {
   }
 }
 
-const hashParameters = new URLSearchParams(location.hash.slice(1));
-const hashJob = hashParameters.get("job");
-if (hashJob && /^[0-9a-f-]{36}$/i.test(hashJob)) {
-  poll(hashJob);
-} else if (location.pathname.replace(/\/$/, "") === "/articles") {
-  showArticles();
+function restoreArticleSection() {
+  const sectionId = readArticleLocation(location.hash).sectionId;
+  const heading = articleSectionHeadings().find(
+    (item) => item.id === sectionId,
+  );
+  if (!heading) {
+    return false;
+  }
+  hideContinueReading();
+  stopNaturalReadingScroll();
+  heading.scrollIntoView({ behavior: "instant", block: "start" });
+  drawAttentionToHeading(heading);
+  return true;
 }
+
+function openArticleJob(jobId) {
+  const hash = articleHash(jobId);
+  if (location.hash === hash) {
+    showArticleRoute();
+  } else {
+    location.hash = hash;
+  }
+}
+
+function showArticleRoute() {
+  sourcePreview.close();
+  const { jobId } = readArticleLocation(location.hash);
+  if (jobId) {
+    if (currentJob?.id === jobId && !resultView.classList.contains("hidden")) {
+      if (!restoreArticleSection()) {
+        resetArticleScroll();
+      }
+      return;
+    }
+    poll(jobId);
+    return;
+  }
+  routeVersion += 1;
+  clearTimeout(jobPollTimer);
+  if (location.pathname.replace(/\/$/, "") === "/articles") {
+    showArticles();
+    return;
+  }
+  resultView.classList.add("hidden");
+  progressView.classList.add("hidden");
+  articlesView.classList.add("hidden");
+  articleReadingProgress.classList.add("hidden");
+  landing.classList.remove("hidden");
+}
+
+window.addEventListener("hashchange", showArticleRoute);
+showArticleRoute();

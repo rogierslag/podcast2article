@@ -6,7 +6,7 @@ import { translate } from "../public/i18n.js";
 // Run the reading controller without loading jobs or starting network requests.
 // Native iOS status-bar gestures and safe-area painting require simulator tests.
 const controller = readFileSync("public/app.js", "utf8")
-  .replace(/^import\s*\{[^}]*\}\s*from "\.\/localize\.js";\s*/, "")
+  .replace(/^import\s*\{[^}]*\}\s*from "[^"\n]+";\s*/gm, "")
   .split('localizedFetch("/api/auth")')[0];
 
 function setupReadingController(
