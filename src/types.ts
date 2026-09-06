@@ -76,6 +76,8 @@ export interface Job {
   deletedAt?: string;
   /** High-entropy capability token for the article's anonymous public permalink. */
   shareToken?: string;
+  /** Digest used to deduplicate personal copies of shared articles. */
+  savedShareKey?: string;
   episode?: Episode;
   transcript?: TranscriptSegment[];
   article?: Article;

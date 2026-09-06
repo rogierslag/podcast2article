@@ -227,3 +227,81 @@ describe("article soft deletion", () => {
     expect(await jobs.getJob("owner", articleId)).toBeUndefined();
   });
 });
+
+describe("saving shared articles", () => {
+  it("persists a personal copy across restart without copying private state", async () => {
+    storeArticle("owner", { readAt: "2026-08-02T12:00:00Z" });
+    const jobs = await import("./jobs.js");
+    await jobs.getJob("owner", articleId);
+
+    const [saved, repeated] = await Promise.all([
+      jobs.saveSharedArticle("reader", shareToken),
+      jobs.saveSharedArticle("reader", shareToken),
+    ]);
+
+    expect(repeated.id).toBe(saved.id);
+    expect(saved.id).not.toBe(articleId);
+    expect(saved).not.toHaveProperty("readAt");
+    expect(saved).not.toHaveProperty("shareToken");
+    expect(saved.transcript).toEqual([
+      { id: "s1", start: 0, end: 0, text: "", speaker: "" },
+    ]);
+    expect(saved.episode?.mediaUrl).toBe("");
+    expect(await jobs.saveSharedArticle("owner", shareToken)).toHaveProperty(
+      "id",
+      articleId,
+    );
+    await jobs.setArticleRead("reader", saved.id, true);
+    await jobs.deleteArticle("owner", articleId);
+    expect(await jobs.getJob("reader", saved.id)).toBeDefined();
+    vi.resetModules();
+    const restarted = await import("./jobs.js");
+    await restarted.resumeIncompleteJobs(["owner", "reader"]);
+    expect(restarted.findSavedSharedArticle("reader", shareToken)?.id).toBe(
+      saved.id,
+    );
+    expect(restarted.listReadyArticles("reader")).toHaveLength(1);
+    expect(restarted.listReadyArticles("owner")).toHaveLength(0);
+    await expect(restarted.retryArticle("reader", saved.id)).rejects.toThrow(
+      "geen complete transcriptie",
+    );
+  });
+
+  it("can save again after deleting the personal copy, without changing the sender", async () => {
+    const original = storeArticle("owner");
+    const jobs = await import("./jobs.js");
+    await jobs.getJob("owner", articleId);
+    const saved = await jobs.saveSharedArticle("reader", shareToken);
+
+    await jobs.deleteArticle("reader", saved.id);
+    const replacement = await jobs.saveSharedArticle("reader", shareToken);
+
+    expect(replacement.id).not.toBe(saved.id);
+    expect(jobs.listReadyArticles("reader")).toHaveLength(1);
+    expect(await jobs.getJob("owner", articleId)).toEqual(original);
+  });
+
+  it("rejects invalid capabilities and users, and allows retry after persistence failure", async () => {
+    storeArticle("owner");
+    const jobs = await import("./jobs.js");
+    await jobs.getJob("owner", articleId);
+    const { writeFile } = await import("node:fs/promises");
+
+    await expect(
+      jobs.saveSharedArticle("../owner", shareToken),
+    ).rejects.toThrow("gebruikersnaam");
+    await expect(jobs.saveSharedArticle("reader", "invalid")).rejects.toThrow(
+      "niet gevonden",
+    );
+    await expect(
+      jobs.saveSharedArticle("reader", "z".repeat(43)),
+    ).rejects.toThrow("niet gevonden");
+    vi.mocked(writeFile).mockRejectedValueOnce(new Error("Disk full"));
+    await expect(jobs.saveSharedArticle("reader", shareToken)).rejects.toThrow(
+      "Disk full",
+    );
+    expect(jobs.listReadyArticles("reader")).toHaveLength(0);
+    await jobs.saveSharedArticle("reader", shareToken);
+    expect(jobs.listReadyArticles("reader")).toHaveLength(1);
+  });
+});

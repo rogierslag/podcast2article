@@ -85,6 +85,15 @@
             </svg>
           </button>
           <div id="episode-hero" class="episode-hero"></div>
+          <div class="shared-save-actions article-actions hidden">
+            <button type="button" data-save-shared data-i18n="shared.save">
+              {{shared.save}}
+            </button>
+            <a data-open-saved class="hidden" data-i18n="shared.openSaved"
+              >{{shared.openSaved}}</a
+            >
+            <span data-save-status role="status"></span>
+          </div>
           <div class="shared-source">
             <div>
               <span class="kicker" data-i18n="shared.listen"
@@ -106,6 +115,15 @@
                 <nav id="toc" aria-labelledby="toc-title"></nav>
               </div>
             </aside>
+          </div>
+          <div class="shared-save-actions article-actions hidden">
+            <button type="button" data-save-shared data-i18n="shared.save">
+              {{shared.save}}
+            </button>
+            <a data-open-saved class="hidden" data-i18n="shared.openSaved"
+              >{{shared.openSaved}}</a
+            >
+            <span data-save-status role="status"></span>
           </div>
         </section>
         <section id="shared-error" class="shared-error hidden">

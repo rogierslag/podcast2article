@@ -657,6 +657,15 @@ function renderResult(job) {
   setArticleActionStatus("");
   updateReadButtons();
   renderTranscript(transcript, "");
+  $(".transcript-head").classList.toggle("hidden", Boolean(job.savedShareKey));
+  $("#transcript").classList.toggle("hidden", Boolean(job.savedShareKey));
+  $("#toggle-transcript").setAttribute(
+    "aria-expanded",
+    String(!job.savedShareKey),
+  );
+  $("#toggle-transcript").textContent = t(
+    job.savedShareKey ? "transcript.show" : "transcript.hide",
+  );
 
   resetArticleScroll();
   showContinueReading(job.readingPosition);

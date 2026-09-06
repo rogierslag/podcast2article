@@ -77,3 +77,27 @@
     grid-template-columns: 1fr;
   }
 }
+
+.shared-save-actions {
+  justify-content: flex-start;
+  margin-bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 18px max(22px, calc((100vw - 1120px) / 2));
+  border-bottom: 1px solid var(--line);
+}
+.shared-save-actions a {
+  color: var(--accent-text);
+  font: 500 12px var(--mono);
+}
+.shared-save-actions [data-save-status] {
+  font-size: 12px;
+  color: var(--muted);
+}
+@media print {
+  .shared-save-actions {
+    display: none;
+  }
+}
