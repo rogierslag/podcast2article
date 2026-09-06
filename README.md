@@ -43,6 +43,12 @@ transcriptie worden niet geïmporteerd. Er is geen Fathom API-key nodig; cookies
 privé-opnames en teamgebonden toegang worden niet ondersteund. De download valt
 onder `MAX_RECORDING_MB` en `MEDIA_DOWNLOAD_TIMEOUT_MS`.
 
+## Ontwerp
+
+De [merkrichtlijnen](docs/BRAND.md) beschrijven de visuele identiteit, typografie,
+kleuren, interacties en het bedoelde gebruik van afgeronde hoeken. Gebruik deze
+samen met [AGENTS.md](AGENTS.md) bij wijzigingen aan de interface.
+
 ## Snel starten
 
 Vereisten: Node.js 24+, Python 3.11+ en een OpenAI API-key.
