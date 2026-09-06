@@ -1,5 +1,6 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
+  copyFile,
   mkdir,
   readFile,
   readdir,
@@ -443,6 +444,124 @@ export function getSharedArticle(
   return undefined;
 }
 
+function savedShareKey(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function findSavedSharedArticle(
+  username: string,
+  token: string,
+): Job | undefined {
+  const shared = getSharedArticle(token);
+  if (shared?.username === username) {
+    return shared.job;
+  }
+  const key = savedShareKey(token);
+  return [...memory.entries()].find(
+    ([entry, job]) =>
+      entry.startsWith(`${username}/`) &&
+      !job.deletedAt &&
+      job.savedShareKey === key,
+  )?.[1];
+}
+
+const pendingSaves = new Map<string, Promise<Job>>();
+
+export async function saveSharedArticle(
+  username: string,
+  token: string,
+): Promise<Job> {
+  userDirectory(username);
+  const key = jobKey(username, savedShareKey(token));
+  const pending = pendingSaves.get(key);
+  if (pending) {
+    return pending;
+  }
+  const operation = copySharedArticle(username, token);
+  pendingSaves.set(key, operation);
+  try {
+    return await operation;
+  } finally {
+    pendingSaves.delete(key);
+  }
+}
+
+async function copySharedArticle(
+  username: string,
+  token: string,
+): Promise<Job> {
+  const shared = getSharedArticle(token);
+  if (!shared?.job.article || !shared.job.episode || !shared.job.transcript) {
+    throw new Error("Gedeeld artikel niet gevonden.");
+  }
+  const existing = findSavedSharedArticle(username, token);
+  if (existing) {
+    return existing;
+  }
+  const { job: source } = shared;
+  const episode = shared.job.episode;
+  const id = randomUUID();
+  const now = new Date().toISOString();
+  // Copy only what the capability already exposes, never the owner's job or transcript.
+  const job: Job = {
+    id,
+    sourceUrl: episode.sourceUrl,
+    language: source.language,
+    articleLength: source.articleLength,
+    stage: "complete",
+    progress: 100,
+    message: "Klaar",
+    createdAt: now,
+    updatedAt: now,
+    completedAt: now,
+    savedShareKey: savedShareKey(token),
+    article: structuredClone(shared.job.article),
+    episode: {
+      sourceType: episode.sourceType,
+      sourceUrl: episode.sourceUrl,
+      sourceName: episode.sourceName,
+      title: episode.title,
+      imageUrl: episode.imageUrl,
+      durationSeconds: episode.durationSeconds,
+      publishedAt: episode.publishedAt,
+      mediaUrl: "",
+      playbackUrl: `/api/jobs/${id}/audio`,
+    },
+    transcript: shared.job.transcript.map(({ id, start }) => ({
+      id,
+      start,
+      end: start,
+      speaker: "",
+      text: "",
+    })),
+  };
+  const sourceAudio = playbackFileForJob(shared.username, source.id);
+  const targetAudio = playbackFileForJob(username, id);
+  if (!sourceAudio || !targetAudio) {
+    throw new Error("Gedeeld artikel niet gevonden.");
+  }
+  await mkdir(path.dirname(targetAudio), { recursive: true });
+  try {
+    await copyFile(sourceAudio, targetAudio);
+  } catch (error) {
+    // Articles without retained audio can still be saved and read.
+    if (!(
+      error instanceof Error &&
+      "code" in error &&
+      error.code === "ENOENT"
+    )) {
+      throw error;
+    }
+  }
+  try {
+    await persist(username, job);
+  } catch (error) {
+    await rm(targetAudio, { force: true });
+    throw error;
+  }
+  return job;
+}
+
 export async function retryArticle(username: string, id: string): Promise<Job> {
   const key = jobKey(username, id);
   const job = await getJob(username, id);
@@ -452,7 +571,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
   if (activeRuns.has(key) || pendingJobIds.has(key)) {
     throw new Error("Deze opdracht wordt al verwerkt.");
   }
-  if (!job.transcript?.length || !job.episode) {
+  if (job.savedShareKey || !job.transcript?.length || !job.episode) {
     throw new Error(
       "Deze opdracht heeft geen complete transcriptie om te hergebruiken.",
     );

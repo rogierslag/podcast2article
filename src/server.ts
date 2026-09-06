@@ -26,6 +26,8 @@ import {
   deleteArticle,
   getJob,
   getSharedArticle,
+  findSavedSharedArticle,
+  saveSharedArticle,
   listProcessingJobs,
   listReadyArticles,
   playbackFileForJob,
@@ -362,6 +364,41 @@ app.get("/api/auth", (_request, response) => {
 app.get("/api/deployment-status", async (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.json({ failed: auth.enabled && (await deploymentFailed()) });
+});
+
+// Account-specific save state stays behind authentication and out of public caches.
+app.get("/api/saved-shares/:token", (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  if (!getSharedArticle(request.params.token)) {
+    return response
+      .status(404)
+      .json({ error: localizeError(response, "error.sharedNotFound") });
+  }
+  const saved = findSavedSharedArticle(
+    response.locals.username,
+    request.params.token,
+  );
+  return response.json({ articleId: saved?.id ?? null });
+});
+
+app.post("/api/saved-shares/:token", async (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  if (!getSharedArticle(request.params.token)) {
+    return response
+      .status(404)
+      .json({ error: localizeError(response, "error.sharedNotFound") });
+  }
+  try {
+    const saved = await saveSharedArticle(
+      response.locals.username,
+      request.params.token,
+    );
+    return response.json({ articleId: saved.id });
+  } catch {
+    return response
+      .status(500)
+      .json({ error: localizeError(response, "error.sharedSave") });
+  }
 });
 
 app.get(["/", "/index.html", "/articles"], sendIndex);

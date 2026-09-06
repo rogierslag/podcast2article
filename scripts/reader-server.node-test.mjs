@@ -301,3 +301,97 @@ test("deployment failure is private, survives reads, and clears on recovery", as
   });
   assert.deepEqual(await response.json(), { failed: false });
 });
+
+async function loginAs(username) {
+  const response = await fetch(`${origin}/login`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `username=${username}&password=test-only-password-${username}`,
+  });
+  return response.headers.get("set-cookie").split(";")[0];
+}
+
+test("saving a shared article requires a session and validates the capability", async () => {
+  for (const method of ["GET", "POST"]) {
+    assert.equal(
+      (await fetch(`${origin}/api/saved-shares/${token}`, { method })).status,
+      401,
+    );
+    const cookie = await loginAs("other");
+    for (const invalid of ["invalid", "z".repeat(43)]) {
+      assert.equal(
+        (
+          await fetch(`${origin}/api/saved-shares/${invalid}`, {
+            method,
+            headers: { Cookie: cookie },
+          })
+        ).status,
+        404,
+      );
+    }
+  }
+});
+
+test("saving creates one independent personal copy with only public content and working audio", async () => {
+  const cookie = await loginAs("other");
+  const headers = { Cookie: cookie };
+  const endpoint = `${origin}/api/saved-shares/${token}`;
+  assert.deepEqual(await (await fetch(endpoint, { headers })).json(), {
+    articleId: null,
+  });
+
+  const results = await Promise.all(
+    Array.from({ length: 4 }, async () => {
+      const response = await fetch(endpoint, { method: "POST", headers });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("cache-control"), "no-store");
+      return response.json();
+    }),
+  );
+  const savedId = results[0].articleId;
+  assert.notEqual(savedId, articleId);
+  assert.ok(results.every((result) => result.articleId === savedId));
+  assert.deepEqual(await (await fetch(endpoint, { headers })).json(), {
+    articleId: savedId,
+  });
+  const saved = await (
+    await fetch(`${origin}/api/jobs/${savedId}`, { headers })
+  ).json();
+  assert.equal(saved.article.title, "Intended article");
+  assert.equal(saved.readAt, undefined);
+  assert.equal(saved.shareToken, undefined);
+  for (const privateValue of [
+    articleId,
+    token,
+    "Private transcript text",
+    "Private speaker",
+    "private-media",
+  ]) {
+    assert.equal(
+      JSON.stringify(saved).includes(privateValue),
+      false,
+      privateValue,
+    );
+  }
+  assert.equal(
+    await (
+      await fetch(`${origin}/api/jobs/${savedId}/audio`, { headers })
+    ).text(),
+    audioBytes.toString(),
+  );
+  const ownerHeaders = { Cookie: await loginAs("owner") };
+  assert.equal(
+    (await fetch(`${origin}/api/jobs/${savedId}`, { headers: ownerHeaders }))
+      .status,
+    404,
+  );
+  const ownSave = await (
+    await fetch(endpoint, { method: "POST", headers: ownerHeaders })
+  ).json();
+  assert.equal(ownSave.articleId, articleId);
+  const overview = await (
+    await fetch(`${origin}/api/articles`, { headers })
+  ).json();
+  assert.ok(JSON.stringify(overview).includes(savedId));
+});

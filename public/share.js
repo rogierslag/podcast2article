@@ -449,8 +449,93 @@ localizedFetch(`/api/shared/${encodeURIComponent(token)}`)
       throw new Error("not found");
     }
     renderSharedArticle(await response.json(), token);
+    void loadSaveState();
   })
   .catch(() => {
     $("#shared-loading").classList.add("hidden");
     $("#shared-error").classList.remove("hidden");
   });
+
+const saveButtons = [...document.querySelectorAll("[data-save-shared]")];
+const saveStatuses = [...document.querySelectorAll("[data-save-status]")];
+
+function showSavedArticle(articleId) {
+  saveButtons.forEach((button) => {
+    button.disabled = true;
+    button.classList.add("hidden");
+  });
+  saveStatuses.forEach((status) => {
+    status.textContent = t("shared.saved");
+  });
+  document.querySelectorAll("[data-open-saved]").forEach((link) => {
+    link.href = `/#job=${encodeURIComponent(articleId)}`;
+    link.classList.remove("hidden");
+  });
+}
+
+async function loadSaveState() {
+  try {
+    const response = await localizedFetch(
+      `/api/saved-shares/${encodeURIComponent(token)}`,
+    );
+    if (!response.ok) {
+      return;
+    }
+    const { articleId } = await response.json();
+    document
+      .querySelectorAll(".shared-save-actions")
+      .forEach((actions) => actions.classList.remove("hidden"));
+    if (articleId) {
+      showSavedArticle(articleId);
+    }
+  } catch {
+    // Account lookup must not interrupt anonymous reading.
+  }
+}
+
+async function saveArticleToOverview(event) {
+  const button = event.currentTarget;
+  const focusSavedLink = document.activeElement === button;
+  const savedLink = button
+    .closest(".shared-save-actions")
+    .querySelector("[data-open-saved]");
+  saveButtons.forEach((button) => {
+    button.disabled = true;
+    button.textContent = t("shared.saving");
+  });
+  saveStatuses.forEach((status) => {
+    status.textContent = "";
+  });
+  try {
+    const response = await localizedFetch(
+      `/api/saved-shares/${encodeURIComponent(token)}`,
+      { method: "POST" },
+    );
+    if (!response.ok) {
+      throw new Error(
+        response.status === 401 ? "error.sessionExpired" : "error.sharedSave",
+      );
+    }
+    const { articleId } = await response.json();
+    showSavedArticle(articleId);
+    if (focusSavedLink) {
+      savedLink.focus();
+    }
+  } catch (error) {
+    saveButtons.forEach((button) => {
+      button.disabled = false;
+      button.textContent = t("shared.save");
+    });
+    saveStatuses.forEach((status) => {
+      status.textContent = t(
+        error.message === "error.sessionExpired"
+          ? "error.sessionExpired"
+          : "error.sharedSave",
+      );
+    });
+  }
+}
+
+saveButtons.forEach((button) =>
+  button.addEventListener("click", saveArticleToOverview),
+);

@@ -2,6 +2,20 @@ import { formatArticleWordRange } from "./article-length.js";
 
 // Shared by the browser and server. Article and transcript content is never translated here.
 export const messages = {
+  "shared.save": { nl: "Bewaar in mijn overzicht", en: "Save to my overview" },
+  "shared.saving": { nl: "Opslaan…", en: "Saving…" },
+  "shared.saved": {
+    nl: "Opgeslagen in je overzicht",
+    en: "Saved to your overview",
+  },
+  "shared.openSaved": {
+    nl: "Open in mijn overzicht →",
+    en: "Open in my overview →",
+  },
+  "error.sharedSave": {
+    nl: "Opslaan is niet gelukt. Probeer het opnieuw.",
+    en: "Couldn’t save the article. Please try again.",
+  },
   "uiLanguage.label": {
     nl: "Taal van de interface",
     en: "Interface language",
