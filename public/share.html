@@ -100,8 +100,10 @@
             <article id="article" class="article"></article>
             <aside class="side-nav">
               <div>
-                <span data-i18n="article.contents">{{article.contents}}</span>
-                <nav id="toc"></nav>
+                <span id="toc-title" data-i18n="article.contents"
+                  >{{article.contents}}</span
+                >
+                <nav id="toc" aria-labelledby="toc-title"></nav>
               </div>
             </aside>
           </div>

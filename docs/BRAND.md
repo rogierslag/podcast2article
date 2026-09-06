@@ -67,7 +67,10 @@ without interrupting the reader's place.
 Use the semantic properties in [theme.css](../public/theme.css) for color values.
 The light theme uses cream for the page, lighter paper for surfaces, dark ink for
 text, orange for emphasis, and green for supporting accents. Accent colors should
-retain a clear purpose rather than spreading across every component.
+retain a clear purpose rather than spreading across every component. Use `--accent-text`
+for smaller orange text and links; reserve `--orange` for decoration, accent surfaces,
+and large editorial headings. Control boundaries use `--control-border` so they
+remain distinguishable while structural rules retain the quieter `--line`.
 
 The dark theme preserves the same warmth and hierarchy with dark neutral surfaces
 and adjusted foregrounds. Choose surface and text roles separately: an inverse
@@ -95,12 +98,11 @@ Text links, underlined input rows, and dividing lines do not need rounded corner
 For joined controls, round only the outside corners so the group remains visually
 connected. Avoid pill-shaped utility buttons and broad rounding across panels.
 
-The 3px control radius is an intended change, not a completed migration. Existing
-controls include square corners and a 4px language switcher. Align these as a
-coherent control update, including the owner, public, and login surfaces; do not
-introduce isolated exceptions. The source-preview dialog already uses 4px.
-When implementing the control update, introduce shared radius properties and keep
-selectors scoped to the relevant components.
+Bounded controls use the shared `--control-radius: 3px` property across the owner,
+public reader, and login screens, including source references and language buttons.
+The source-preview dialog uses `--dialog-radius: 4px`. Keep radius declarations
+scoped to these components so article containers, images, and structural elements
+retain their straight edges.
 
 ## Interactions and motion
 

@@ -117,7 +117,7 @@
         font-family: inherit;
         font-size: 16px;
         line-height: 1;
-        border-radius: 0;
+        border-radius: var(--control-radius);
         -webkit-appearance: none;
         appearance: none;
       }
@@ -126,6 +126,7 @@
         border-color: var(--orange);
       }
       button {
+        border-radius: var(--control-radius);
         width: 100%;
         height: 52px;
         border: 0;
@@ -164,7 +165,7 @@
         margin: 16px 0 0;
       }
       .access-note a {
-        color: var(--orange);
+        color: var(--accent-text);
         text-underline-offset: 3px;
       }
       .access-note a:hover {
@@ -210,7 +211,7 @@
         text-decoration: none;
       }
       .maker-links a:hover {
-        color: var(--orange);
+        color: var(--accent-text);
       }
       .maker-links span {
         color: var(--line);

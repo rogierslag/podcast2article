@@ -702,6 +702,22 @@ export const messages = {
     nl: "Zoek in het transcript…",
     en: "Search the transcript…",
   },
+  "transcript.searchLabel": {
+    nl: "Zoek in het transcript",
+    en: "Search the transcript",
+  },
+  "transcript.playFrom": {
+    nl: "Speel vanaf {time}",
+    en: "Play from {time}",
+  },
+  "transcript.noResults": {
+    nl: "Geen resultaten",
+    en: "No results",
+  },
+  "transcript.clearSearch": {
+    nl: "Wis zoekopdracht",
+    en: "Clear search",
+  },
   "transcript.hide": {
     nl: "Verberg",
     en: "Hide",

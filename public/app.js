@@ -665,12 +665,16 @@ function renderResult(job) {
 
 function renderTranscript(transcript, query) {
   const normalized = query.trim().toLowerCase();
-  $("#transcript").innerHTML = transcript
+  let matchCount = 0;
+  $("#transcript-segments").innerHTML = transcript
     .map((part) => {
       const match =
         !normalized ||
         part.text.toLowerCase().includes(normalized) ||
         part.speaker.toLowerCase().includes(normalized);
+      if (match) {
+        matchCount += 1;
+      }
       let textValue = escapeHtml(part.text);
       if (normalized && match) {
         const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -681,7 +685,11 @@ function renderTranscript(transcript, query) {
       }
       return html`
         <div class="segment" id="${part.id}" ${match ? "" : "hidden"}>
-          <button class="timestamp" data-time="${part.start}">
+          <button
+            class="timestamp"
+            data-time="${part.start}"
+            aria-label="${escapeHtml(t("transcript.playFrom", { time: time(part.start) }))}"
+          >
             ${time(part.start)}
           </button>
           <span class="speaker">${escapeHtml(part.speaker)}</span>
@@ -690,6 +698,11 @@ function renderTranscript(transcript, query) {
       `;
     })
     .join("");
+  const noResults = Boolean(normalized) && matchCount === 0;
+  $("#transcript-empty").hidden = !noResults;
+  $("#transcript-search-status").textContent = noResults
+    ? t("transcript.noResults")
+    : "";
 }
 
 function sourceClick(event) {
@@ -840,9 +853,21 @@ $("#transcript-search").addEventListener(
   (event) =>
     currentJob && renderTranscript(currentJob.transcript, event.target.value),
 );
+$("#clear-transcript-search").addEventListener("click", () => {
+  const search = $("#transcript-search");
+  search.value = "";
+  if (currentJob) {
+    renderTranscript(currentJob.transcript, "");
+  }
+  search.focus({ preventScroll: true });
+});
 $("#toggle-transcript").addEventListener("click", () => {
   const transcript = $("#transcript");
   transcript.classList.toggle("hidden");
+  $("#toggle-transcript").setAttribute(
+    "aria-expanded",
+    String(!transcript.classList.contains("hidden")),
+  );
   $("#toggle-transcript").textContent = transcript.classList.contains("hidden")
     ? t("transcript.show")
     : t("transcript.hide");

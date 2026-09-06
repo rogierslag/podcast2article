@@ -155,6 +155,7 @@ body.scroll-shell {
   outline: 0;
 }
 .url-row button {
+  border-radius: var(--control-radius);
   border: 0;
   background: var(--action-surface);
   color: var(--action-text);
@@ -183,7 +184,7 @@ body.scroll-shell {
   min-height: 48px;
   margin-top: 8px;
   border: 1px solid var(--control-border);
-  border-radius: 0;
+  border-radius: var(--control-radius);
   appearance: none;
   background-color: var(--paper);
   background-image: var(--select-arrow);
@@ -254,7 +255,7 @@ body.scroll-shell {
 }
 .promise-grid strong {
   font: 400 11px var(--mono);
-  color: var(--orange);
+  color: var(--accent-text);
 }
 .promise-grid h2 {
   font: 600 19px var(--serif);
@@ -379,7 +380,7 @@ body.scroll-shell {
   }
   .episode-hero .kicker {
     grid-column: 1 / -1;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.6;
     overflow-wrap: anywhere;
   }
@@ -449,6 +450,7 @@ body.scroll-shell {
   will-change: transform;
 }
 .continue-reading {
+  border-radius: var(--control-radius);
   position: fixed;
   z-index: 45;
   right: max(24px, env(safe-area-inset-right), calc((100vw - 1380px) / 2));
@@ -467,7 +469,7 @@ body.scroll-shell {
   cursor: pointer;
 }
 .continue-reading span {
-  font: 500 9px/1.3 var(--mono);
+  font: 500 11px/1.3 var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--inverse-muted);
@@ -504,7 +506,7 @@ body.scroll-shell {
 @keyframes resume-heading-highlight {
   0%,
   35% {
-    color: var(--orange);
+    color: var(--accent-text);
     text-shadow: 0 0 28px rgb(232 94 42 / 32%);
   }
   100% {
@@ -518,6 +520,7 @@ body.scroll-shell {
   margin-bottom: 30px;
 }
 .article-actions button {
+  border-radius: var(--control-radius);
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -571,7 +574,7 @@ body.scroll-shell {
   padding-bottom: 38px;
 }
 .article .byline {
-  font: 10px var(--mono);
+  font: 12px var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
@@ -613,8 +616,8 @@ body.scroll-shell {
   border: 0;
   background: var(--source-surface);
   color: var(--green);
-  font: 500 9px var(--mono);
-  border-radius: 10px;
+  font: 500 11px var(--mono);
+  border-radius: var(--control-radius);
   padding: 4px 7px;
   cursor: pointer;
 }
@@ -649,7 +652,7 @@ body.scroll-shell {
   top: 28px;
 }
 .side-nav span {
-  font: 10px var(--mono);
+  font: 11px var(--mono);
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -662,7 +665,7 @@ body.scroll-shell {
   margin: 14px 0;
 }
 .side-nav a:hover {
-  color: var(--orange);
+  color: var(--accent-text);
 }
 .transcript-wrap {
   background: var(--paper);
@@ -685,6 +688,7 @@ body.scroll-shell {
 }
 .transcript-actions input,
 .transcript-actions button {
+  border-radius: var(--control-radius);
   border: 1px solid var(--control-border);
   background: var(--control-surface);
   color: var(--ink);
@@ -705,6 +709,28 @@ audio {
   max-height: 700px;
   overflow: auto;
   border-top: 1px solid var(--line);
+}
+.transcript-empty {
+  padding: 24px 8px;
+}
+.transcript-empty p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font: 14px/1.5 var(--sans);
+}
+.transcript-empty button {
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background: var(--control-surface);
+  color: var(--ink);
+  min-height: 44px;
+  padding: 10px 13px;
+  font: 11px/1.4 var(--mono);
+  cursor: pointer;
+}
+.transcript-empty button:hover {
+  background: var(--action-surface);
+  color: var(--action-text);
 }
 .segment {
   display: grid;
@@ -732,13 +758,13 @@ audio {
 .timestamp {
   border: 0;
   background: transparent;
-  color: var(--orange);
+  color: var(--accent-text);
   font: 500 11px var(--mono);
   text-align: left;
   cursor: pointer;
 }
 .speaker {
-  font: 500 10px var(--mono);
+  font: 500 11px var(--mono);
   text-transform: uppercase;
   color: var(--green);
 }
@@ -781,7 +807,7 @@ footer {
   min-height: 44px;
   padding: 8px 10px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--control-radius);
   background: transparent;
   color: var(--muted);
   font: 11px var(--mono);
@@ -1033,7 +1059,7 @@ footer {
 }
 .main-nav a:hover,
 .main-nav button:hover {
-  color: var(--orange);
+  color: var(--accent-text);
 }
 .main-nav form {
   display: flex;
@@ -1065,7 +1091,7 @@ footer {
   margin: 26px 0 0;
 }
 .articles-count {
-  font: 500 10px var(--mono);
+  font: 500 11px var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
@@ -1128,14 +1154,14 @@ footer {
   flex-direction: column;
 }
 .article-card-meta {
-  font: 500 9px/1.5 var(--mono);
+  font: 500 11px/1.5 var(--mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
   margin: 0 0 13px;
 }
 .article-card-meta span {
-  color: var(--orange);
+  color: var(--accent-text);
   margin-right: 8px;
 }
 .article-card h2 {
@@ -1159,7 +1185,7 @@ footer {
   gap: 15px;
   align-items: end;
   margin-top: auto;
-  font-size: 10px;
+  font-size: 11px;
 }
 .article-card-body > div > span {
   overflow: hidden;
@@ -1174,7 +1200,7 @@ footer {
   letter-spacing: 0.04em;
 }
 .article-card:hover strong {
-  color: var(--orange);
+  color: var(--accent-text);
 }
 .articles-loading {
   grid-column: 1/-1;
@@ -1378,6 +1404,7 @@ footer {
   gap: 10px;
 }
 .article-read-footer button {
+  border-radius: var(--control-radius);
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -1458,7 +1485,7 @@ footer {
   border-radius: 50%;
   background: var(--ink);
   color: var(--cream);
-  font: 9px var(--mono);
+  font: 11px var(--mono);
 }
 .collapsible-shelf summary {
   cursor: pointer;
@@ -1511,7 +1538,7 @@ footer {
   margin: 0 0 12px;
 }
 .article-card-title:hover {
-  color: var(--orange);
+  color: var(--accent-text);
 }
 .article-card-footer {
   display: flex;
@@ -1519,7 +1546,7 @@ footer {
   gap: 15px;
   align-items: end;
   margin-top: auto;
-  font-size: 10px;
+  font-size: 11px;
 }
 .article-card-footer > span {
   min-width: 0;
@@ -1541,9 +1568,10 @@ footer {
   text-transform: uppercase;
 }
 .article-card-actions > a:hover {
-  color: var(--orange);
+  color: var(--accent-text);
 }
 .article-card-actions button {
+  border-radius: var(--control-radius);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1734,14 +1762,14 @@ footer {
 .processing-card-body > p {
   display: flex;
   gap: 9px;
-  margin: 1px 0 8px;
+  margin: 1px 0 11px;
   color: var(--muted);
-  font: 8px var(--mono);
+  font: 11px var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .processing-card-body > p span {
-  color: var(--orange);
+  color: var(--accent-text);
 }
 .processing-card h3 {
   font: 600 22px/1.08 var(--serif);
@@ -1757,7 +1785,7 @@ footer {
   gap: 12px;
   margin-top: auto;
   color: var(--muted);
-  font: 9px var(--mono);
+  font: 11px var(--mono);
 }
 .processing-status span {
   white-space: nowrap;
@@ -1780,7 +1808,7 @@ footer {
   transition: width 0.4s;
 }
 .processing-card:hover h3 {
-  color: var(--orange);
+  color: var(--accent-text);
 }
 @media (max-width: 1000px) {
   .processing-grid {
@@ -1820,7 +1848,7 @@ footer {
   }
   .article h2.resume-highlight {
     animation: none;
-    color: var(--orange);
+    color: var(--accent-text);
   }
   .record,
   .segment.flash,
@@ -1861,7 +1889,7 @@ footer {
   max-height: calc(100dvh - 48px);
   padding: 28px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--dialog-radius);
   background: var(--paper);
   color: var(--ink);
   box-shadow: 0 18px 64px #1b201d33;
@@ -1912,6 +1940,7 @@ footer {
   font: 600 32px/1.1 var(--serif);
 }
 .source-preview-header button {
+  border-radius: var(--control-radius);
   flex-shrink: 0;
   min-height: 44px;
   padding: 10px 14px;
