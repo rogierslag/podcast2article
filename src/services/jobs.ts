@@ -146,6 +146,7 @@ function canonicalSourceUrl(value: string): string | undefined {
 export function findDuplicateJob(
   jobs: Iterable<Job>,
   sourceUrl: string,
+  options: Pick<Job, "language" | "articleLength">,
 ): Job | undefined {
   const canonicalUrl = canonicalSourceUrl(sourceUrl);
   if (!canonicalUrl) {
@@ -162,7 +163,12 @@ export function findDuplicateJob(
       }
       return right.createdAt.localeCompare(left.createdAt);
     })
-    .find((job) => canonicalSourceUrl(job.sourceUrl) === canonicalUrl);
+    .find(
+      (job) =>
+        canonicalSourceUrl(job.sourceUrl) === canonicalUrl &&
+        job.language === options.language &&
+        job.articleLength === options.articleLength,
+    );
 }
 
 export async function createJob(
@@ -176,6 +182,7 @@ export async function createJob(
       .filter(([key]) => key.startsWith(prefix))
       .map(([, job]) => job),
     sourceUrl,
+    input,
   );
   if (existingJob) {
     throw new DuplicateJobError(existingJob);

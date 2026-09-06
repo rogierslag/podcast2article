@@ -204,11 +204,11 @@ describe("article soft deletion", () => {
     const deleted = JSON.parse(storage.files.get(storedPath("owner")) ?? "{}");
 
     expect(
-      jobs.findDuplicateJob([deleted], original.sourceUrl),
+      jobs.findDuplicateJob([deleted], original.sourceUrl, original),
     ).toBeUndefined();
-    expect(jobs.findDuplicateJob([deleted, original], original.sourceUrl)).toBe(
-      original,
-    );
+    expect(
+      jobs.findDuplicateJob([deleted, original], original.sourceUrl, original),
+    ).toBe(original);
   });
 
   it("keeps the article visible when saving deletion fails, allowing retry", async () => {

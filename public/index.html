@@ -132,7 +132,12 @@
               </label>
               <label
                 ><span data-i18n="form.length">{{form.length}}</span>
-                <select name="articleLength">
+                <select
+                  name="articleLength"
+                  aria-label="{{form.length}}"
+                  data-i18n-aria-label="form.length"
+                  aria-describedby="article-length-hint"
+                >
                   <option value="compact" data-i18n="length.short">
                     {{length.short}}
                   </option>
@@ -143,6 +148,12 @@
                     {{length.long}}
                   </option>
                 </select>
+                <span
+                  id="article-length-hint"
+                  class="option-hint"
+                  data-i18n="form.lengthHint"
+                  >{{form.lengthHint}}</span
+                >
               </label>
               <span class="privacy"
                 ><span></span>

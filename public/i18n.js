@@ -545,16 +545,20 @@ export const messages = {
     en: "Spanish",
   },
   "length.short": {
-    nl: "Compact",
-    en: "Short",
+    nl: "Compact · 700–1.000 woorden",
+    en: "Short · 700–1,000 words",
   },
   "length.standard": {
-    nl: "Standaard",
-    en: "Standard",
+    nl: "Standaard · 1.100–1.700 woorden",
+    en: "Standard · 1,100–1,700 words",
   },
   "length.long": {
-    nl: "Uitgebreid",
-    en: "Long",
+    nl: "Uitgebreid · 1.800–2.600 woorden",
+    en: "Long · 1,800–2,600 words",
+  },
+  "form.lengthHint": {
+    nl: "De woordenaantallen zijn een richtlijn.",
+    en: "Word counts are a guide.",
   },
   "form.publicSources": {
     nl: "Alleen openbare bronnen",
