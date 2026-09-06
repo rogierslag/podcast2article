@@ -167,6 +167,7 @@ test("shared reader assets are public while owner routes require authentication"
     assert.equal((await fetch(origin + route)).status, 200, route);
   }
   for (const route of [
+    "/api/deployment-status",
     "/api/articles",
     "/api/jobs",
     `/api/jobs/${articleId}/audio`,
@@ -264,4 +265,39 @@ test("authenticated audio supports seeking from a hidden workspace directory", a
     ).status,
     404,
   );
+});
+
+test("deployment failure is private, survives reads, and clears on recovery", async () => {
+  const login = await fetch(`${origin}/login`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "username=owner&password=test-only-password-owner",
+  });
+  const cookie = login.headers.get("set-cookie").split(";")[0];
+  const statusFile = path.join(directory, "data/deployment-status.json");
+  for (const failed of [true, true, false]) {
+    await writeFile(
+      statusFile,
+      JSON.stringify({ failed, privateLog: "secret" }),
+    );
+
+    const response = await fetch(`${origin}/api/deployment-status`, {
+      headers: { Cookie: cookie },
+    });
+    const shared = await fetch(`${origin}/api/shared/${token}`);
+
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await response.json(), { failed });
+    assert.doesNotMatch(await shared.text(), /failed|deployment|secret/);
+  }
+  const page = await fetch(`${origin}/s/${token}`, {
+    headers: { Cookie: cookie },
+  });
+  assert.doesNotMatch(await page.text(), /deployment-alert|deployment-status/);
+  await rm(statusFile);
+  const response = await fetch(`${origin}/api/deployment-status`, {
+    headers: { Cookie: cookie },
+  });
+  assert.deepEqual(await response.json(), { failed: false });
 });

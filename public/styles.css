@@ -1111,6 +1111,16 @@ footer {
   padding: 0;
   cursor: pointer;
 }
+.deployment-alert {
+  margin: 0 0 28px;
+  padding: 14px 18px;
+  border-left: 3px solid var(--error);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .articles-view {
   max-width: 1440px;
   margin: auto;

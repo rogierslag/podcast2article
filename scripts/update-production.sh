@@ -13,12 +13,26 @@ release_root="$application_root/releases"
 current_link="$application_root/current"
 service="podcast2article.service"
 build_directory=""
+deployment_attempted=false
+deployment_status="/var/lib/podcast2article/deployment-status.json"
 
 log() {
   printf '%s %s\n' "$(date --iso-8601=seconds)" "$*"
 }
 
+write_deployment_status() {
+  local temporary_status
+  temporary_status="$(mktemp "${deployment_status}.XXXXXX")"
+  printf '{"failed":%s}\n' "$1" >"$temporary_status"
+  chmod 0644 "$temporary_status"
+  mv -f "$temporary_status" "$deployment_status"
+}
+
 cleanup() {
+  local exit_status=$?
+  if [[ "$deployment_attempted" == true && "$exit_status" != 0 ]]; then
+    write_deployment_status true || log "Could not record deployment failure"
+  fi
   case "$build_directory" in
     /var/tmp/podcast2article-update.*) rm -rf -- "$build_directory" ;;
   esac
@@ -30,6 +44,8 @@ if ! flock -n 9; then
   log "Another update is already running; skipping"
   exit 0
 fi
+
+deployment_attempted=true
 
 remote_commit="$(git ls-remote "$repository" "refs/heads/$branch" | awk 'NR == 1 { print $1 }')"
 if [[ ! "$remote_commit" =~ ^[0-9a-f]{40}$ ]]; then
@@ -44,6 +60,11 @@ if [[ -n "$current_release" && -r "$current_release/.deployed-commit" ]]; then
 fi
 
 if [[ "$current_commit" == "$remote_commit" ]]; then
+  if ! systemctl is-active --quiet "$service" || ! curl -fsS http://127.0.0.1:3000/api/health | grep -q '"ok":true'; then
+    log "Current release is unhealthy"
+    exit 1
+  fi
+  write_deployment_status false
   log "Already current at ${remote_commit:0:12}"
   exit 0
 fi
@@ -93,6 +114,8 @@ log "Activating $release_name"
 if systemctl restart "$service"; then
   for _ in $(seq 1 30); do
     if systemctl is-active --quiet "$service" && curl -fsS http://127.0.0.1:3000/api/health | grep -q '"ok":true'; then
+      write_deployment_status false
+      deployment_attempted=false
       log "Deployment successful: $release_name"
       find "$release_root" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
         | sort -nr \

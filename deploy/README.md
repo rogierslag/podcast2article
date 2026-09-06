@@ -197,6 +197,13 @@ sudo deploy/install-infrastructure.sh
 Use the hardening flags only when the corresponding host configuration should
 also be updated.
 
+### Deployment failure alert rollout
+
+The failure alert also requires an updated `/usr/local/sbin/update-podcast2article`.
+Application releases do not replace that installed executable. Follow the
+[script-only rollout](../docs/DEPLOYMENT-STATUS.md#rollout-after-merge) after merge;
+no service-definition or secret changes are required.
+
 ### FFmpeg and deployment guard rollout
 
 The installer copies the runtime management tool, media test, pinned manifest,

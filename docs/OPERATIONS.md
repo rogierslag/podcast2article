@@ -451,6 +451,14 @@ sudo tail -n 100 /var/log/podcast2article-update.log
 Do not run two ad-hoc copies of the update script. The lock prevents overlap,
 but systemd is the canonical invocation path.
 
+### Deployment failure alert
+
+Logged-in users see a failed deployment warning on the articles overview. Public
+permalinks never show deployment status. The updater persists the failure across
+application restarts and clears it after a healthy update or reconciliation.
+See the [deployment-status runbook](DEPLOYMENT-STATUS.md) for the marker format,
+limitations, and required installation of the updated host script after merge.
+
 ### A successful webhook is not a successful deployment
 
 HTTP `202` from the webhook confirms that the receiver accepted the delivery.
