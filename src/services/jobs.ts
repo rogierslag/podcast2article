@@ -10,6 +10,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { ConcurrencyGate } from "../lib/concurrency.js";
 import { jobError, jobLog } from "../lib/logger.js";
 import {
   audioChunkSeconds,
@@ -22,6 +23,7 @@ import { resolveSource, validateSourceUrl } from "./resolver.js";
 import { downloadFathomRecording } from "./fathom.js";
 import { downloadYouTubeAudio } from "./youtube.js";
 import type {
+  ApiRequestUsage,
   ArticleReadingPosition,
   ArticleSummary,
   Job,
@@ -30,6 +32,7 @@ import type {
 
 const root = path.resolve("data");
 const memory = new Map<string, Job>();
+const pendingWrites = new Map<string, Promise<void>>();
 const activeRuns = new Map<
   string,
   { controller: AbortController; promise: Promise<void> }
@@ -40,6 +43,11 @@ const pendingRuns: Array<{
   type: "full" | "article";
 }> = [];
 const pendingJobIds = new Set<string>();
+// Metadata can advance through the whole queue without waiting for OpenAI.
+const metadataSlots = new ConcurrencyGate(3);
+const processingSlots = new ConcurrencyGate(3);
+// Downloaders can invoke FFmpeg too, so reserve the entire media preparation step.
+const mediaSlots = new ConcurrencyGate(1);
 let shuttingDown = false;
 
 export class DuplicateJobError extends Error {
@@ -117,14 +125,59 @@ export function playbackFileForJob(
 }
 
 async function persist(username: string, job: Job): Promise<void> {
-  const jobDirectory = path.join(userDirectory(username), "jobs");
-  await mkdir(jobDirectory, { recursive: true });
-  job.updatedAt = new Date().toISOString();
-  await writeFile(
-    path.join(jobDirectory, `${job.id}.json`),
-    JSON.stringify(job, null, 2),
+  const key = jobKey(username, job.id);
+  const previous = pendingWrites.get(key) ?? Promise.resolve();
+  // Progress callbacks and request accounting can persist the same job concurrently.
+  // A failed write is still reported to its caller; later writes may recover.
+  const writing = previous
+    .catch(() => undefined)
+    .then(async () => {
+      const jobDirectory = path.join(userDirectory(username), "jobs");
+      await mkdir(jobDirectory, { recursive: true });
+      job.updatedAt = new Date().toISOString();
+      await writeFile(
+        path.join(jobDirectory, `${job.id}.json`),
+        JSON.stringify(job, null, 2),
+      );
+      memory.set(key, job);
+    });
+  pendingWrites.set(key, writing);
+  try {
+    await writing;
+  } finally {
+    if (pendingWrites.get(key) === writing) {
+      pendingWrites.delete(key);
+    }
+  }
+}
+
+async function recordApiUsage(
+  username: string,
+  job: Job,
+  request: ApiRequestUsage,
+): Promise<void> {
+  const usage = job.apiUsage ?? {
+    trackingStartedAt: new Date().toISOString(),
+    coverage: "partial" as const,
+    requests: [],
+    knownEstimatedCostUsd: 0,
+    unknownCostRequests: 0,
+  };
+  const index = usage.requests.findIndex((entry) => entry.id === request.id);
+  const snapshot = structuredClone(request);
+  if (index === -1) {
+    usage.requests.push(snapshot);
+  } else {
+    usage.requests[index] = snapshot;
+  }
+  usage.knownEstimatedCostUsd = usage.requests.reduce(
+    (total, entry) => total + (entry.cost.amount ?? 0),
+    0,
   );
-  memory.set(jobKey(username, job.id), job);
+  usage.unknownCostRequests = usage.requests.filter(
+    (entry) => entry.cost.amount === null,
+  ).length;
+  await update(username, job, { apiUsage: usage });
 }
 
 async function update(
@@ -199,6 +252,13 @@ export async function createJob(
       ? { spotifyUrl: sourceUrl }
       : {}),
     id: randomUUID(),
+    apiUsage: {
+      trackingStartedAt: new Date().toISOString(),
+      coverage: "complete",
+      requests: [],
+      knownEstimatedCostUsd: 0,
+      unknownCostRequests: 0,
+    },
     stage: "queued",
     progress: 2,
     message: "Opdracht staat klaar",
@@ -650,18 +710,17 @@ function enqueueJob(
 }
 
 function drainQueue(): void {
-  if (shuttingDown || activeRuns.size > 0) {
-    return;
-  }
-  const next = pendingRuns.shift();
-  if (!next) {
-    return;
-  }
-  pendingJobIds.delete(jobKey(next.username, next.job.id));
-  if (next.type === "article") {
-    launchArticleRetry(next.username, next.job);
-  } else {
-    launchJob(next.username, next.job);
+  while (!shuttingDown && pendingRuns.length > 0) {
+    const next = pendingRuns.shift();
+    if (!next) {
+      return;
+    }
+    pendingJobIds.delete(jobKey(next.username, next.job.id));
+    if (next.type === "article") {
+      launchArticleRetry(next.username, next.job);
+    } else {
+      launchJob(next.username, next.job);
+    }
   }
 }
 
@@ -672,7 +731,7 @@ function finishRun(jobId: string): void {
 
 function launchJob(username: string, job: Job): void {
   const key = jobKey(username, job.id);
-  if (shuttingDown || activeRuns.size > 0 || activeRuns.has(key)) {
+  if (shuttingDown || activeRuns.has(key)) {
     return;
   }
   const controller = new AbortController();
@@ -684,13 +743,7 @@ function launchJob(username: string, job: Job): void {
 
 function launchArticleRetry(username: string, job: Job): void {
   const key = jobKey(username, job.id);
-  if (
-    shuttingDown ||
-    activeRuns.size > 0 ||
-    activeRuns.has(key) ||
-    !job.transcript ||
-    !job.episode
-  ) {
+  if (shuttingDown || activeRuns.has(key) || !job.transcript || !job.episode) {
     return;
   }
   const controller = new AbortController();
@@ -705,7 +758,9 @@ async function processArticleRetry(
   job: Job,
   signal: AbortSignal,
 ): Promise<void> {
+  let releaseProcessing: (() => void) | undefined;
   try {
+    releaseProcessing = await processingSlots.acquire(signal);
     const article = await generateArticle(
       username,
       job,
@@ -741,6 +796,8 @@ async function processArticleRetry(
         progress: job.progress,
       });
     }
+  } finally {
+    releaseProcessing?.();
   }
 }
 
@@ -772,6 +829,8 @@ async function processJob(
   const workspace = path.join(workDirectory, job.id);
   const mediaTarget = playbackFileForJob(username, job.id)!;
   const jobStartedAt = Date.now();
+  let releaseProcessing: (() => void) | undefined;
+  let releaseMedia: (() => void) | undefined;
   try {
     await rm(workspace, { recursive: true, force: true });
     await rm(mediaTarget, { force: true });
@@ -782,7 +841,13 @@ async function processJob(
       progress: 8,
       message: "Openbare opnamebron controleren",
     });
-    const episode = await resolveSource(job.sourceUrl, signal);
+    const releaseMetadata = await metadataSlots.acquire(signal);
+    let episode: NonNullable<Job["episode"]>;
+    try {
+      episode = await resolveSource(job.sourceUrl, signal);
+    } finally {
+      releaseMetadata();
+    }
     episode.playbackUrl = `/api/jobs/${job.id}/audio`;
     jobLog(job.id, "resolving", "Opname gekoppeld", {
       title: episode.title,
@@ -792,9 +857,13 @@ async function processJob(
     });
     await update(username, job, {
       episode,
+      stage: "queued",
       progress: 18,
       message: "Opname gevonden",
     });
+
+    releaseProcessing = await processingSlots.acquire(signal);
+    releaseMedia = await mediaSlots.acquire(signal);
 
     const input = path.join(workspace, "source.media");
     const downloadStartedAt = Date.now();
@@ -836,6 +905,8 @@ async function processJob(
       chunkSeconds: audioChunkSeconds(),
     });
     const chunks = await splitAudio(playbackAudio, workspace, signal);
+    releaseMedia();
+    releaseMedia = undefined;
     await rm(input, { force: true });
     const chunkSizes = await Promise.all(
       chunks.map(async (file) =>
@@ -872,6 +943,7 @@ async function processJob(
         }
       },
       signal,
+      (request) => recordApiUsage(username, job, request),
     );
     jobLog(job.id, "transcribing", "Volledige transcriptie gereed", {
       segments: transcript.length,
@@ -926,9 +998,11 @@ async function processJob(
       });
     }
   } finally {
+    releaseMedia?.();
     await rm(workspace, { recursive: true, force: true }).catch(
       () => undefined,
     );
+    releaseProcessing?.();
     jobLog(job.id, job.stage, "Tijdelijke audiobestanden opgeruimd");
   }
 }
@@ -965,5 +1039,6 @@ async function generateArticle(
       }
     },
     signal,
+    (request) => recordApiUsage(username, job, request),
   );
 }

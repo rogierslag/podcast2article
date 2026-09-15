@@ -1,16 +1,22 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Job } from "../types.js";
+import type { ApiRequestUsage, Job } from "../types.js";
 
 const state = vi.hoisted(() => ({
   files: new Map<string, string>(),
   resolveSource: vi.fn(),
   writeFile: vi.fn(),
+  download: vi.fn(),
+  normalize: vi.fn(),
+  transcribe: vi.fn(),
+  writeArticle: vi.fn(),
 }));
 vi.mock("node:fs/promises", async (original) => ({
   ...(await original<typeof import("node:fs/promises")>()),
   mkdir: vi.fn(),
-  rm: vi.fn(),
+  stat: vi.fn(async () => ({ size: 1024 })),
+  rename: vi.fn(),
+  rm: vi.fn().mockResolvedValue(undefined),
   writeFile: state.writeFile,
   readFile: vi.fn(async (file: string) => {
     const content = state.files.get(file);
@@ -29,6 +35,20 @@ vi.mock("./resolver.js", async (original) => ({
   ...(await original<typeof import("./resolver.js")>()),
   resolveSource: state.resolveSource,
 }));
+vi.mock("./youtube.js", async (original) => ({
+  ...(await original<typeof import("./youtube.js")>()),
+  downloadYouTubeAudio: state.download,
+}));
+vi.mock("./audio.js", () => ({
+  audioChunkSeconds: () => 600,
+  downloadMedia: state.download,
+  normalizeAudio: state.normalize,
+  splitAudio: vi.fn(async () => ["chunk.mp3"]),
+}));
+vi.mock("./openai.js", () => ({
+  transcribeChunks: state.transcribe,
+  writeArticle: state.writeArticle,
+}));
 vi.mock("../lib/logger.js", () => ({ jobLog: vi.fn(), jobError: vi.fn() }));
 const input = {
   sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -39,6 +59,19 @@ const input = {
 beforeEach(() => {
   vi.resetModules();
   state.files.clear();
+  state.writeArticle
+    .mockReset()
+    .mockResolvedValue({ title: "An article", sections: [] });
+  state.download.mockReset().mockResolvedValue(undefined);
+  state.normalize.mockReset().mockResolvedValue(undefined);
+  state.transcribe.mockReset().mockImplementation(
+    (_files, _language, _progress, _status, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      }),
+  );
   state.writeFile
     .mockReset()
     .mockImplementation(async (file: string, content: string) => {
@@ -63,7 +96,7 @@ afterEach(async () => {
   await jobs.shutdownJobs();
 });
 
-describe("processing reservations and serial queue (PR 17 and lost-video investigation)", () => {
+describe("processing reservations and concurrent queue", () => {
   it("reserves a canonical source before the first persistence completes", async () => {
     const jobs = await import("./jobs.js");
     let release = () => {};
@@ -99,7 +132,7 @@ describe("processing reservations and serial queue (PR 17 and lost-video investi
     ]);
   });
 
-  it("keeps accounts isolated while running only one source at a time, then advances after failure", async () => {
+  it("keeps accounts isolated while resolving sources concurrently and isolates failures", async () => {
     const jobs = await import("./jobs.js");
     let failFirst = (_error: Error) => {};
     state.resolveSource.mockImplementationOnce(
@@ -111,7 +144,7 @@ describe("processing reservations and serial queue (PR 17 and lost-video investi
     const first = await jobs.createJob("owner", input);
     const second = await jobs.createJob("other", input);
     await vi.waitFor(() =>
-      expect(state.resolveSource).toHaveBeenCalledTimes(1),
+      expect(state.resolveSource).toHaveBeenCalledTimes(2),
     );
 
     expect(jobs.listProcessingJobs("owner").map((job) => job.id)).toEqual([
@@ -134,7 +167,7 @@ describe("processing reservations and serial queue (PR 17 and lost-video investi
     const first = await jobs.createJob("owner", input);
     const second = await jobs.createJob("other", input);
     await vi.waitFor(() =>
-      expect(state.resolveSource).toHaveBeenCalledTimes(1),
+      expect(state.resolveSource).toHaveBeenCalledTimes(2),
     );
 
     await jobs.shutdownJobs();
@@ -143,14 +176,217 @@ describe("processing reservations and serial queue (PR 17 and lost-video investi
     const restarted = await import("./jobs.js");
     await restarted.resumeIncompleteJobs(["owner", "other"]);
     await vi.waitFor(() =>
-      expect(state.resolveSource).toHaveBeenCalledTimes(1),
+      expect(state.resolveSource).toHaveBeenCalledTimes(2),
     );
 
     expect(restarted.listProcessingJobs("owner").map((job) => job.id)).toEqual([
       first.id,
     ]);
     expect(restarted.listProcessingJobs("other")).toMatchObject([
-      { id: second.id, stage: "queued" },
+      { id: second.id, stage: "resolving" },
     ]);
   });
+});
+
+function resolveMetadata() {
+  state.resolveSource.mockImplementation(async (sourceUrl: string) => ({
+    sourceUrl,
+    sourceType: "youtube",
+    sourceName: "The Knowledge Project",
+    title: "How to make better decisions",
+    imageUrl: "https://example.com/cover.jpg",
+    mediaUrl: "",
+  }));
+}
+
+describe("independent metadata and media processing", () => {
+  it("fetches queued titles and artwork while three transcriptions are waiting", async () => {
+    resolveMetadata();
+    const jobs = await import("./jobs.js");
+    for (const username of ["one", "two", "three", "four", "five"]) {
+      await jobs.createJob(username, input);
+    }
+
+    await vi.waitFor(() => {
+      expect(state.resolveSource).toHaveBeenCalledTimes(5);
+      expect(state.transcribe).toHaveBeenCalledTimes(3);
+      expect(jobs.listProcessingJobs("five")[0]).toMatchObject({
+        stage: "queued",
+        title: "How to make better decisions",
+        sourceName: "The Knowledge Project",
+        imageUrl: "https://example.com/cover.jpg",
+      });
+    });
+    expect(state.download).toHaveBeenCalledTimes(3);
+
+    await jobs.shutdownJobs();
+    expect(state.download).toHaveBeenCalledTimes(3);
+    for (const username of ["one", "two", "three", "four", "five"]) {
+      expect(jobs.listProcessingJobs(username)[0]?.stage).toBe("queued");
+    }
+  });
+
+  it("advances waiting jobs when a transcription fails", async () => {
+    resolveMetadata();
+    let failTranscription = (_error: Error) => {};
+    state.transcribe.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failTranscription = reject;
+        }),
+    );
+    const jobs = await import("./jobs.js");
+    const first = await jobs.createJob("one", input);
+    for (const username of ["two", "three", "four"]) {
+      await jobs.createJob(username, input);
+    }
+    await vi.waitFor(() => expect(state.transcribe).toHaveBeenCalledTimes(3));
+
+    failTranscription(new Error("Transcription unavailable"));
+    await vi.waitFor(() => expect(state.transcribe).toHaveBeenCalledTimes(4));
+
+    expect((await jobs.getJob("one", first.id))?.stage).toBe("failed");
+    expect(jobs.listProcessingJobs("four")[0]?.stage).toBe("transcribing");
+  });
+
+  it("serializes media preparation and releases the slot after failure", async () => {
+    resolveMetadata();
+    let failNormalization = (_error: Error) => {};
+    state.normalize.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failNormalization = reject;
+        }),
+    );
+    const jobs = await import("./jobs.js");
+    const first = await jobs.createJob("one", input);
+    await jobs.createJob("two", input);
+    await vi.waitFor(() => expect(state.normalize).toHaveBeenCalledTimes(1));
+
+    expect(state.download).toHaveBeenCalledTimes(1);
+    expect(state.transcribe).not.toHaveBeenCalled();
+    failNormalization(new Error("FFmpeg failed"));
+    await vi.waitFor(() => expect(state.transcribe).toHaveBeenCalledTimes(1));
+
+    expect(state.download).toHaveBeenCalledTimes(2);
+    expect((await jobs.getJob("one", first.id))?.stage).toBe("failed");
+  });
+
+  it("limits metadata requests independently and cancels waiting lookups at shutdown", async () => {
+    const jobs = await import("./jobs.js");
+    for (const username of ["one", "two", "three", "four", "five"]) {
+      await jobs.createJob(username, input);
+    }
+    await vi.waitFor(() =>
+      expect(state.resolveSource).toHaveBeenCalledTimes(3),
+    );
+
+    await jobs.shutdownJobs();
+
+    expect(state.resolveSource).toHaveBeenCalledTimes(3);
+    expect(state.download).not.toHaveBeenCalled();
+  });
+});
+
+it("persists usage through failure and restart without duplicating attempt updates", async () => {
+  resolveMetadata();
+  const entry: ApiRequestUsage = {
+    id: "test-attempt",
+    operationId: "test-operation",
+    attempt: 1,
+    stage: "transcription",
+    requestedModel: "gpt-4o-transcribe-diarize",
+    requestedServiceTier: "default",
+    endpointRegion: "global",
+    startedAt: "2026-09-15T10:00:00Z",
+    status: "pending",
+    cost: { currency: "USD", amount: null },
+  };
+  state.transcribe.mockImplementationOnce(
+    async (_files, _language, onProgress, _status, _signal, recordUsage) => {
+      await recordUsage(entry);
+      onProgress(1, 2);
+      await recordUsage({
+        ...entry,
+        status: "succeeded",
+        audioSeconds: 30,
+        cost: { currency: "USD", amount: 0.003 },
+      });
+      await recordUsage({
+        ...entry,
+        id: "test-failed-attempt",
+        attempt: 2,
+        status: "failed",
+      });
+      throw new Error("Second chunk failed");
+    },
+  );
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+  await vi.waitFor(async () =>
+    expect((await jobs.getJob("owner", job.id))?.stage).toBe("failed"),
+  );
+  await jobs.shutdownJobs();
+
+  vi.resetModules();
+  const restarted = await import("./jobs.js");
+  await restarted.resumeIncompleteJobs(["owner"]);
+  const restored = await restarted.getJob("owner", job.id);
+
+  expect(restored?.apiUsage).toMatchObject({
+    coverage: "complete",
+    knownEstimatedCostUsd: 0.003,
+    unknownCostRequests: 1,
+  });
+  expect(restored?.apiUsage?.requests).toHaveLength(2);
+  expect(restored?.apiUsage?.requests[0]?.status).toBe("succeeded");
+  expect(restarted.listProcessingJobs("other")).toEqual([]);
+});
+
+it("keeps earlier charges when retrying article generation", async () => {
+  resolveMetadata();
+  state.transcribe.mockResolvedValue([
+    { id: "t-00001", start: 0, end: 1, speaker: "Alice", text: "Hello" },
+  ]);
+  let requests = 0;
+  state.writeArticle.mockImplementation(
+    async (_transcript, _metadata, _status, _signal, recordUsage) => {
+      requests += 1;
+      await recordUsage({
+        id: `article-attempt-${requests}`,
+        operationId: `operation-${requests}`,
+        attempt: 1,
+        stage: "article",
+        requestedModel: "gpt-5.6-terra",
+        requestedServiceTier: "auto",
+        endpointRegion: "global",
+        startedAt: "2026-09-15T10:00:00Z",
+        status: "succeeded",
+        cost: { currency: "USD", amount: 0.01 },
+      } satisfies ApiRequestUsage);
+      if (requests === 1) {
+        throw new Error("Generated article failed validation");
+      }
+      return { title: "An article", sections: [] };
+    },
+  );
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+  await vi.waitFor(async () =>
+    expect((await jobs.getJob("owner", job.id))?.stage).toBe("failed"),
+  );
+
+  await jobs.retryArticle("owner", job.id);
+  await vi.waitFor(async () =>
+    expect((await jobs.getJob("owner", job.id))?.stage).toBe("complete"),
+  );
+
+  expect((await jobs.getJob("owner", job.id))?.apiUsage).toMatchObject({
+    knownEstimatedCostUsd: 0.02,
+    unknownCostRequests: 0,
+  });
+  expect((await jobs.getJob("owner", job.id))?.apiUsage?.requests).toHaveLength(
+    2,
+  );
+  expect(state.transcribe).toHaveBeenCalledTimes(1);
 });

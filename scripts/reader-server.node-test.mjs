@@ -28,6 +28,13 @@ function fixture(id, shareToken, title) {
     createdAt: "2026-09-06T10:00:00Z",
     updatedAt: "2026-09-06T10:00:00Z",
     readAt: "2026-09-06T11:00:00Z",
+    apiUsage: {
+      trackingStartedAt: "2026-09-06T10:00:00Z",
+      coverage: "complete",
+      requests: [{ requestId: "private-billing-request" }],
+      knownEstimatedCostUsd: 0.42,
+      unknownCostRequests: 0,
+    },
     episode: {
       sourceType: "google-drive",
       sourceUrl: "https://example.com/recording",
@@ -208,6 +215,8 @@ test("each public token returns only its own article and minimal source fields",
     "Private transcript text",
     "Private speaker",
     "private-media",
+    "apiUsage",
+    "private-billing-request",
     "readAt",
     "username",
   ]) {
@@ -367,6 +376,8 @@ test("saving creates one independent personal copy with only public content and 
     "Private transcript text",
     "Private speaker",
     "private-media",
+    "apiUsage",
+    "private-billing-request",
   ]) {
     assert.equal(
       JSON.stringify(saved).includes(privateValue),
