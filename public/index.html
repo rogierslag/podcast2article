@@ -2,6 +2,15 @@
 <html lang="{{language}}">
   <head>
     <meta charset="utf-8" />
+    <script>
+      // Hash routes never reach the server. Select the loading shell before paint.
+      if (
+        location.pathname.replace(/\/$/, "") === "/articles" ||
+        new URLSearchParams(location.hash.slice(1)).has("job")
+      ) {
+        document.documentElement.setAttribute("data-loading-view", "");
+      }
+    </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=contain"
@@ -33,8 +42,8 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=sound-to-text-v2" />
-    <script src="/app.js?v=natural-reading-position-v1" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=initial-view-v1" />
+    <script src="/app.js?v=initial-view-v1" type="module"></script>
   </head>
   <body class="native-scroll">
     <div class="reading-chrome">
@@ -80,6 +89,9 @@
       </header>
 
       <main>
+        <section id="initial-loading" class="initial-loading" role="status">
+          <p data-i18n="page.loading">{{page.loading}}</p>
+        </section>
         <section id="landing" class="landing">
           <div class="landing-opening">
             <div class="eyebrow landing-kicker">
