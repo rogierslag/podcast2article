@@ -305,3 +305,20 @@ describe("saving shared articles", () => {
     expect(jobs.listReadyArticles("reader")).toHaveLength(1);
   });
 });
+
+it("creates distinct capability tokens per owner and reuses the persisted token after restart", async () => {
+  storeArticle("owner", { shareToken: undefined });
+  storeArticle("other", { shareToken: undefined });
+  const jobs = await import("./jobs.js");
+
+  const ownerToken = await jobs.createArticleShare("owner", articleId);
+  const otherToken = await jobs.createArticleShare("other", articleId);
+  vi.resetModules();
+  const restarted = await import("./jobs.js");
+  const persistedToken = await restarted.createArticleShare("owner", articleId);
+
+  expect(ownerToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  expect(otherToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  expect(otherToken).not.toBe(ownerToken);
+  expect(persistedToken).toBe(ownerToken);
+});

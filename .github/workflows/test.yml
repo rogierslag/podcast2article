@@ -33,6 +33,10 @@ jobs:
               node --check public/share.js
           - name: Tests
             command: npm test
+          - name: Media regression
+            command: npm run build && FFMPEG_BIN=/usr/bin/ffmpeg node scripts/media-smoke.mjs . /usr/bin/ffmpeg
+          - name: Browser regressions
+            command: npm run test:browser
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -48,7 +52,35 @@ jobs:
         run: npm install --global yarn@1.22.22
 
       - name: Install dependencies from lockfile
+        env:
+          # Offline tests do not invoke yt-dlp or need its latest release binary.
+          YOUTUBE_DL_SKIP_DOWNLOAD: "1"
         run: yarn install --frozen-lockfile --non-interactive
+
+      - name: Install test browsers and system libraries
+        if: matrix.name == 'Browser regressions'
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Install the Linux media test runtime
+        if: matrix.name == 'Media regression'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg
+          /usr/bin/ffmpeg -version
 
       - name: ${{ matrix.name }}
         run: ${{ matrix.command }}
+
+      - name: Summarize regressions and known bugs
+        if: ${{ !cancelled() && matrix.name == 'Browser regressions' && hashFiles('test-results/browser-results.json') != '' }}
+        run: node scripts/browser/report.mjs
+
+      - name: Upload browser report and failure traces
+        if: ${{ !cancelled() && matrix.name == 'Browser regressions' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-regressions
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

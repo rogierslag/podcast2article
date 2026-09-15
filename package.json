@@ -12,9 +12,10 @@
     "check:media": "node scripts/media-smoke.mjs .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint src public scripts eslint.config.js",
+    "lint": "eslint src public scripts eslint.config.js playwright.config.js",
     "lint:fix": "npm run lint -- --fix",
-    "check": "npm run format:check && npm run lint && npm run build && npm test"
+    "check": "npm run format:check && npm run lint && npm run build && npm test",
+    "test:browser": "npm run build && playwright test"
   },
   "engines": {
     "node": ">=24"
@@ -29,6 +30,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/express": "^5.0.6",
     "@types/node": "^26.4.1",
     "@types/pdfkit": "^0.17.6",

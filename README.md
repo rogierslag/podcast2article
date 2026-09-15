@@ -225,7 +225,7 @@ opname.
 
 GitHub Actions voert bij iedere pull request en push naar `main` automatisch
 de formatteringscontrole, ESLint, de TypeScript-build en alle tests uit. Deze
-controles draaien als vier onafhankelijke jobs, zodat een fout in één controle
+controles draaien als zes onafhankelijke jobs, zodat een fout in één controle
 de andere resultaten niet tegenhoudt. De buildjob controleert ook de syntaxis
 van de browsercode. De workflow kan handmatig worden
 gestart via **Actions → Tests → Run workflow**. Hij gebruikt de Node.js-versie
@@ -240,6 +240,33 @@ request annuleert de vorige run.
 ```bash
 npm test
 npm run check
+npx playwright install chromium webkit
+npm run test:browser
+npm run check:media
 ```
+
+De browserjob test desktop-Chromium en mobiele WebKit. Hij bewaart het HTML-rapport,
+screenshots en fouttraces gedurende 14 dagen als Actions-artifact. De mediajob
+verwerkt een synthetische opname met Ubuntu’s FFmpeg via een expliciete
+`FFMPEG_BIN`-instelling. Browser- en mediatests staan apart van `npm run check`,
+zodat bestaande productiechecks geen browsers hoeven te installeren.
+
+### Testbeperkingen
+
+- Bekende bugs draaien met Playwrights `test.fail` en worden apart vermeld in het
+  Actions-rapport. Een groene workflow betekent niet dat deze bugs zijn opgelost.
+  Zodra zo’n test slaagt, faalt de suite totdat de annotatie is verwijderd.
+- Mobiele WebKit vervangt geen fysieke iPhone. Native deelmenu’s, focuszoom,
+  statusbalktikken en Home Screen-modus vragen nog controle op een toestel.
+- Browsertests blokkeren externe verzoeken, gebruiken fallbackfonts en bootsen
+  sommige API-antwoorden na. Ze controleren geen pixels tegen eerdere screenshots.
+  Servertests controleren de echte API- en opslaggrenzen apart.
+- De mediajob controleert de conversieketen met Ubuntu’s FFmpeg, niet met het
+  exacte productie-executable of iedere codec. De download in
+  `deploy/ffmpeg-release.json` was bij controle onbereikbaar (HTTP 404); herstel
+  daarvan en verificatie van de productiebinary blijven apart nodig.
+- Offline tests verifiëren geen beschikbaarheid of kwaliteit van externe modellen.
+  Een groene workflow bevestigt ook geen productiedeployment; zie
+  [de operationele controles](docs/OPERATIONS.md).
 
 Bijdragen zijn welkom. Zie [LICENSE](./LICENSE) voor de MIT-licentie.
