@@ -12,3 +12,5 @@ data/work/
 .DS_Store
 npm-debug.log*
 data/deployment-status.json
+playwright-report/
+test-results/

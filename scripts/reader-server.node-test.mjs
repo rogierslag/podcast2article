@@ -395,3 +395,28 @@ test("saving creates one independent personal copy with only public content and 
   ).json();
   assert.ok(JSON.stringify(overview).includes(savedId));
 });
+
+test("owner permalink creation reuses the same capability and rejects another account (PR 3)", async () => {
+  const cookie = await loginAs("owner");
+  const otherCookie = await loginAs("other");
+  const otherId = "00000000-0000-4000-8000-000000000918";
+  const route = `${origin}/api/jobs/${otherId}/share`;
+
+  const first = await fetch(route, {
+    method: "POST",
+    headers: { Cookie: otherCookie },
+  });
+  const second = await fetch(route, {
+    method: "POST",
+    headers: { Cookie: otherCookie },
+  });
+  const unauthorized = await fetch(route, {
+    method: "POST",
+    headers: { Cookie: cookie },
+  });
+
+  assert.equal(first.status, 201);
+  assert.equal(second.status, 201);
+  assert.deepEqual(await first.json(), await second.json());
+  assert.equal(unauthorized.status, 404);
+});
