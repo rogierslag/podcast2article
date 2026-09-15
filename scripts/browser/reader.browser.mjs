@@ -50,6 +50,66 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const reader of ["owner", "shared"]) {
+  test(`${reader}: takeaway timestamps wrap between buttons without splitting times`, async ({
+    page,
+  }, testInfo) => {
+    const job = articleFixture();
+    job.transcript = Array.from({ length: 8 }, (_, index) => ({
+      ...job.transcript[0],
+      id: `t-${String(index + 1).padStart(5, "0")}`,
+      start: 3605 + index * 125,
+      end: 3610 + index * 125,
+    }));
+    job.article.takeaways = [
+      {
+        text: "Geef teams de tijd om ideeën uit te werken en maak bewust ruimte voor aandacht en samenwerking.",
+        sources: job.transcript.map((segment) => segment.id),
+      },
+    ];
+    if (reader === "owner") {
+      await owner(page, job);
+    } else {
+      await page.route(`**/api/shared/${token}`, (route) =>
+        route.fulfill({
+          json: {
+            episode: job.episode,
+            article: job.article,
+            sources: job.transcript.map(({ id, start }) => ({ id, start })),
+          },
+        }),
+      );
+      await shared(page);
+    }
+
+    const takeaways = page.locator(".takeaways");
+    await takeaways.scrollIntoViewIfNeeded();
+    await testInfo.attach(`${reader}-takeaways`, {
+      body: await takeaways.screenshot(),
+      contentType: "image/png",
+    });
+
+    for (const width of [390, 320, 1440]) {
+      await page.setViewportSize({ width, height: width < 800 ? 844 : 1000 });
+      await noOverflow(page, ".takeaways, .takeaways li, .takeaways .sources");
+      const buttons = takeaways.getByRole("button");
+      await expect(buttons).toHaveCount(8);
+      const lines = await buttons.evaluateAll((elements) =>
+        elements.map((button) => {
+          const range = document.createRange();
+          range.selectNodeContents(button);
+          return [...range.getClientRects()].filter((rect) => rect.width > 0)
+            .length;
+        }),
+      );
+      expect(lines).toEqual(Array(8).fill(1));
+      for (const button of await buttons.all()) {
+        await expect(button).toHaveAccessibleName(/\d+:\d+/);
+      }
+    }
+  });
+}
+
+for (const reader of ["owner", "shared"]) {
   test(`${reader}: long text and artwork-free headers fit narrow and desktop widths (PRs 22, 24, 26, 32)`, async ({
     page,
   }, testInfo) => {
