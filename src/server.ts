@@ -13,6 +13,11 @@ import {
 } from "./lib/i18n.js";
 import { translate } from "../public/i18n.js";
 import {
+  prefillDestination,
+  sourcePrefill,
+  sharedSourcePrefill,
+} from "../public/source-prefill.js";
+import {
   createUserAuth,
   expiredSessionCookie,
   readCookie,
@@ -258,6 +263,9 @@ app.get(
     "/favicon.svg",
     "/favicon-32.png",
     "/apple-touch-icon.png",
+    "/manifest.webmanifest",
+    "/icon-192.png",
+    "/icon-512.png",
   ],
   async (request, response) => {
     const contentTypes: Record<string, string> = {
@@ -265,6 +273,7 @@ app.get(
       ".css": "text/css",
       ".svg": "image/svg+xml",
       ".png": "image/png",
+      ".webmanifest": "application/manifest+json",
     };
     response.type(
       contentTypes[path.extname(request.path)] ?? "application/octet-stream",
@@ -275,23 +284,40 @@ app.get(
   },
 );
 
+// Incoming shares only prepare form data; authentication and submission stay unchanged.
+app.get("/share-target", (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  return response.redirect(
+    303,
+    prefillDestination(
+      sharedSourcePrefill(
+        request.query.url,
+        request.query.text,
+        request.query.title,
+      ),
+    ),
+  );
+});
+
 app.get("/login", (request, response) => {
   response.setHeader("Cache-Control", "no-store");
   if (authenticatedUser(request.headers.cookie)) {
-    return response.redirect(303, "/");
+    return response.redirect(303, prefillDestination(request.query.sourceUrl));
   }
   response.type("html");
   return response.send(
-    renderPage(response, loginTemplate).replace(
-      "<!-- GIT_SHA -->",
-      loginBuildMarkup(response),
-    ),
+    renderPage(response, loginTemplate)
+      .replace(
+        "<!-- SOURCE_PREFILL -->",
+        `<input type="hidden" name="sourceUrl" value="${htmlAttribute(sourcePrefill(request.query.sourceUrl))}">`,
+      )
+      .replace("<!-- GIT_SHA -->", loginBuildMarkup(response)),
   );
 });
 
 app.post("/login", (request, response) => {
   if (!auth.enabled) {
-    return response.redirect(303, "/");
+    return response.redirect(303, prefillDestination(request.body?.sourceUrl));
   }
   const key = request.ip ?? request.socket.remoteAddress ?? "unknown";
   const now = Date.now();
@@ -327,11 +353,15 @@ app.post("/login", (request, response) => {
       blockedUntil:
         failures >= maximumLoginFailures ? Date.now() + loginBlockMs : 0,
     });
-    return response.redirect(303, "/login?error=1");
+    const destination = prefillDestination(request.body?.sourceUrl, "/login");
+    return response.redirect(
+      303,
+      `${destination}${destination.includes("?") ? "&" : "?"}error=1`,
+    );
   }
   loginAttempts.delete(key);
   response.setHeader("Set-Cookie", sessionCookie(token, request.secure));
-  return response.redirect(303, "/");
+  return response.redirect(303, prefillDestination(request.body?.sourceUrl));
 });
 
 app.use((request, response, next) => {
@@ -347,7 +377,13 @@ app.use((request, response, next) => {
     });
   }
   return request.method === "GET"
-    ? response.redirect(303, "/login")
+    ? response.redirect(
+        303,
+        prefillDestination(
+          request.path === "/" ? request.query.sourceUrl : undefined,
+          "/login",
+        ),
+      )
     : response.status(401).send(localizeError(response, "error.loginRequired"));
 });
 
@@ -402,6 +438,12 @@ app.post("/api/saved-shares/:token", async (request, response) => {
 });
 
 app.get(["/", "/index.html", "/articles"], sendIndex);
+app.get("/shortcuts/Add%20to%20Reads.shortcut", (_request, response) => {
+  response.type("application/x-apple-shortcut");
+  return response.download("Add to Reads.shortcut", "Add to Reads.shortcut", {
+    root: path.join(publicDirectory, "shortcuts"),
+  });
+});
 app.use((request, response, next) => {
   // HTML files are templates, never serve their untranslated placeholders as static assets.
   if (request.path.endsWith(".html")) {
