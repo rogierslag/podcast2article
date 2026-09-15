@@ -969,8 +969,8 @@ export const messages = {
     en: "Share link copied.",
   },
   "share.message": {
-    nl: "Lees “{title}” op Podcast2Article: {url}",
-    en: "Read “{title}” on Podcast2Article: {url}",
+    nl: "Lees “{title}” op Podcast2Article",
+    en: "Read “{title}” on Podcast2Article",
   },
   "article.readAction": {
     nl: "Lees",
