@@ -2,6 +2,7 @@ import { formatArticleWordRange } from "./article-length.js";
 
 // Shared by the browser and server. Article and transcript content is never translated here.
 export const messages = {
+  "page.loading": { nl: "Pagina laden…", en: "Loading page…" },
   "shared.save": { nl: "Bewaar in mijn overzicht", en: "Save to my overview" },
   "shared.saving": { nl: "Opslaan…", en: "Saving…" },
   "shared.saved": {

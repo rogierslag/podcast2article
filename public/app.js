@@ -36,6 +36,11 @@ const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const articleReadingProgress = $("#article-reading-progress");
 const form = $("#job-form");
+
+function finishInitialLoad() {
+  document.documentElement.removeAttribute("data-loading-view");
+}
+
 let currentJob;
 let articlesState = [];
 let processingState = [];
@@ -452,6 +457,7 @@ function showProgress(job) {
   if (job.episode) {
     $("#progress-title").textContent = job.episode.title;
   }
+  finishInitialLoad();
 }
 
 async function poll(id, version = ++routeVersion) {
@@ -480,6 +486,7 @@ async function poll(id, version = ++routeVersion) {
     progressView.classList.add("hidden");
     landing.classList.remove("hidden");
     $("#form-error").textContent = errorText(error);
+    finishInitialLoad();
   }
 }
 
@@ -1240,6 +1247,7 @@ async function refreshDeploymentAlert() {
 }
 
 async function showArticles(showLoading = true) {
+  const version = routeVersion;
   void refreshDeploymentAlert();
   landing.classList.add("hidden");
   progressView.classList.add("hidden");
@@ -1261,18 +1269,30 @@ async function showArticles(showLoading = true) {
     if (!articlesResponse.ok || !processingResponse.ok) {
       throw new LocalizedError(t("error.overviewLoad"));
     }
-    [articlesState, processingState] = await Promise.all([
+    const [articles, processing] = await Promise.all([
       articlesResponse.json(),
       processingResponse.json(),
     ]);
+    if (version !== routeVersion) {
+      return;
+    }
+    articlesState = articles;
+    processingState = processing;
     renderArticlesOverview();
     scheduleOverviewRefresh();
   } catch (error) {
+    if (version !== routeVersion) {
+      return;
+    }
     if (showLoading) {
       $("#articles-content").innerHTML = "";
       $("#articles-count").textContent = "";
     }
     $("#articles-error").textContent = errorText(error);
+  } finally {
+    if (version === routeVersion) {
+      finishInitialLoad();
+    }
   }
 }
 
@@ -1324,6 +1344,7 @@ function showArticleRoute() {
   articlesView.classList.add("hidden");
   articleReadingProgress.classList.add("hidden");
   landing.classList.remove("hidden");
+  finishInitialLoad();
 }
 
 window.addEventListener("hashchange", showArticleRoute);

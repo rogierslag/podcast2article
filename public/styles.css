@@ -17,6 +17,33 @@ body {
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
 }
+.initial-loading {
+  display: none;
+  min-height: calc(100svh - 76px - env(safe-area-inset-top));
+  padding: clamp(42px, 6vw, 88px) max(8vw, env(safe-area-inset-right)) 42px
+    max(8vw, env(safe-area-inset-left));
+  color: var(--muted);
+  font: 500 12px var(--mono);
+}
+html[data-loading-view] main > section:not(#initial-loading) {
+  display: none;
+}
+html[data-loading-view] .initial-loading {
+  display: block;
+}
+.initial-loading p {
+  margin: 0;
+  /* Fast responses need no loading message; this is a delay, not a fade. */
+  animation: initial-loading-reveal 0s 250ms both;
+}
+@keyframes initial-loading-reveal {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
+}
 body.scroll-shell {
   height: 100%;
   overflow: hidden;
