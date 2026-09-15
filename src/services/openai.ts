@@ -1,5 +1,7 @@
 import { createReadStream } from "node:fs";
 import OpenAI from "openai";
+import { endpointRegion, trackedRequest } from "./api-usage.js";
+import type { UsageRecorder } from "./api-usage.js";
 import { formatArticleWordRange } from "../../public/article-length.js";
 import { audioChunkSeconds } from "./audio.js";
 import type { Article, TranscriptSegment } from "../types.js";
@@ -52,6 +54,7 @@ export async function transcribeChunks(
     data: Record<string, string | number>,
   ) => void = () => undefined,
   signal?: AbortSignal,
+  recordUsage?: UsageRecorder,
 ): Promise<TranscriptSegment[]> {
   const openai = client();
   const all: TranscriptSegment[] = [];
@@ -76,16 +79,31 @@ export async function transcribeChunks(
     heartbeat.unref();
     let response: { segments?: DiarizedSegment[]; text?: string };
     try {
-      response = (await openai.audio.transcriptions.create(
+      const model =
+        process.env.TRANSCRIPTION_MODEL ?? "gpt-4o-transcribe-diarize";
+      response = await trackedRequest(
         {
-          file: createReadStream(files[index]!),
-          model: process.env.TRANSCRIPTION_MODEL ?? "gpt-4o-transcribe-diarize",
-          response_format: "diarized_json",
-          chunking_strategy: "auto",
-          language: language === "auto" ? undefined : language,
-        } as never,
-        { timeout: timeoutMs, signal },
-      )) as unknown as { segments?: DiarizedSegment[]; text?: string };
+          stage: "transcription",
+          model,
+          region: endpointRegion(openai.baseURL),
+          chunkNumber,
+          signal,
+          record: recordUsage,
+        },
+        () =>
+          openai.audio.transcriptions
+            .create(
+              {
+                file: createReadStream(files[index]!),
+                model,
+                response_format: "diarized_json",
+                chunking_strategy: "auto",
+                language: language === "auto" ? undefined : language,
+              } as never,
+              { timeout: timeoutMs, signal, maxRetries: 0 },
+            )
+            .withResponse(),
+      );
     } finally {
       clearInterval(heartbeat);
     }
@@ -326,6 +344,7 @@ export async function writeArticle(
     data: Record<string, string | number>,
   ) => void = () => undefined,
   signal?: AbortSignal,
+  recordUsage?: UsageRecorder,
 ): Promise<Article> {
   signal?.throwIfAborted();
   const openai = client();
@@ -351,24 +370,37 @@ export async function writeArticle(
   heartbeat.unref();
   let response;
   try {
-    response = await openai.responses.create(
+    const model = process.env.ARTICLE_MODEL ?? "gpt-5.6-terra";
+    response = await trackedRequest(
       {
-        model: process.env.ARTICLE_MODEL ?? "gpt-5.6-terra",
-        instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
+        stage: "article",
+        model,
+        region: endpointRegion(openai.baseURL),
+        signal,
+        record: recordUsage,
+      },
+      () =>
+        openai.responses
+          .create(
+            {
+              model,
+              instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
 Behoud de herkenbare stijl van de opname: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
 Gebruik verspreid door de secties enkele quote-blokken voor letterlijke, op zichzelf staande en memorabele uitspraken, maar alleen als het transcript zulke uitspraken bevat. Zet dan kind op "quote" en kopieer de gesproken woorden exact uit de gekoppelde, aaneengesloten bronfragmenten; laat omringende aanhalingstekens weg. Gebruik anders kind "paragraph". Forceer geen citaten en gebruik quote-blokken niet voor parafrases.\n
 Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea direct ondersteunen. Kies de nauwkeurigste fragmenten. Vermijd meta-commentaar zoals 'in de podcast' of 'in de opname'. Geef in styleNote in één korte zin aan welke stijleigenschappen je hebt behouden. Schrijf circa ${targetWords} woorden.`,
-        input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nTaalinstructie: ${articleLanguageInstruction(metadata.language)}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
-        text: {
-          format: {
-            type: "json_schema",
-            name: "source_linked_article",
-            strict: true,
-            schema: articleSchemaFor(validIds),
-          },
-        },
-      },
-      { timeout: timeoutMs, signal },
+              input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nTaalinstructie: ${articleLanguageInstruction(metadata.language)}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
+              text: {
+                format: {
+                  type: "json_schema",
+                  name: "source_linked_article",
+                  strict: true,
+                  schema: articleSchemaFor(validIds),
+                },
+              },
+            },
+            { timeout: timeoutMs, signal, maxRetries: 0 },
+          )
+          .withResponse(),
     );
   } finally {
     clearInterval(heartbeat);

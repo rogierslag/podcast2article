@@ -134,9 +134,17 @@ all job, article, transcript, PDF, and audio access is scoped to that user.
 `src/services/jobs.ts` owns job lifecycle, persistence, recovery, and
 concurrency.
 
-Only one full job or article-only retry runs at a time. Additional work is kept
-in an in-memory FIFO queue. This protects the one-vCPU, one-GB VPS from
-concurrent FFmpeg and Node workloads.
+Metadata resolution has three independent FIFO slots, so queued jobs acquire
+recognizable titles and artwork without waiting for audio processing. Resolved
+jobs wait in `queued` with their metadata persisted.
+
+Full jobs and article-only retries share three processing slots. Downloading,
+normalization, and splitting share one media slot because downloaders can also
+invoke FFmpeg. That slot is released before transcription: remote transcription
+and article requests can overlap across jobs without concurrent media processing.
+Chunks within each job are still transcribed sequentially. Up to three jobs can
+retain temporary audio at once, so disk use can exceed the former serial queue.
+Slot waits are abortable and slots are released on both success and failure.
 
 The persisted job record is updated at important boundaries. Job files are
 written as formatted JSON under
@@ -147,7 +155,7 @@ On startup:
 1. every stored job is loaded into memory;
 2. completed and failed jobs remain unchanged;
 3. incomplete jobs are reset to `queued`;
-4. resumable jobs enter the serial queue;
+4. resumable jobs enter the processing pipeline;
 5. the active processing step starts again from a safe boundary.
 
 On shutdown:
@@ -273,6 +281,31 @@ JSON persistence is simple and inspectable, but it does not provide database
 transactions, multi-process coordination, querying, or horizontal scaling.
 The architecture assumes exactly one application process.
 
+### API usage accounting
+
+Each new job has an `apiUsage` ledger. The OpenAI boundary persists a pending
+attempt before sending and its usage immediately after receiving a response,
+before article parsing and validation. Each automatic retry is a separate attempt
+under the same operation ID; SDK retries are disabled to avoid invisible attempts.
+The wrapper retains the existing maximum of two retries for transient failures,
+honors retry headers, and supports shutdown cancellation.
+
+The ledger stores numeric usage counters, reported audio duration, requested and
+actual model/tier, request IDs, timestamps, and HTTP outcomes. It excludes prompts,
+response text, credentials, and error bodies. Job writes are serialized to prevent
+progress updates from overwriting accounting records. Article retries and restart
+recovery preserve the ledger. A hard stop leaves pending attempts with unknown cost.
+
+Known USD estimates are summed separately from unknown-cost attempts. Price snapshots
+cover the two default models and are based on the [OpenAI pricing page](https://developers.openai.com/api/docs/pricing)
+(2026-09-15). Diarization uses the published per-minute estimate applied to reported
+seconds. Terra uses reported tokens, cache reads/writes, actual service tier, the
+[272K context boundary](https://developers.openai.com/api/docs/models/gpt-5.6-terra),
+and regional uplift. These are estimates, excluding infrastructure and invoice-level
+adjustments. Unsupported models, custom endpoints, and missing usage remain unknown.
+Legacy jobs have unknown history; tracking initiated later is marked partial.
+Public payloads and saved shared copies never include the source owner's ledger.
+
 ## 4. Processing lifecycle
 
 ```text
@@ -292,12 +325,12 @@ Detailed flow:
 
 1. Validate source URL, language, and requested article length.
 2. Persist a new queued job with a UUID.
-3. Wait for the serial queue.
-4. Resolve the public source and metadata.
+3. Resolve the public source in a metadata slot and persist its title and artwork.
+4. Wait for a processing slot and the media slot.
 5. Enforce the source-specific download limit.
 6. Download the source to the temporary work directory.
 7. Normalize once to compact playback MP3.
-8. Split by stream copy.
+8. Split by stream copy and release the media slot.
 9. Transcribe each chunk and merge timestamped segments.
 10. Move normalized audio to persistent media storage.
 11. Generate the source-grounded article.
@@ -441,10 +474,11 @@ pressure.
 One FFmpeg encode creates the retained MP3. Transcript chunking then copies the
 encoded stream without another CPU-heavy pass.
 
-### Serial queue
+### Bounded concurrency
 
-One active job trades throughput for predictable memory and CPU consumption on
-the V1 server.
+Three processing slots overlap remote API waits. One media slot keeps downloads
+and FFmpeg serial on the V1 server. Independent metadata slots let the queue
+show titles and artwork before media processing begins.
 
 ### Immutable releases and external mutable data
 

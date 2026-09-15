@@ -57,6 +57,53 @@ export interface ArticleReadingPosition {
   updatedAt: string;
 }
 
+export interface ApiUsageMetrics {
+  [key: string]: number | ApiUsageMetrics;
+}
+
+export interface ApiCostEstimate {
+  currency: "USD";
+  amount: number | null;
+  reason?: string;
+  basis?: string;
+  pricingDate?: string;
+  pricingSource?: string;
+  rates?: Record<string, number>;
+}
+
+export interface ApiRequestUsage {
+  id: string;
+  operationId: string;
+  attempt: number;
+  stage: "transcription" | "article";
+  chunkNumber?: number;
+  requestedModel: string;
+  actualModel?: string;
+  requestedServiceTier: string;
+  actualServiceTier?: string;
+  endpointRegion: "global" | "eu" | "us" | "custom";
+  startedAt: string;
+  finishedAt?: string;
+  elapsedMs?: number;
+  status: "pending" | "succeeded" | "failed" | "aborted";
+  responseStatus?: string;
+  httpStatus?: number;
+  requestId?: string;
+  errorCode?: string;
+  usage?: ApiUsageMetrics;
+  audioSeconds?: number;
+  cost: ApiCostEstimate;
+}
+
+export interface JobApiUsage {
+  trackingStartedAt: string;
+  coverage: "complete" | "partial";
+  requests: ApiRequestUsage[];
+  /** Sum of known estimates only; never interpret as an invoice total. */
+  knownEstimatedCostUsd: number;
+  unknownCostRequests: number;
+}
+
 export interface Job {
   id: string;
   sourceUrl: string;
@@ -82,6 +129,7 @@ export interface Job {
   transcript?: TranscriptSegment[];
   article?: Article;
   error?: string;
+  apiUsage?: JobApiUsage;
 }
 
 export interface ArticleSummary {

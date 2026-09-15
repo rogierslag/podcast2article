@@ -123,9 +123,35 @@ Jobs worden per gebruiker als JSON opgeslagen in
 transcriptiechunks worden verwijderd. Gebruikers kunnen uitsluitend hun eigen
 jobs, artikelen, transcripties en audio benaderen.
 Onvoltooide jobs worden na een serverherstart automatisch opnieuw gestart met
-hetzelfde job-ID. Jobs worden bewust één voor één verwerkt om piekbelasting op
-kleine servers te beperken. De actieve verwerkingsstap begint daarbij opnieuw,
+hetzelfde job-ID. Maximaal drie jobs worden tegelijk verwerkt. Downloads en
+FFmpeg blijven één voor één draaien; transcriptie en artikelgeneratie kunnen
+overlappen met andere jobs. Broninformatie wordt apart opgehaald (maximaal drie
+verzoeken tegelijk), zodat titels en afbeeldingen al in de wachtrij verschijnen.
+De actieve verwerkingsstap begint na een herstart opnieuw,
 zodat er nooit stilzwijgend een job in een oude status blijft hangen.
+
+Elke nieuwe job bewaart API-gebruik in `apiUsage` in hetzelfde JSON-bestand.
+Per transcriptiechunk en artikelverzoek worden model, aangevraagde en gemelde
+service tier, request-ID, tijdsduur, gebruikscijfers en pogingen opgeslagen.
+Automatische retries krijgen elk een eigen record. Ook bij afgekeurde
+artikelinhoud blijft het gebruik van het geslaagde API-verzoek bewaard.
+
+`knownEstimatedCostUsd` telt de bekende USD-schattingen op;
+`unknownCostRequests` telt pogingen waarvan de kosten onbekend zijn.
+Een ontbrekend bedrag is `null`, geen nul. De schattingen gebruiken opgeslagen
+prijzen van 15 september 2026: voor `gpt-4o-transcribe-diarize` de gemelde
+audioduur, voor `gpt-5.6-terra` de tokens, cacheverdeling, contextlengte, gemelde
+service tier en eventuele regionale toeslag. Andere modellen en aangepaste
+API-endpoints bewaren wel gebruik, maar krijgen geen geschatte prijs.
+Prijzen staan in `src/services/api-usage.ts`; elke schatting bewaart de gebruikte
+prijzen en bron zodat oude bedragen niet veranderen bij een prijsupdate.
+
+Dit zijn API-kostenschattingen, geen factuurbedragen. Hosting, downloads en
+FFmpeg-kosten zijn niet inbegrepen. Oude jobs worden niet achteraf als gratis
+beschouwd: ontbrekende `apiUsage` betekent onbekend; bij een nieuwe poging op
+zo'n job staat `coverage` op `partial`. Na een harde stop kan een poging
+`pending` blijven, met onbekende kosten. Gebruiksgegevens zijn uitsluitend
+beschikbaar bij de eigen job, niet via publieke links of opgeslagen kopieën.
 
 Bij `SIGINT` of `SIGTERM` stopt de server met het aannemen van verzoeken en
 annuleert hij alle actieve OpenAI HTTP-requests via `AbortSignal`. Onderbroken
