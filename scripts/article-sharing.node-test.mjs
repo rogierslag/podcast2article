@@ -47,7 +47,7 @@ function setup({
   return { ...context, buttons, copied, statuses, url };
 }
 for (const language of ["nl", "en"]) {
-  test(`iOS native share includes the capability URL in text as well as url (${language}, PR 7)`, async () => {
+  test(`native share includes the capability URL exactly once (${language}, PR 7)`, async () => {
     let payload;
     const state = setup({
       language,
@@ -59,7 +59,7 @@ for (const language of ["nl", "en"]) {
     await state.shareArticle();
 
     assert.equal(payload.url, state.url);
-    assert.ok(payload.text.includes(state.url));
+    assert.equal(payload.text.includes(state.url), false);
     assert.ok(payload.text.includes(state.currentJob.article.title));
     assert.equal(payload.title, state.currentJob.article.title);
     assert.deepEqual(state.copied, []);
@@ -115,3 +115,56 @@ for (const options of [{ ok: false }, { clipboardError: "Copy failed" }]) {
     assert.ok(state.buttons.every((button) => !button.disabled));
   });
 }
+
+function statusSetup() {
+  const statuses = Array.from({ length: 2 }, () => ({
+    textContent: "",
+    classList: { toggle() {} },
+  }));
+  const timers = new Map();
+  let nextTimer = 0;
+  const context = {
+    $: (selector) => statuses[selector === "#article-action-status" ? 0 : 1],
+    setTimeout: (callback, delay) => {
+      timers.set(++nextTimer, { callback, delay });
+      return nextTimer;
+    },
+    clearTimeout: (id) => timers.delete(id),
+  };
+  runInNewContext(
+    app.slice(
+      app.indexOf("let articleActionStatusTimer;"),
+      app.indexOf("async function exportToPdf()"),
+    ) + "; this.setStatus = setArticleActionStatus;",
+    context,
+  );
+  return { statuses, timers, setStatus: context.setStatus };
+}
+
+test("success feedback clears both article statuses after four seconds", () => {
+  const state = statusSetup();
+
+  state.setStatus("Copied", true);
+
+  assert.ok(state.statuses.every((status) => status.textContent === "Copied"));
+  const timer = [...state.timers.values()][0];
+  assert.equal(timer.delay, 4000);
+  timer.callback();
+  assert.ok(state.statuses.every((status) => status.textContent === ""));
+});
+
+test("new feedback replaces the timer and errors remain readable", () => {
+  const state = statusSetup();
+
+  state.setStatus("Copied", true);
+  state.setStatus("Downloaded", true);
+
+  assert.equal(state.timers.size, 1);
+  state.setStatus("Failed");
+  assert.equal(state.timers.size, 0);
+  assert.ok(state.statuses.every((status) => status.textContent === "Failed"));
+
+  state.setStatus("Copied", true);
+  state.setStatus("");
+  assert.equal(state.timers.size, 0);
+});

@@ -455,3 +455,37 @@ test("known bug: navigation must fit at 320px without webfonts", async ({
   );
   await noOverflow(page);
 });
+
+test("share feedback disappears after four seconds and restarts for a new action", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "share", { value: undefined });
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: async () => {} },
+    });
+  });
+  await owner(page);
+  await page.clock.install();
+  const button = page.locator("[data-share-article]").first();
+  const statuses = page.locator(
+    "#article-action-status, #article-read-footer-status",
+  );
+
+  await button.click();
+
+  await expect(statuses).toHaveText([
+    "Deelbare link gekopieerd.",
+    "Deelbare link gekopieerd.",
+  ]);
+  await page.clock.fastForward(3000);
+  await button.click();
+  await expect(button).toBeEnabled();
+  await page.clock.fastForward(1000);
+  await expect(statuses).toHaveText([
+    "Deelbare link gekopieerd.",
+    "Deelbare link gekopieerd.",
+  ]);
+  await page.clock.fastForward(3000);
+  await expect(statuses).toHaveText(["", ""]);
+});

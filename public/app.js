@@ -737,13 +737,21 @@ function seek(seconds) {
   audio.currentTime = seconds;
   audio.play().catch(() => undefined);
 }
+let articleActionStatusTimer;
 function setArticleActionStatus(message, isSuccess = false) {
+  clearTimeout(articleActionStatusTimer);
   [$("#article-action-status"), $("#article-read-footer-status")].forEach(
     (status) => {
       status.classList.toggle("is-success", isSuccess);
       status.textContent = message;
     },
   );
+  if (message && isSuccess) {
+    articleActionStatusTimer = setTimeout(
+      () => setArticleActionStatus(""),
+      4000,
+    );
+  }
 }
 async function exportToPdf() {
   if (!currentJob) {
@@ -835,7 +843,6 @@ async function shareArticle() {
           title: currentJob.article.title,
           text: t("share.message", {
             title: currentJob.article.title,
-            url: body.url,
           }),
           url: body.url,
         });
