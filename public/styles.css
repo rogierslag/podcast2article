@@ -881,6 +881,8 @@ footer {
   }
   .url-row input {
     width: calc(100% - 40px);
+    /* Keep iOS from zooming the page when the source field receives focus. */
+    font-size: 16px;
   }
   .url-row button {
     width: 100%;
