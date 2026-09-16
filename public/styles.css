@@ -199,6 +199,51 @@ body.scroll-shell {
   text-transform: uppercase;
   margin: 0 0 11px;
 }
+.source-prefill-note,
+.shortcut-install,
+.android-install {
+  font: 400 13px/1.6 var(--sans);
+  color: var(--muted);
+}
+.shortcut-install,
+.android-install {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 14px;
+}
+.shortcut-install summary,
+.android-install summary {
+  color: var(--ink);
+  cursor: pointer;
+  width: fit-content;
+}
+.shortcut-install a,
+.android-install a {
+  color: var(--accent-text);
+  text-underline-offset: 3px;
+}
+.shortcut-install ol,
+.android-install ol {
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+.shortcut-install li + li,
+.android-install li + li {
+  margin-top: 8px;
+}
+.shortcut-install summary:focus-visible,
+.android-install summary:focus-visible,
+.shortcut-install a:focus-visible,
+.android-install a:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 4px;
+}
+@media print {
+  .shortcut-install,
+  .android-install {
+    display: none;
+  }
+}
 .url-row {
   display: flex;
   align-items: center;
@@ -2095,4 +2140,19 @@ body:has(.source-preview[open]) .page-scroll {
 input::placeholder {
   color: var(--muted);
   opacity: 1;
+}
+
+.android-install-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.android-install-button:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 4px;
 }

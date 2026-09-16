@@ -35,6 +35,8 @@
     <title data-i18n="page.title">{{page.title}}</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script src="/android-install.js" defer></script>
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -225,6 +227,50 @@
               >
             </div>
             <p id="form-error" class="error" role="alert"></p>
+            <p
+              id="source-prefill-note"
+              class="source-prefill-note hidden"
+              role="status"
+              data-i18n="shortcut.prefilled"
+            >
+              {{shortcut.prefilled}}
+            </p>
+            <details class="android-install" hidden>
+              <summary data-i18n="android.title">{{android.title}}</summary>
+              <p data-i18n="android.description">{{android.description}}</p>
+              <button
+                type="button"
+                class="android-install-button"
+                hidden
+                data-i18n="android.install"
+              >
+                {{android.install}}
+              </button>
+              <ol>
+                <li data-i18n="android.stepInstall">{{android.stepInstall}}</li>
+                <li data-i18n="android.stepShare">{{android.stepShare}}</li>
+                <li data-i18n="android.stepConfirm">{{android.stepConfirm}}</li>
+              </ol>
+            </details>
+            <details class="shortcut-install" hidden>
+              <summary data-i18n="shortcut.title">{{shortcut.title}}</summary>
+              <p data-i18n="shortcut.description">{{shortcut.description}}</p>
+              <a
+                href="/shortcuts/Add%20to%20Reads.shortcut"
+                download="Add to Reads.shortcut"
+                data-i18n="shortcut.install"
+                >{{shortcut.install}}</a
+              >
+              <ol>
+                <li data-i18n="shortcut.stepInstall">
+                  {{shortcut.stepInstall}}
+                </li>
+                <li data-i18n="shortcut.stepShare">{{shortcut.stepShare}}</li>
+                <li data-i18n="shortcut.stepConfirm">
+                  {{shortcut.stepConfirm}}
+                </li>
+              </ol>
+            </details>
           </form>
 
           <div class="promise-grid">

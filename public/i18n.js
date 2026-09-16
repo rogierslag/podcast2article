@@ -3,6 +3,58 @@ import { formatArticleWordRange } from "./article-length.js";
 // Shared by the browser and server. Article and transcript content is never translated here.
 export const messages = {
   "page.loading": { nl: "Pagina laden…", en: "Loading page…" },
+  "android.title": {
+    nl: "Voeg toe vanaf Android",
+    en: "Add from Android",
+  },
+  "android.description": {
+    nl: "Installeer Reads via Chrome om links rechtstreeks vanuit Spotify te delen.",
+    en: "Install Reads through Chrome to share links directly from Spotify.",
+  },
+  "android.install": {
+    nl: "Installeer Reads →",
+    en: "Install Reads →",
+  },
+  "android.stepInstall": {
+    nl: "Open Reads in Chrome. Kies in het menu ‘Toevoegen aan startscherm’ en daarna ‘Installeren’ als de installatieknop hier ontbreekt.",
+    en: "Open Reads in Chrome. If no install button appears here, choose ‘Add to Home screen’ and then ‘Install’ from Chrome’s menu.",
+  },
+  "android.stepConfirm": {
+    nl: "Reads opent met de link ingevuld. Log zo nodig in, controleer je instellingen en maak het artikel.",
+    en: "Reads opens with the link filled in. Sign in if needed, check your settings and create the article.",
+  },
+  "android.stepShare": {
+    nl: "Open een aflevering in Spotify, tik op ‘Delen’ en kies Reads. Je vindt Reads eventueel onder ‘Meer’.",
+    en: "Open an episode in Spotify, tap ‘Share’ and choose Reads. You may find Reads under ‘More’.",
+  },
+  "shortcut.prefilled": {
+    nl: "Je link staat klaar. Controleer de instellingen en kies ‘Maak artikel’ om te beginnen.",
+    en: "Your link is ready. Check the settings and choose ‘Create article’ to start.",
+  },
+  "shortcut.title": {
+    nl: "Voeg toe vanaf je iPhone of iPad",
+    en: "Add from your iPhone or iPad",
+  },
+  "shortcut.description": {
+    nl: "Deel een aflevering vanuit Spotify naar Reads, zonder de link te kopiëren. Installeer eenmalig de opdracht ‘Add to Reads’.",
+    en: "Share an episode from Spotify to Reads without copying the link. Install the ‘Add to Reads’ shortcut once.",
+  },
+  "shortcut.install": {
+    nl: "Download Add to Reads →",
+    en: "Download Add to Reads →",
+  },
+  "shortcut.stepInstall": {
+    nl: "Open het gedownloade bestand in Opdrachten en tik op ‘Voeg opdracht toe’.",
+    en: "Open the downloaded file in Shortcuts and tap ‘Add Shortcut’.",
+  },
+  "shortcut.stepShare": {
+    nl: "Kies bij een Spotify-aflevering ‘Delen’ → ‘Meer’. Scrol naar ‘Add to Reads’.",
+    en: "On a Spotify episode, choose ‘Share’ → ‘More’. Scroll to ‘Add to Reads’.",
+  },
+  "shortcut.stepConfirm": {
+    nl: "Reads opent in je browser met de link ingevuld. Log zo nodig in, controleer je instellingen en maak het artikel.",
+    en: "Reads opens in your browser with the link filled in. Sign in if needed, check your settings and create the article.",
+  },
   "shared.save": { nl: "Bewaar in mijn overzicht", en: "Save to my overview" },
   "shared.saving": { nl: "Opslaan…", en: "Saving…" },
   "shared.saved": {

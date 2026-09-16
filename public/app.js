@@ -9,6 +9,8 @@ import {
 
 import { createSourcePreview } from "./source-preview.js";
 import { articleHash, readArticleLocation } from "./article-location.js";
+import { sourcePrefill, prefillDestination } from "./source-prefill.js";
+import { supportsIOSShortcutInstall } from "./ios-shortcut.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -24,7 +26,12 @@ const browserFetch = window.fetch.bind(window);
 window.fetch = async (...arguments_) => {
   const response = await browserFetch(...arguments_);
   if (response.status === 401) {
-    location.assign("/login");
+    location.assign(
+      prefillDestination(
+        document.querySelector("#source-url")?.value,
+        "/login",
+      ),
+    );
     throw new LocalizedError(t("error.sessionExpired"));
   }
   return response;
@@ -1348,4 +1355,12 @@ function showArticleRoute() {
 }
 
 window.addEventListener("hashchange", showArticleRoute);
+$(".shortcut-install").hidden = !supportsIOSShortcutInstall(navigator);
+const incomingSourceUrl = sourcePrefill(
+  new URLSearchParams(location.search).get("sourceUrl"),
+);
+if (incomingSourceUrl && location.pathname === "/") {
+  $("#source-url").value = incomingSourceUrl;
+  $("#source-prefill-note").classList.remove("hidden");
+}
 showArticleRoute();

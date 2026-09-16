@@ -15,6 +15,72 @@ let directory;
 let child;
 let origin;
 
+test("incoming links survive authentication and failed login without creating jobs", async () => {
+  const sourceUrl =
+    'https://open.spotify.com/episode/example?si=a&title="quoted"';
+  const query = new URLSearchParams({ sourceUrl });
+
+  const incoming = await fetch(`${origin}/?${query}`, { redirect: "manual" });
+  assert.equal(incoming.status, 303);
+  assert.equal(incoming.headers.get("location"), `/login?${query}`);
+  const loginPage = await fetch(`${origin}/login?${query}`);
+  const markup = await loginPage.text();
+  assert.ok(markup.includes('name="sourceUrl"'));
+  assert.ok(markup.includes("&amp;title=&quot;quoted&quot;"));
+
+  const failed = await fetch(`${origin}/login`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      username: "owner",
+      password: "wrong",
+      sourceUrl,
+    }),
+  });
+  assert.equal(failed.headers.get("location"), `/login?${query}&error=1`);
+
+  const successful = await fetch(`${origin}/login`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      username: "owner",
+      password: "test-only-password-owner",
+      sourceUrl,
+    }),
+  });
+  assert.equal(successful.headers.get("location"), `/?${query}`);
+  const cookie = successful.headers.get("set-cookie").split(";")[0];
+  const loggedIn = await fetch(`${origin}/login?${query}`, {
+    redirect: "manual",
+    headers: { cookie },
+  });
+  assert.equal(loggedIn.headers.get("location"), `/?${query}`);
+  const jobs = await fetch(`${origin}/api/jobs`, { headers: { cookie } });
+  assert.deepEqual(await jobs.json(), []);
+});
+
+test("login never redirects to incoming URL data or propagates malformed input", async () => {
+  for (const sourceUrl of [
+    "javascript:alert(1)",
+    "//evil.example",
+    "https://user:password@example.com",
+    "x".repeat(501),
+  ]) {
+    const response = await fetch(
+      `${origin}/?${new URLSearchParams({ sourceUrl })}`,
+      { redirect: "manual" },
+    );
+    assert.equal(response.headers.get("location"), "/login");
+  }
+  const duplicate = await fetch(
+    `${origin}/?sourceUrl=https://example.com&sourceUrl=https://other.example`,
+    { redirect: "manual" },
+  );
+  assert.equal(duplicate.headers.get("location"), "/login");
+});
+
 function fixture(id, shareToken, title) {
   return {
     id,
