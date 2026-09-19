@@ -141,8 +141,8 @@ styles. The final combined branch passed 387 Vitest tests, 56 Node tests, and
 lint, build, frontend syntax, and diff checks. Reproduce these checks with:
 
 ```sh
-npm run check
-npm run test:browser
+yarn run check
+yarn run test:browser
 node --check public/app.js
 node --check public/share.js
 git diff --check

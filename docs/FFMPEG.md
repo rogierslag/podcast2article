@@ -111,8 +111,8 @@ gate. The installer also checks media before restarting an existing app.
 For local verification after compiling:
 
 ```bash
-npm run build
-npm run check:media
+yarn run build
+yarn run check:media
 ```
 
 ## Fathom errors

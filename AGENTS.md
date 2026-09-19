@@ -4,7 +4,7 @@ This file applies to the entire repository.
 
 ## Product and language
 
-- Podcast2Article turns public Spotify episodes, YouTube videos, and Google Drive recordings into source-linked articles.
+- Podcast2Article turns public Spotify episodes, YouTube videos, Fathom recordings, and Google Drive recordings into source-linked articles; followed podcast series use public RSS feeds.
 - Write repository documentation in English, including headings, examples, and explanatory comments in documentation code blocks. Use English interface labels in guides; preserve exact identifiers and quoted diagnostic output when needed for accuracy.
 - The interface follows the primary browser language: Dutch for Dutch locales, English otherwise. Keep both translations consistent; generated-article language is a separate user choice.
 - Preserve the editorial visual style in `public/styles.css`: warm paper colors, serif article typography, compact monospace metadata, and restrained controls.
@@ -29,7 +29,7 @@ This file applies to the entire repository.
 
 ## Current article-action behavior
 
-- Article pages expose three owner actions: `Mark as read`, PDF export, and permalink copy.
+- Article pages expose three primary owner reading actions: `Mark as read`, PDF export, and permalink copy. Podcast following, shared-link statistics, and deletion have their own controls.
 - On mobile, keep the localized `Mark as read` label written out. PDF and permalink actions should use recognizable printer and share icons with accessible labels; their visible text may collapse at the mobile breakpoint.
 - Keep the same actions available at the top of the article and in the completion footer unless the task explicitly changes that behavior.
 
@@ -65,11 +65,13 @@ Readability is the default. Some older frontend files are densely formatted; tre
 
 ### General formatting
 
-- Prettier is the formatting authority for all supported repository files. Run `npm run format` after editing and do not manually fight its output.
-- Run `npm run format:check` to verify formatting without changing files. The full `npm run check` command includes this verification.
+- Use Yarn 1.22.22, pinned in `package.json`, for dependency installation and scripts. Install with `yarn install --frozen-lockfile`; keep `yarn.lock` as the only dependency lockfile. npm may bootstrap Yarn or Corepack, but must not install project dependencies.
+
+- Prettier is the formatting authority for all supported repository files. Run `yarn run format` after editing and do not manually fight its output.
+- Run `yarn run format:check` to verify formatting without changing files. The full `yarn run check` command includes this verification.
 - Do not hand-minify, manually align, or use formatting tricks that Prettier will undo.
 - Keep statements and control flow structurally clear before formatting. Prettier standardizes layout; it does not make overly compressed logic readable.
-- Always use braces for `if`, `else`, loops, and `try`/`catch`, including one-line bodies. ESLint enforces this rule; run `npm run lint:fix` to repair violations.
+- Always use braces for `if`, `else`, loops, and `try`/`catch`, including one-line bodies. ESLint enforces this rule; run `yarn run lint:fix` to repair violations.
 - Keep comments for intent, constraints, and non-obvious tradeoffs. Do not narrate code that is already clear from its names and structure.
 
 ### TypeScript and JavaScript
@@ -113,7 +115,7 @@ Readability is the default. Some older frontend files are densely formatted; tre
 Run the full check before handing off implementation changes:
 
 ```sh
-npm run check
+yarn run check
 ```
 
 For frontend JavaScript changes, also run:
@@ -157,7 +159,8 @@ In the pull request description, include a concise verification section with:
 - Before creating or updating a PR, review repository documentation for anything affected by the final diff, including the README, architecture and API references, user journeys, setup and operations guides, and agent instructions. Update affected documentation in the same PR so behavior, defaults, limits, examples, and configuration stay in sync with the implementation. Search for outdated descriptions rather than checking only files already changed, and report any documentation gaps that remain.
 - Write the PR description to a temporary Markdown file and pass it with `gh pr create --body-file` or `gh pr edit --body-file`. Do not pass multiline Markdown inline through the shell because backticks and substitutions may be interpreted as commands.
 - Add the screenshots and videos to the PR description itself, or use durable links/attachments that reviewers can open from the PR. Do not leave required visual evidence only in a local filesystem path.
-- GitHub's documented APIs and `gh` CLI do not upload native PR-body attachments. Use an approved durable artifact location when available. If none is configured, use the single long-lived `assets` branch and store each PR's media under `pr-media/<PR number>/`. Create the branch through `gh api` when it does not exist, reuse it for later PRs, keep binary media out of feature branches and PR diffs, and embed its raw GitHub URLs in the PR description. State this storage choice in the PR notes and do not delete the `assets` branch so existing links remain valid.
+- Prefer native image/video uploads with `gh pr create --attach` or `gh pr edit --attach` (GitHub CLI 2.99.0 or newer). Check `gh version` and command help before use, and pass the description through `--body-file`. Attachments support images and videos, not PDFs, CSVs, or HTML. Verify the remote body contains the uploaded URLs. If the CLI lacks `--attach`, report that it needs updating; do not claim GitHub cannot upload attachments.
+- If native uploads cannot be used, use an approved durable artifact location. The existing long-lived `assets` branch is a fallback: store media under `pr-media/<PR number>/`, keep binaries out of feature branches, embed raw GitHub URLs, and state this storage choice in the PR. Preserve that branch and existing files so earlier PR links remain valid.
 - If no durable upload is possible, report the limitation clearly in the PR, include all remaining evidence, and provide the exact local artifact paths so the user can attach them; do not silently omit required media.
 - PR titles and descriptions must be concise but complete. Remove repetition and implementation diary details, but never omit behavior changes, security implications, migrations/configuration, verification performed, visual evidence, known limitations, or reviewer-relevant tradeoffs.
 - Prefer this compact PR-description structure when applicable:

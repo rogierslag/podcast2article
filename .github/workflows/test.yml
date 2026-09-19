@@ -23,20 +23,20 @@ jobs:
       matrix:
         include:
           - name: Formatting
-            command: npm run format:check
+            command: yarn run format:check
           - name: Lint
-            command: npm run lint
+            command: yarn run lint
           - name: Build and browser syntax
             command: |
-              npm run build
+              yarn run build
               node --check public/app.js
               node --check public/share.js
           - name: Tests
-            command: npm test
+            command: yarn test
           - name: Media regression
-            command: npm run build && FFMPEG_BIN=/usr/bin/ffmpeg node scripts/media-smoke.mjs . /usr/bin/ffmpeg
+            command: yarn run build && FFMPEG_BIN=/usr/bin/ffmpeg node scripts/media-smoke.mjs . /usr/bin/ffmpeg
           - name: Browser regressions
-            command: npm run test:browser
+            command: yarn run test:browser
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,7 +59,7 @@ jobs:
 
       - name: Install test browsers and system libraries
         if: matrix.name == 'Browser regressions'
-        run: npx playwright install --with-deps chromium webkit
+        run: yarn playwright install --with-deps chromium webkit
 
       - name: Install the Linux media test runtime
         if: matrix.name == 'Media regression'

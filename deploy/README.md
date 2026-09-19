@@ -38,6 +38,12 @@ for package installation, Corepack recovery, and deployment verification.
 Point the production hostname's A and AAAA records at the VPS. Allow inbound
 TCP ports 22, 80, and 443 in the provider firewall.
 
+The checked-in `deploy/Caddyfile` uses `reads.rogierslag.nl`. For another host,
+replace that site address before running the installer, which copies the file
+to `/etc/caddy/Caddyfile`. Set `PUBLIC_BASE_URL` to the same public origin.
+The bundled iOS Shortcut also targets that domain and must be
+[rebuilt and signed](../docs/IOS-SHORTCUT.md#rebuilding-the-installer) for another origin.
+
 Keep a second, key-authenticated SSH session open before applying SSH or UFW
 hardening.
 
@@ -73,6 +79,7 @@ APP_USERS='{"rogier":"<long-random-secret>","melvin":"<different-long-random-sec
 OPENAI_REGION=eu
 HOST=127.0.0.1
 PORT=3000
+PUBLIC_BASE_URL=https://<production-host>
 ```
 
 Edit the webhook environment:
@@ -144,7 +151,9 @@ The updater fetches the exact `main` commit, installs locked dependencies,
 builds, tests, creates an immutable release, and runs the real synthetic media
 pipeline with the production service environment. Only after this succeeds does
 it switch the `current` symlink, start the app, and perform a health check with
-rollback on failure.
+rollback on failure when a previous release exists. The validation command is
+`yarn run check`; browser tests run separately in GitHub Actions. The updater
+does not wait for those CI checks, so confirm them before merging to `main`.
 
 ## 7. Configure the GitHub webhook
 
