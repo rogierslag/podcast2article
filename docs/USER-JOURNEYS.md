@@ -12,6 +12,7 @@ how the interface should express them.
 ## Evidence and limits
 
 This is the 19 September 2026 review, after rebasing onto `main` at `0239d8e`.
+PR preparation also validated the branch on `c091ba6` with the Node 24 tooling update.
 “Implemented” means present in the reviewed code, not verified deployed. Linked
 pull requests explain decisions and previous verification; their test results
 are not a substitute for checking the combined application.

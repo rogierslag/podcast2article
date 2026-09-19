@@ -7,9 +7,10 @@ overflow, low-contrast artwork placeholders, and incomplete names for reading
 continuation and numbered article links. It does not establish WCAG 2.2 AA
 conformance for the whole product.
 
-The review covers `codex/brand-journey-review`, rebased onto `main` at `0239d8e`,
-including the current working changes. The earlier fixes from PRs #55 and #58
-were part of the starting point, not assumed to complete the review.
+The review started from `main` at `0239d8e`. PR preparation rebased
+`codex/brand-journey-review` onto `c091ba6`, including the Node 24 tooling update,
+and repeated the complete repository and browser checks. The earlier fixes from
+PRs #55 and #58 were part of the starting point, not assumed to complete the review.
 
 ## Scope and evidence
 
