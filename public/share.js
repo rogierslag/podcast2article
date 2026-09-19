@@ -336,7 +336,9 @@ function renderSharedArticle(shared, token) {
         ? t("source.viewYoutube")
         : episode.sourceType === "fathom"
           ? t("source.viewFathom")
-          : t("source.viewSpotify");
+          : episode.sourceType === "rss"
+            ? t("source.viewPodcast")
+            : t("source.viewSpotify");
   $("#episode-hero").innerHTML = html`
     ${
       episode.imageUrl

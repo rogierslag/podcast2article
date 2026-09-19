@@ -1368,6 +1368,17 @@ footer {
   }
 }
 @media (max-width: 800px) {
+  .nav {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-content: center;
+    /* The brand's last baseline comes from its text, rather than its icon. */
+    align-items: last baseline;
+  }
+  .main-nav,
+  .main-nav form {
+    align-items: baseline;
+  }
   .main-nav {
     gap: 14px;
   }
@@ -1406,6 +1417,18 @@ footer {
 @media (max-width: 480px) {
   .main-nav a:first-child {
     display: none;
+  }
+}
+@media (max-width: 380px) {
+  .nav {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    gap: 14px;
+    padding-top: calc(14px + env(safe-area-inset-top));
+    padding-bottom: 14px;
+  }
+  .main-nav {
+    flex-wrap: wrap;
   }
 }
 @media print {

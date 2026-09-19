@@ -441,17 +441,46 @@ test("composer selects have room for labels, arrows and keyboard focus (PR 13)",
   await noOverflow(page);
 });
 
-test("known bug: navigation must fit at 320px without webfonts", async ({
+test("navigation fits at 320px without webfonts", async ({ page }) => {
+  await owner(page);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await expect(page.locator("#logout-form")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Series", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Artikelen", exact: true }),
+  ).toBeVisible();
+
+  await expect
+    .poll(() =>
+      page
+        .locator(".nav, .brand, .main-nav, .main-nav a, .main-nav button")
+        .evaluateAll((elements) =>
+          elements
+            .filter((element) => {
+              const bounds = element.getBoundingClientRect();
+              return (
+                bounds.width > 0 &&
+                (bounds.left < 0 || bounds.right > innerWidth)
+              );
+            })
+            .map((element) => element.textContent.trim()),
+        ),
+    )
+    .toEqual([]);
+});
+
+test("known bug: article page must fit at 320px without webfonts", async ({
   page,
   browserName,
 }) => {
   await owner(page);
   await page.setViewportSize({ width: 320, height: 844 });
-  await expect(page.locator("#logout-form")).toBeVisible();
 
   test.fail(
     process.platform === "linux" && browserName === "webkit",
-    "Linux WebKit fallback fonts make the navigation overflow at 320px; detected by the first Actions run.",
+    "The existing Linux WebKit article overflow at 320px remains outside the navigation fix.",
   );
   await noOverflow(page);
 });

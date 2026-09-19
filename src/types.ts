@@ -9,7 +9,8 @@ export type JobStage =
 
 export type ProcessingStage = Exclude<JobStage, "complete" | "failed">;
 
-export type SourceType = "spotify" | "google-drive" | "youtube" | "fathom";
+export type SourceType =
+  "spotify" | "rss" | "google-drive" | "youtube" | "fathom";
 
 export interface Episode {
   sourceType: SourceType;
@@ -125,11 +126,43 @@ export interface Job {
   shareToken?: string;
   /** Digest used to deduplicate personal copies of shared articles. */
   savedShareKey?: string;
+  /** Stable feed + episode identity, independent of changing enclosure URLs. */
+  podcastEpisodeKey?: string;
   episode?: Episode;
   transcript?: TranscriptSegment[];
   article?: Article;
   error?: string;
   apiUsage?: JobApiUsage;
+}
+
+export interface PodcastEpisode {
+  key: string;
+  episode: Episode;
+}
+
+export interface PodcastFeed {
+  url: string;
+  title: string;
+  episodes: PodcastEpisode[];
+}
+
+export type Backfill = "none" | "latest" | "ten";
+
+export interface PodcastSubscription {
+  id: string;
+  feedUrl: string;
+  title: string;
+  language: string;
+  articleLength: Job["articleLength"];
+  paused: boolean;
+  pauseReason?: "limit";
+  archiveKeys?: string[];
+  createdAt: string;
+  checkedAt?: string;
+  error?: string;
+  seen: string[];
+  jobIds: string[];
+  pending: PodcastEpisode[];
 }
 
 export interface ArticleSummary {

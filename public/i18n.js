@@ -3,6 +3,172 @@ import { formatArticleWordRange } from "./article-length.js";
 // Shared by the browser and server. Article and transcript content is never translated here.
 export const messages = {
   "page.loading": { nl: "Pagina laden…", en: "Loading page…" },
+  "series.moreLater": {
+    nl: "Meer afleveringen inhalen",
+    en: "Catch up on more episodes",
+  },
+  "series.outstanding": {
+    nl: "{count} van maximaal 10 ongelezen of nog te verwerken afleveringen",
+    en: "{count} of at most 10 unread or processing episodes",
+  },
+  "series.limitPaused": {
+    nl: "Automatisch gepauzeerd bij 10 afleveringen. Lees eerst artikelen of markeer ze als gelezen. Daarna kun je zelf hervatten.",
+    en: "Automatically paused at 10 episodes. Read articles or mark them as read, then resume when you are ready.",
+  },
+  "series.errorLimit": {
+    nl: "De serie zit aan de grens van 10 ongelezen of nog te verwerken afleveringen. Lees eerst artikelen voordat je verdergaat.",
+    en: "This series has reached the limit of 10 unread or processing episodes. Read articles before continuing.",
+  },
+  "series.errorNoHistory": {
+    nl: "Er zijn geen overgeslagen afleveringen meer beschikbaar in de openbare feed.",
+    en: "No skipped episodes remain available in the public feed.",
+  },
+  "series.more": {
+    nl: "Haal tot {count} eerdere afleveringen in",
+    en: "Catch up on up to {count} earlier episodes",
+  },
+  "series.moreSaved": {
+    nl: "{count} eerdere afleveringen ingepland.",
+    en: "Scheduled {count} earlier episodes.",
+  },
+
+  "nav.series": { nl: "Series", en: "Series" },
+  "source.viewPodcast": { nl: "Bekijk podcastbron", en: "View podcast source" },
+  "series.kicker": {
+    nl: "Van aflevering naar leeslijst",
+    en: "From episodes to your reading list",
+  },
+  "series.title": {
+    nl: "Blijf bij met je podcasts.",
+    en: "Keep up with your podcasts.",
+  },
+  "series.intro": {
+    nl: "Volg een serie, haal eerdere afleveringen in en lees nieuwe afleveringen automatisch als artikel.",
+    en: "Follow a series, catch up on past episodes and automatically turn new episodes into articles.",
+  },
+  "series.url": {
+    nl: "Spotify-serielink of openbare RSS-feed",
+    en: "Spotify series link or public RSS feed",
+  },
+  "series.search": { nl: "Zoek serie →", en: "Find series →" },
+  "series.sources": {
+    nl: "De serie moet een openbare audiobron hebben. Spotify-exclusives zonder openbare feed werken niet.",
+    en: "The series needs a public audio source. Spotify exclusives without a public feed are not supported.",
+  },
+  "series.choose": {
+    nl: "Welke serie bedoel je?",
+    en: "Which series do you mean?",
+  },
+  "series.preview": { nl: "Controleer de serie", en: "Check the series" },
+  "series.feed": {
+    nl: "Bekijk de openbare feed ↗",
+    en: "View the public feed ↗",
+  },
+  "series.available": {
+    nl: "{count} afleveringen beschikbaar in deze feed. Meest recent:",
+    en: "{count} episodes available in this feed. Most recent:",
+  },
+  "series.backfill": {
+    nl: "Eerdere afleveringen inhalen",
+    en: "Catch up on past episodes",
+  },
+  "series.latest": { nl: "Laatste aflevering", en: "Latest episode" },
+  "series.ten": { nl: "Laatste 10 afleveringen", en: "Latest 10 episodes" },
+  "series.all": {
+    nl: "Alle beschikbare afleveringen",
+    en: "All available episodes",
+  },
+  "series.none": { nl: "Alleen nieuwe afleveringen", en: "New episodes only" },
+  "series.plan": {
+    nl: "Je haalt {count} afleveringen in. Daarna worden nieuwe afleveringen automatisch verwerkt.",
+    en: "Catch up on {count} episodes. New episodes will then be processed automatically.",
+  },
+  "series.planOne": {
+    nl: "Je haalt 1 aflevering in. Daarna worden nieuwe afleveringen automatisch verwerkt.",
+    en: "Catch up on 1 episode. New episodes will then be processed automatically.",
+  },
+  "series.cost": {
+    nl: "Je haalt maximaal 10 afleveringen per keer in. Elke nieuwe verwerking gebruikt betaalde transcriptie en artikelgeneratie. Later kun je zelf meer inhalen.",
+    en: "Catch up on at most 10 episodes at a time. Each new job uses paid transcription and article generation. You can choose to catch up on more later.",
+  },
+  "series.follow": {
+    nl: "Bevestig en volg serie",
+    en: "Confirm and follow series",
+  },
+  "series.following": { nl: "Gevolgde series", en: "Following" },
+  "series.schedule": {
+    nl: "Nieuwe afleveringen worden elk uur gecontroleerd zolang de server draait. Bij 10 ongelezen of nog te verwerken afleveringen pauzeert de serie. Hervatten gaat nooit over die grens.",
+    en: "New episodes are checked hourly while the server is running. The series pauses at 10 unread or processing episodes. Resuming respects the same limit.",
+  },
+  "series.articles": {
+    nl: "Bekijk artikelen en voortgang →",
+    en: "View articles and progress →",
+  },
+  "series.saved": {
+    nl: "Serie toegevoegd. Je keuze is opgeslagen.",
+    en: "Series added. Your selection has been saved.",
+  },
+  "series.empty": {
+    nl: "Je volgt nog geen series. Voeg hierboven je eerste podcast toe.",
+    en: "You are not following any series yet. Add your first podcast above.",
+  },
+  "series.active": { nl: "Actief", en: "Active" },
+  "series.paused": { nl: "Gepauzeerd", en: "Paused" },
+  "series.pause": { nl: "Pauzeer", en: "Pause" },
+  "series.resume": { nl: "Hervat", en: "Resume" },
+  "series.resumed": {
+    nl: "Volgen hervat. Gemiste afleveringen worden opgehaald.",
+    en: "Following resumed. Missed episodes will be fetched.",
+  },
+  "series.pauseInfo": {
+    nl: "Volgen gepauzeerd. Afleveringen die al in de verwerkingswachtrij staan, worden nog afgerond.",
+    en: "Following paused. Episodes already in the processing queue will still finish.",
+  },
+  "series.counts": {
+    nl: "{complete} klaar · {processing} in verwerking · {pending} nog in te plannen",
+    en: "{complete} ready · {processing} processing · {pending} awaiting scheduling",
+  },
+  "series.checked": {
+    nl: "Laatst gecontroleerd: {date}",
+    en: "Last checked: {date}",
+  },
+  "series.failed": {
+    nl: "Verwerking mislukt: {title} →",
+    en: "Processing failed: {title} →",
+  },
+  "series.errorFeed": {
+    nl: "Deze openbare feed kon niet worden gelezen. Controleer de link en probeer het opnieuw.",
+    en: "This public feed could not be read. Check the link and try again.",
+  },
+  "series.errorEmpty": {
+    nl: "Deze feed bevat geen ondersteunde audioafleveringen.",
+    en: "This feed contains no supported audio episodes.",
+  },
+  "series.errorShow": {
+    nl: "Gebruik een Spotify-link naar de serie, niet naar een losse aflevering.",
+    en: "Use a Spotify series link, rather than an individual episode link.",
+  },
+  "series.errorDiscovery": {
+    nl: "Geen openbare feed gevonden. Probeer de RSS-link van de podcastmaker.",
+    en: "No public feed found. Try the podcast publisher’s RSS link.",
+  },
+  "series.errorDuplicate": {
+    nl: "Je volgt deze feed al. Je kunt de bestaande serie hieronder hervatten.",
+    en: "You already follow this feed. You can resume the existing series below.",
+  },
+  "series.errorPreview": {
+    nl: "Dit voorbeeld is verlopen of vervangen. Zoek de serie opnieuw op voordat je bevestigt.",
+    en: "This preview has expired or been replaced. Find the series again before confirming.",
+  },
+  "series.errorNotFound": {
+    nl: "Serie niet gevonden.",
+    en: "Series not found.",
+  },
+  "series.errorCheck": {
+    nl: "Controleren of inplannen is niet gelukt. We proberen het bij de volgende controle opnieuw.",
+    en: "Checking or scheduling failed. We will try again at the next check.",
+  },
+
   "android.title": {
     nl: "Voeg toe vanaf Android",
     en: "Add from Android",

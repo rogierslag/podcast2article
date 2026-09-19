@@ -1,0 +1,230 @@
+import { test, expect } from "@playwright/test";
+import { password } from "./fixture.mjs";
+const previewId = "00000000-0000-4000-8000-000000000771";
+const preview = {
+  id: previewId,
+  title: "De wetenschap van alledag",
+  url: "https://example.com/podcast/feed.xml",
+  count: 42,
+  episodes: [
+    { title: "Waarom slapen we? Een gesprek over ons geheugen" },
+    { title: "Wat de Noordzee ons vertelt over het klimaat" },
+    { title: "De stille revolutie in onze batterijen" },
+  ],
+};
+test.beforeEach(async ({ page }) => {
+  await page.route(/^https?:\/\/(?!127\.0\.0\.1:4317)/, (route) =>
+    route.abort(),
+  );
+  await page.request.post("/login", {
+    form: { username: "regression", password },
+  });
+});
+test("series: preview, backlog confirmation and pause/resume remain usable on desktop and mobile", async ({
+  page,
+}, testInfo) => {
+  let followed = false;
+  let paused = false;
+  let submitted;
+  let outstanding = 10;
+  await page.route("**/api/subscriptions**", async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    if (pathname.endsWith("/discover")) {
+      return route.fulfill({
+        json: [{ title: preview.title, url: preview.url }],
+      });
+    }
+    if (pathname.endsWith("/preview")) {
+      return route.fulfill({ json: preview });
+    }
+    if (pathname.endsWith("/backfill")) {
+      outstanding = 10;
+      paused = true;
+      return route.fulfill({ status: 202, json: { count: 4 } });
+    }
+    if (request.method() === "POST") {
+      submitted = request.postDataJSON();
+      followed = true;
+      paused = true;
+      return route.fulfill({ status: 202, json: { id: previewId } });
+    }
+    if (request.method() === "PATCH") {
+      paused = request.postDataJSON().paused;
+      return route.fulfill({ json: { paused } });
+    }
+    return route.fulfill({
+      json: followed
+        ? [
+            {
+              id: previewId,
+              title: preview.title,
+              paused,
+              complete: 0,
+              processing: outstanding,
+              outstanding,
+              archiveCount: 32,
+              pauseReason: paused ? "limit" : undefined,
+              pendingCount: 0,
+              checkedAt: "2026-09-15T12:00:00Z",
+              failed: [],
+            },
+          ]
+        : [],
+    });
+  });
+  await page.goto("/series");
+  await expect(page.locator("#series-list")).toContainText(
+    "Je volgt nog geen series",
+  );
+  await page
+    .locator("#series-url")
+    .fill("https://open.spotify.com/show/example");
+  await page.getByRole("button", { name: "Zoek serie" }).click();
+  await expect(page.locator("#series-preview-title")).toHaveText(preview.title);
+  await expect(page.locator("#series-preview-title")).toBeFocused();
+  for (const [value, count] of [
+    ["ten", "10"],
+    ["none", "0"],
+    ["ten", "10"],
+  ]) {
+    await page.locator("#series-backfill").selectOption(value);
+    await expect(page.locator("#series-plan")).toContainText(
+      `Je haalt ${count} afleveringen in`,
+    );
+  }
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    )
+    .toBe(true);
+  await testInfo.attach("series-preview", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+  await page.getByRole("button", { name: "Bevestig en volg serie" }).click();
+  await expect(page.locator("#series-status")).toContainText(
+    "Serie toegevoegd",
+  );
+  expect(submitted).toEqual({
+    previewId,
+    backfill: "ten",
+    language: "auto",
+    articleLength: "standard",
+  });
+  await expect(page.locator(".series-limit-note")).toContainText(
+    "Automatisch gepauzeerd bij 10",
+  );
+  await expect(
+    page.getByRole("button", { name: `Hervat: ${preview.title}`, exact: true }),
+  ).toBeDisabled();
+  await testInfo.attach("series-paused", {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: "image/png",
+  });
+  // Simulate reading four articles through the existing reader, then refresh the list.
+  outstanding = 6;
+  await page.reload();
+  await page
+    .getByRole("button", { name: `Hervat: ${preview.title}`, exact: true })
+    .click();
+  await expect(page.locator(".series-state")).toHaveText("Actief");
+  await page
+    .getByRole("button", {
+      name: `Haal tot 4 eerdere afleveringen in: ${preview.title}`,
+      exact: true,
+    })
+    .click();
+  await expect(page.locator("#series-status")).toContainText(
+    "4 eerdere afleveringen ingepland",
+  );
+  await expect(
+    page.getByRole("button", { name: `Hervat: ${preview.title}`, exact: true }),
+  ).toBeDisabled();
+});
+test("series: errors are readable and untrusted titles are text", async ({
+  page,
+}) => {
+  await page.route("**/api/subscriptions**", (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ json: [] });
+    }
+    if (route.request().url().endsWith("/preview")) {
+      return route.fulfill({
+        json: {
+          ...preview,
+          title: '<img src=x onerror="window.injected=true">',
+        },
+      });
+    }
+    return route.fulfill({
+      json: [{ title: preview.title, url: preview.url }],
+    });
+  });
+  await page.goto("/series");
+  await page.locator("#series-url").fill(preview.url);
+  await page.getByRole("button", { name: "Zoek serie" }).click();
+  await expect(page.locator("#series-preview-title")).toContainText("<img");
+  expect(await page.evaluate(() => window.injected)).toBeUndefined();
+  await page.route("**/api/subscriptions", (route) =>
+    route.fulfill({
+      status: 400,
+      json: { error: "Dit voorbeeld is verlopen. Zoek de serie opnieuw op." },
+    }),
+  );
+  await page.getByRole("button", { name: "Bevestig en volg serie" }).click();
+  await expect(page.locator("#series-error")).toContainText(
+    "Dit voorbeeld is verlopen",
+  );
+  await expect(page.locator("#series-error")).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Bevestig en volg serie" }),
+  ).toBeEnabled();
+});
+test("series: a Spotify show submitted on the landing page opens series setup", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .locator("#source-url")
+    .fill("https://open.spotify.com/show/example");
+  await page.locator('#job-form button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/series\?url=/);
+  await expect(page.locator("#series-url")).toHaveValue(
+    "https://open.spotify.com/show/example",
+  );
+});
+
+test("series: mobile navigation shares the wordmark baseline", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/series");
+  await expect(page.locator("#logout-form")).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+
+  const baselines = await page
+    .locator(".brand > span:last-child, .main-nav a, .main-nav button")
+    .evaluateAll((elements) =>
+      elements
+        .filter((element) => element.getBoundingClientRect().width)
+        .map((element) => {
+          // A zero-height inline box exposes the actual text baseline, not the glyph bounds.
+          const original = [...element.childNodes];
+          const text = document.createElement("span");
+          const marker = document.createElement("i");
+          marker.style.cssText =
+            "display:inline-block;width:0;height:0;padding:0;margin:0;border:0";
+          text.append(...original, marker);
+          element.append(text);
+          const baseline = marker.getBoundingClientRect().top;
+          element.replaceChildren(...original);
+          return baseline;
+        }),
+    );
+
+  expect(baselines).toHaveLength(4);
+  expect(Math.max(...baselines) - Math.min(...baselines)).toBeLessThan(0.5);
+});
