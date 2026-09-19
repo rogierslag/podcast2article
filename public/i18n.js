@@ -3,6 +3,32 @@ import { formatArticleWordRange } from "./article-length.js";
 // Shared by the browser and server. Article and transcript content is never translated here.
 export const messages = {
   "page.loading": { nl: "Pagina laden…", en: "Loading page…" },
+  "article.seriesInterested": {
+    nl: "Interessant? Lees ook de volgende afleveringen.",
+    en: "Interested? Read the next episodes too.",
+  },
+  "article.seriesFollow": {
+    nl: "Volg deze podcast",
+    en: "Follow this podcast",
+  },
+  "article.seriesFollowing": {
+    nl: "Je volgt deze podcast",
+    en: "You follow this podcast",
+  },
+  "article.seriesPaused": {
+    nl: "Je volgt deze podcast · gepauzeerd",
+    en: "You follow this podcast \u00b7 paused",
+  },
+  "article.seriesManage": { nl: "Beheer serie", en: "Manage series" },
+  "article.seriesLoading": {
+    nl: "Volgstatus ophalen…",
+    en: "Checking follow status\u2026",
+  },
+  "article.seriesError": {
+    nl: "De volgstatus is niet beschikbaar.",
+    en: "Follow status is unavailable.",
+  },
+  "article.seriesRetry": { nl: "Probeer opnieuw", en: "Try again" },
   "series.moreLater": {
     nl: "Meer afleveringen inhalen",
     en: "Catch up on more episodes",

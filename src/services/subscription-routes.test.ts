@@ -7,12 +7,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchPodcastFeed, discoverPodcastFeeds } from "./podcast-feeds.js";
 import { subscriptionRouter } from "./subscription-routes.js";
 import { SubscriptionStore } from "./subscriptions.js";
-import type { PodcastFeed } from "../types.js";
+import { getJob } from "./jobs.js";
+import { findEpisodeFeed } from "./resolver.js";
+import type { Job, PodcastFeed } from "../types.js";
 vi.mock("./podcast-feeds.js", () => ({
   fetchPodcastFeed: vi.fn(),
   discoverPodcastFeeds: vi.fn(),
 }));
+vi.mock("./resolver.js", () => ({ findEpisodeFeed: vi.fn() }));
 vi.mock("./jobs.js", () => ({
+  getJob: vi.fn(),
   podcastJobStatus: vi.fn(() => ({ complete: 0, processing: 0, failed: [] })),
 }));
 let server: Server;
@@ -178,5 +182,94 @@ describe("subscription API", () => {
       error:
         "This public feed could not be read. Check the link and try again.",
     });
+  });
+});
+
+describe("article follow status", () => {
+  const id = "00000000-0000-4000-8000-000000000123";
+  function article(): Job {
+    return {
+      id,
+      sourceUrl: "https://open.spotify.com/episode/example",
+      language: "nl",
+      articleLength: "standard",
+      stage: "complete",
+      progress: 100,
+      message: "Klaar",
+      createdAt: "2026-09-01",
+      updatedAt: "2026-09-01",
+      episode: {
+        sourceType: "spotify",
+        sourceUrl: "https://open.spotify.com/episode/example",
+        sourceName: "Public podcast",
+        title: "Episode one",
+        mediaUrl: "https://example.com/one.mp3",
+        feedUrl: feed.url,
+      },
+    };
+  }
+  it("matches feed identity, reports pause state and isolates accounts", async () => {
+    vi.mocked(getJob).mockResolvedValue(article());
+    const subscription = await store.follow("alice", feed, "none", {
+      language: "nl",
+      articleLength: "standard",
+    });
+
+    const active = await (await request(`/article/${id}`)).json();
+    await store.pause("alice", subscription.id, true);
+    const paused = await (await request(`/article/${id}`)).json();
+    const other = await (
+      await request(`/article/${id}`, "GET", undefined, "bob")
+    ).json();
+
+    expect(active).toEqual({
+      feedUrl: feed.url,
+      subscription: { id: subscription.id, paused: false },
+    });
+    expect(paused.subscription.paused).toBe(true);
+    expect(other).toEqual({ feedUrl: feed.url, subscription: null });
+    expect(getJob).toHaveBeenCalledWith("bob", id);
+    expect(findEpisodeFeed).not.toHaveBeenCalled();
+  });
+  it("recognizes older RSS articles through subscription membership", async () => {
+    const subscription = await store.follow("alice", feed, "latest", {
+      language: "nl",
+      articleLength: "standard",
+    });
+    enqueue.mockResolvedValueOnce({ id });
+    await store.check("alice");
+    const job = article();
+    job.episode = { ...feed.episodes[0].episode };
+    vi.mocked(getJob).mockResolvedValue(job);
+
+    const result = await (await request(`/article/${id}`)).json();
+
+    expect(result.subscription.id).toBe(subscription.id);
+    expect(findEpisodeFeed).not.toHaveBeenCalled();
+  });
+  it("recovers legacy Spotify feed identity and reports unavailable discovery", async () => {
+    const job = article();
+    delete job.episode?.feedUrl;
+    vi.mocked(getJob).mockResolvedValue(job);
+    vi.mocked(findEpisodeFeed).mockResolvedValue(feed.url);
+
+    const result = await (await request(`/article/${id}`)).json();
+    vi.mocked(findEpisodeFeed).mockResolvedValue(undefined);
+    const unavailable = await request(`/article/${id}`);
+
+    expect(result).toEqual({ feedUrl: feed.url, subscription: null });
+    expect(unavailable.status).toBe(400);
+  });
+  it("rejects malformed, missing, unfinished and non-podcast articles", async () => {
+    expect((await request("/article/invalid")).status).toBe(400);
+    expect(getJob).not.toHaveBeenCalled();
+    expect((await request(`/article/${id}`)).status).toBe(404);
+    vi.mocked(getJob).mockResolvedValue({ ...article(), stage: "writing" });
+    expect((await request(`/article/${id}`)).status).toBe(404);
+    const job = article();
+    job.episode = { ...feed.episodes[0].episode, sourceType: "youtube" };
+    vi.mocked(getJob).mockResolvedValue(job);
+    expect((await request(`/article/${id}`)).status).toBe(404);
+    expect(findEpisodeFeed).not.toHaveBeenCalled();
   });
 });

@@ -222,6 +222,18 @@ export function selectBestEpisode(
     .sort((a, b) => b.score - a.score)[0]?.item;
 }
 
+/** Recover a legacy article's feed using its known audio, not a series-name guess. */
+export async function findEpisodeFeed(
+  episode: Episode,
+): Promise<string | undefined> {
+  const candidates = await searchItunes(episode.title, "podcastEpisode");
+  return candidates.find(
+    (candidate) =>
+      candidate.episodeUrl === episode.mediaUrl ||
+      (episode.audioUrl && candidate.episodeUrl === episode.audioUrl),
+  )?.feedUrl;
+}
+
 export async function resolveSpotifyEpisode(value: string): Promise<Episode> {
   const spotifyUrl = validateSpotifyUrl(value).toString();
   const type = new URL(spotifyUrl).pathname.split("/")[1];
@@ -248,6 +260,7 @@ export async function resolveSpotifyEpisode(value: string): Promise<Episode> {
   return {
     sourceType: "spotify",
     sourceUrl: spotifyUrl,
+    feedUrl: match.feedUrl,
     sourceName: match.collectionName ?? "Onbekende podcast",
     spotifyUrl,
     title: match.trackName ?? spotify.title,

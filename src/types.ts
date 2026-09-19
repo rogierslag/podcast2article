@@ -16,6 +16,8 @@ export interface Episode {
   sourceType: SourceType;
   sourceUrl: string;
   sourceName: string;
+  /** Public RSS feed identifying the podcast series. */
+  feedUrl?: string;
   title: string;
   description?: string;
   imageUrl?: string;

@@ -563,6 +563,7 @@ function slug(value, index) {
 function renderResult(job) {
   sourcePreview.close();
   currentJob = job;
+  void updateArticleSeries(job);
   progressView.classList.add("hidden");
   landing.classList.add("hidden");
   articlesView.classList.add("hidden");
@@ -1379,3 +1380,86 @@ if (incomingSourceUrl && location.pathname === "/") {
   $("#source-prefill-note").classList.remove("hidden");
 }
 showArticleRoute();
+
+let articleSeriesRequest = 0;
+async function updateArticleSeries(job) {
+  const requestId = ++articleSeriesRequest;
+  const containers = document.querySelectorAll("[data-article-series]");
+  const focusedContainer = [...containers].find((container) =>
+    container.contains(document.activeElement),
+  );
+  containers.forEach((container) => {
+    container.replaceChildren();
+    container.classList.add("hidden");
+  });
+  if (!["spotify", "rss"].includes(job.episode?.sourceType)) {
+    return;
+  }
+  containers.forEach((container) => {
+    container.classList.remove("hidden");
+    container.textContent = t("article.seriesLoading");
+  });
+  try {
+    const response = await localizedFetch(
+      `/api/subscriptions/article/${job.id}`,
+    );
+    const result = await response.json();
+    if (!response.ok) {
+      throw new LocalizedError(result.error || t("error.generic"));
+    }
+    if (currentJob !== job || requestId !== articleSeriesRequest) {
+      return;
+    }
+    containers.forEach((container) => {
+      const label = document.createElement("span");
+      const link = document.createElement("a");
+      if (result.subscription) {
+        label.textContent = t(
+          result.subscription.paused
+            ? "article.seriesPaused"
+            : "article.seriesFollowing",
+        );
+        link.textContent = t("article.seriesManage");
+        link.href = `/series#subscription-${encodeURIComponent(result.subscription.id)}`;
+      } else {
+        label.textContent = t("article.seriesInterested");
+        link.textContent = t("article.seriesFollow");
+        link.href = `/series?${new URLSearchParams({ url: result.feedUrl, preview: "1" })}`;
+      }
+      container.replaceChildren(label, link);
+      if (container === focusedContainer) {
+        link.focus();
+      }
+    });
+  } catch {
+    if (currentJob !== job || requestId !== articleSeriesRequest) {
+      return;
+    }
+    containers.forEach((container) => {
+      const label = document.createElement("span");
+      label.textContent = t("article.seriesError");
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = t("article.seriesRetry");
+      retry.addEventListener("click", () => void updateArticleSeries(job));
+      container.replaceChildren(label, retry);
+      if (container === focusedContainer) {
+        retry.focus();
+      }
+    });
+  }
+}
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted && currentJob) {
+    void updateArticleSeries(currentJob);
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  if (
+    !document.hidden &&
+    currentJob &&
+    !resultView.classList.contains("hidden")
+  ) {
+    void updateArticleSeries(currentJob);
+  }
+});

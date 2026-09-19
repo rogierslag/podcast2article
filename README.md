@@ -319,6 +319,14 @@ ook overgeslagen. Mislukte opdrachten worden getoond bij de serie en niet elk uu
 opnieuw gestart. Een mislukte feedcontrole wordt wel automatisch opnieuw geprobeerd.
 Zonder `OPENAI_API_KEY` wordt niets nieuws ingepland.
 
+Vanuit een podcastartikel kun je bovenaan en onderaan **Volg deze podcast** kiezen.
+De bestaande bevestigingspagina opent met standaard alleen nieuwe afleveringen;
+eerdere afleveringen ophalen blijft een eigen keuze. Als je de serie al volgt,
+zie je dat direct, inclusief een eventuele pauze, met een link naar seriebeheer.
+Voor oudere Spotify-artikelen wordt de feed teruggezocht via de opgeslagen
+audiolink. Als die niet meer in de openbare index staat, kan de volgstatus niet
+worden bepaald.
+
 Spotify wordt gebruikt om de serie te vinden. Bij meerdere zoekresultaten kies
 je zelf de juiste openbare feed. Alleen audioafleveringen in RSS 2.0 worden
 ondersteund; Spotify-exclusives, betaalde feeds en verdwenen archiefafleveringen
