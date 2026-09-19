@@ -8,8 +8,18 @@ import type {
 } from "../types.js";
 
 export type UsageRecorder = (request: ApiRequestUsage) => Promise<void>;
-const pricingDate = "2026-09-15";
+const pricingDate = "2026-09-19";
 const pricingSource = "https://developers.openai.com/api/docs/pricing";
+
+// Standard short-context rates per million tokens. Sol's promotional rates
+// are published through at least November 21, 2026; recheck before updating.
+const articlePricing = new Map([
+  [
+    "gpt-5.6-terra",
+    { input: 2, cachedInput: 0.2, cacheWrite: 2.5, output: 12 },
+  ],
+  ["gpt-5.6-sol", { input: 4, cachedInput: 0.4, cacheWrite: 5, output: 20 }],
+]);
 
 function object(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -49,6 +59,7 @@ export function estimateApiCost(request: ApiRequestUsage): ApiCostEstimate {
     return unknown("Custom endpoint pricing is unknown");
   }
   const model = request.actualModel ?? request.requestedModel;
+  const modelPricing = articlePricing.get(model);
   const usage = request.usage ?? {};
   const input = count(usage.input_tokens);
   const output = count(usage.output_tokens);
@@ -68,7 +79,7 @@ export function estimateApiCost(request: ApiRequestUsage): ApiCostEstimate {
     rates = { perMinute: 0.006 };
     amount = (request.audioSeconds / 60) * 0.006;
     basis = "reported_duration";
-  } else if (model === "gpt-5.6-terra" && request.stage === "article") {
+  } else if (modelPricing && request.stage === "article") {
     if (input === undefined || output === undefined) {
       return unknown("Token usage is missing");
     }
@@ -83,12 +94,14 @@ export function estimateApiCost(request: ApiRequestUsage): ApiCostEstimate {
     }
     const multiplier = tier === "flex" ? 0.5 : tier === "default" ? 1 : 2;
     const longContext = input > 272_000;
+    const inputMultiplier = (longContext ? 2 : 1) * multiplier;
+    const outputMultiplier = (longContext ? 1.5 : 1) * multiplier;
     const regional = request.endpointRegion === "global" ? 1 : 1.1;
     const tokenRates = {
-      inputPerMillion: (longContext ? 4 : 2) * multiplier,
-      cachedInputPerMillion: (longContext ? 0.4 : 0.2) * multiplier,
-      cacheWritePerMillion: (longContext ? 5 : 2.5) * multiplier,
-      outputPerMillion: (longContext ? 18 : 12) * multiplier,
+      inputPerMillion: modelPricing.input * inputMultiplier,
+      cachedInputPerMillion: modelPricing.cachedInput * inputMultiplier,
+      cacheWritePerMillion: modelPricing.cacheWrite * inputMultiplier,
+      outputPerMillion: modelPricing.output * outputMultiplier,
       regionalMultiplier: regional,
     };
     rates = tokenRates;

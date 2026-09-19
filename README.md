@@ -141,15 +141,19 @@ service tier, request-ID, tijdsduur, gebruikscijfers en pogingen opgeslagen.
 Automatische retries krijgen elk een eigen record. Ook bij afgekeurde
 artikelinhoud blijft het gebruik van het geslaagde API-verzoek bewaard.
 
-`knownEstimatedCostUsd` telt de bekende USD-schattingen op;
+`knownEstimatedCostUsd` telt de bekende USD-schattingen op en wordt samen met
+het artikel in het job-JSON opgeslagen. Bij het laden worden deze bedragen
+niet opnieuw berekend met de actuele prijstabel;
 `unknownCostRequests` telt pogingen waarvan de kosten onbekend zijn.
 Een ontbrekend bedrag is `null`, geen nul. De schattingen gebruiken opgeslagen
-prijzen van 15 september 2026: voor `gpt-4o-transcribe-diarize` de gemelde
-audioduur, voor `gpt-5.6-terra` de tokens, cacheverdeling, contextlengte, gemelde
+prijzen van 19 september 2026: voor `gpt-4o-transcribe-diarize` de gemelde
+audioduur, voor `gpt-5.6-terra` en `gpt-5.6-sol` de tokens, cacheverdeling, contextlengte, gemelde
 service tier en eventuele regionale toeslag. Andere modellen en aangepaste
 API-endpoints bewaren wel gebruik, maar krijgen geen geschatte prijs.
 Prijzen staan in `src/services/api-usage.ts`; elke schatting bewaart de gebruikte
 prijzen en bron zodat oude bedragen niet veranderen bij een prijsupdate.
+De promotieprijzen voor `gpt-5.6-sol` gelden volgens OpenAI ten minste tot
+21 november 2026. Bestaande jobs worden niet automatisch opnieuw geprijsd.
 
 Dit zijn API-kostenschattingen, geen factuurbedragen. Hosting, downloads en
 FFmpeg-kosten zijn niet inbegrepen. Oude jobs worden niet achteraf als gratis
