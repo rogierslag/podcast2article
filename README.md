@@ -45,6 +45,16 @@ transcripts are not imported. No Fathom API key is needed; cookies, private
 recordings, and team-restricted access are not supported. Downloads are subject
 to `MAX_RECORDING_MB` and `MEDIA_DOWNLOAD_TIMEOUT_MS`.
 
+## Preview before signing in
+
+The compact login page links to an example article about engineering and
+management in a new tab. The existing public permalink provides the complete
+English article and source playback without signing in or starting new processing.
+The link and explanation follow the visitor's Dutch or English language preference.
+
+The example links to the production article at `reads.rogierslag.nl`. Deleting
+that article disables the permalink; preserve it or update the example link.
+
 ## Design
 
 The [brand guidelines](docs/BRAND.md) describe the visual identity, typography,

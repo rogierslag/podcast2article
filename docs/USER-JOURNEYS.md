@@ -56,6 +56,15 @@ can serve more than one job; a feature should still name its primary outcome.
 
 ## J1. Capture a public recording
 
+The compact login page offers a public example article before sign-in. The link
+opens in a new tab so visitors can inspect the result and its source references
+without losing their login form or prefilled recording link. It uses an existing
+English article; interface labels remain Dutch or English. Viewing the example
+does not start processing. The featured article must remain available for its
+permalink to work. This implements the approved login-link scope of
+[issue 70](https://github.com/rogierslag/podcast2article/issues/70); it does not add
+an excerpt or example to the unauthenticated-mode home page.
+
 **Implemented.** The form accepts supported public episode/video/recording links.
 A Spotify show link leads to series setup. The iOS Shortcut and Android share
 target prefill the form and preserve the link through login; neither creates an

@@ -95,6 +95,28 @@
         line-height: 1.65;
         margin: 0 0 34px;
       }
+      .example-link {
+        margin: -16px 0 30px;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .example-link a {
+        color: var(--accent-text);
+        text-underline-offset: 3px;
+      }
+      .example-link a:hover {
+        color: var(--ink);
+      }
+      .example-link a:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 3px;
+      }
+      .example-link span {
+        color: var(--muted);
+        display: block;
+        font-size: 12px;
+        margin-top: 3px;
+      }
       label {
         display: block;
         font-size: 12px;
@@ -284,6 +306,16 @@
       </svg>
       <h1 data-i18n="login.heading">{{login.heading}}</h1>
       <p class="intro" data-i18n="login.intro">{{login.intro}}</p>
+      <p class="example-link">
+        <a
+          href="https://reads.rogierslag.nl/s/_eUKVjs2CsydDZ7nEseiXUNRYc64L1Pp2EPQ8LLIGng"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-i18n="login.exampleOpen"
+          >{{login.exampleOpen}}</a
+        >
+        <span data-i18n="login.exampleHint">{{login.exampleHint}}</span>
+      </p>
       <p id="login-error" class="error" role="alert" data-i18n="login.error">
         {{login.error}}
       </p>
