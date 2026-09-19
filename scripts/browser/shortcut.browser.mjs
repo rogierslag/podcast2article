@@ -28,10 +28,14 @@ test("shared link survives a failed login and waits for explicit submission", as
 
   await page.goto(`/?${new URLSearchParams({ sourceUrl })}`);
   await expect(page).toHaveURL(/\/login\?/);
+  // Let native autofocus settle before WebKit starts filling either field.
+  await expect(page.locator("#username")).toBeFocused();
   await page.locator("#username").fill("regression");
   await page.locator("#password").fill("incorrect");
   await page.locator("button[type=submit]").click();
   await expect(page.locator("#login-error")).toBeVisible();
+  // Let native autofocus settle before WebKit starts filling either field.
+  await expect(page.locator("#username")).toBeFocused();
   await page.locator("#username").fill("regression");
   await page.locator("#password").fill(password);
   await page.locator("button[type=submit]").click();
@@ -168,6 +172,8 @@ test("Android text share survives login and manifest assets are public", async (
   });
   await page.goto(`${manifest.share_target.action}?${params}`);
   await expect(page).toHaveURL(/\/login\?/);
+  // Let native autofocus settle before WebKit starts filling either field.
+  await expect(page.locator("#username")).toBeFocused();
   await page.locator("#username").fill("regression");
   await page.locator("#password").fill(password);
   await page.locator("button[type=submit]").click();

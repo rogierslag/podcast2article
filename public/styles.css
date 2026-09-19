@@ -923,6 +923,30 @@ footer {
   gap: 12px;
   text-align: center;
 }
+.footer-utilities {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 16px;
+}
+.footer-logout {
+  margin: 0;
+}
+.footer-logout.is-unavailable {
+  /* Auth resolves asynchronously; reserve space without exposing a control. */
+  visibility: hidden;
+}
+.footer-logout button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--control-radius);
+  background: transparent;
+  color: var(--muted);
+  font: 11px var(--mono);
+  cursor: pointer;
+}
 .language-switcher {
   display: flex;
   gap: 6px;

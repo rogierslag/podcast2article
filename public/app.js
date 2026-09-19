@@ -365,7 +365,7 @@ localizedFetch("/api/auth")
   .then((response) => response.json())
   .then(({ enabled }) => {
     if (enabled) {
-      $("#logout-form").classList.remove("hidden");
+      $("#logout-form").classList.remove("is-unavailable");
     }
   })
   .catch(() => undefined);

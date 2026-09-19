@@ -376,7 +376,7 @@ void api("/api/auth")
   .then((session) => {
     document
       .querySelector("#logout-form")
-      .classList.toggle("hidden", !session.enabled);
+      .classList.toggle("is-unavailable", !session.enabled);
   })
   .catch(() => undefined);
 

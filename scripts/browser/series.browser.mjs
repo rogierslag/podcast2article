@@ -206,7 +206,7 @@ test("series: single-row navigation shares the wordmark baseline", async ({
   await page.evaluate(() => document.fonts.ready);
 
   const baselines = await page
-    .locator(".brand > span:last-child, .main-nav a, .main-nav button")
+    .locator(".brand > span:last-child, .main-nav a")
     .evaluateAll((elements) =>
       elements
         .filter((element) => element.getBoundingClientRect().width)
@@ -225,7 +225,7 @@ test("series: single-row navigation shares the wordmark baseline", async ({
         }),
     );
 
-  expect(baselines).toHaveLength(5);
+  expect(baselines).toHaveLength(4);
   expect(Math.max(...baselines) - Math.min(...baselines)).toBeLessThan(0.5);
 });
 

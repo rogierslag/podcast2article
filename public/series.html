@@ -92,9 +92,6 @@
           <a href="/series" aria-current="page" data-i18n="nav.series"
             >{{nav.series}}</a
           >
-          <form id="logout-form" class="hidden" method="post" action="/logout">
-            <button type="submit" data-i18n="nav.logout">{{nav.logout}}</button>
-          </form>
         </nav>
       </header>
 
@@ -246,30 +243,40 @@
       </main>
       <footer class="owner-footer">
         <span>Podcast2Article</span><span data-i18n="footer">{{footer}}</span>
-        <div
-          class="language-switcher"
-          role="group"
-          aria-label="{{uiLanguage.label}}"
-          data-i18n-aria-label="uiLanguage.label"
-        >
-          <button
-            type="button"
-            data-ui-language="nl"
-            lang="nl"
-            aria-pressed="false"
+        <div class="footer-utilities">
+          <div
+            class="language-switcher"
+            role="group"
+            aria-label="{{uiLanguage.label}}"
+            data-i18n-aria-label="uiLanguage.label"
           >
-            <span class="language-flag" aria-hidden="true">🇳🇱</span>
-            Nederlands
-          </button>
-          <button
-            type="button"
-            data-ui-language="en"
-            lang="en"
-            aria-pressed="false"
+            <button
+              type="button"
+              data-ui-language="nl"
+              lang="nl"
+              aria-pressed="false"
+            >
+              <span class="language-flag" aria-hidden="true">🇳🇱</span>
+              Nederlands
+            </button>
+            <button
+              type="button"
+              data-ui-language="en"
+              lang="en"
+              aria-pressed="false"
+            >
+              <span class="language-flag" aria-hidden="true">🇬🇧</span>
+              English
+            </button>
+          </div>
+          <form
+            id="logout-form"
+            class="footer-logout is-unavailable"
+            method="post"
+            action="/logout"
           >
-            <span class="language-flag" aria-hidden="true">🇬🇧</span>
-            English
-          </button>
+            <button type="submit" data-i18n="nav.logout">{{nav.logout}}</button>
+          </form>
         </div>
       </footer>
     </div>
