@@ -1,3 +1,4 @@
+import { decodeHTMLAttribute, decodeHTMLStrict } from "entities";
 import { similarity } from "../lib/format.js";
 import { safeFetch } from "../lib/network.js";
 import type { Episode } from "../types.js";
@@ -116,18 +117,6 @@ export function validateSourceUrl(value: string): URL {
   throw new Error("error.sourceUnsupported");
 }
 
-function decodeHtml(value: string): string {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#(\d+);/g, (_match, code: string) =>
-      String.fromCodePoint(Number(code)),
-    );
-}
-
 function metaContent(html: string, property: string): string | undefined {
   for (const tag of html.match(/<meta\s+[^>]*>/gi) ?? []) {
     const propertyMatch = tag.match(/\bproperty\s*=\s*(["'])(.*?)\1/i);
@@ -136,7 +125,7 @@ function metaContent(html: string, property: string): string | undefined {
     }
     const contentMatch = tag.match(/\bcontent\s*=\s*(["'])(.*?)\1/i);
     if (contentMatch?.[2]) {
-      return decodeHtml(contentMatch[2]).trim();
+      return decodeHTMLAttribute(contentMatch[2]).trim();
     }
   }
   return undefined;
@@ -187,7 +176,11 @@ async function getSpotifyMetadata(url: string): Promise<SpotifyEmbed> {
   if (!response.ok) {
     throw new Error("Spotify kon deze publieke link niet lezen.");
   }
-  return response.json() as Promise<SpotifyEmbed>;
+  const metadata = (await response.json()) as SpotifyEmbed;
+  return {
+    ...metadata,
+    title: metadata.title && decodeHTMLStrict(metadata.title),
+  };
 }
 
 async function searchItunes(
@@ -209,7 +202,15 @@ async function searchItunes(
     throw new Error("De openbare podcastindex is tijdelijk niet bereikbaar.");
   }
   const body = (await response.json()) as { results?: ItunesResult[] };
-  return body.results ?? [];
+  return (body.results ?? []).map((item) => ({
+    ...item,
+    trackName: item.trackName && decodeHTMLStrict(item.trackName),
+    collectionName:
+      item.collectionName && decodeHTMLStrict(item.collectionName),
+    description: item.description && decodeHTMLStrict(item.description),
+    shortDescription:
+      item.shortDescription && decodeHTMLStrict(item.shortDescription),
+  }));
 }
 
 export function selectBestEpisode(

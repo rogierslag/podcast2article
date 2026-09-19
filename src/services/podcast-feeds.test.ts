@@ -52,6 +52,62 @@ describe("podcast feed parsing", () => {
 
     expect(feed.imageUrl).toBe("https://example.com/art.jpg");
   });
+  it.each([
+    "We&#39;re back! Caf&#233; &#x1F600; &amp; &lt;script&gt;",
+    "<![CDATA[We&#39;re back! Caf&eacute; &#x1F600; &amp; &lt;script&gt;]]>",
+    "We<![CDATA[&#39;re back! Café 😀 & <script>]]>",
+  ])("decodes RSS display text without treating it as markup: %s", (title) => {
+    const input = `<rss><channel><title>${title}</title><item><title>${title}</title><description>${title}</description><guid>a&amp;b</guid><enclosure url="https://example.com/audio?a=1&amp;b=2"/></item></channel></rss>`;
+
+    const feed = parsePodcastFeed(input, url);
+
+    expect(feed.title).toBe("We're back! Café 😀 & <script>");
+    expect(feed.episodes[0]?.episode).toMatchObject({
+      title: feed.title,
+      sourceName: feed.title,
+      description: feed.title,
+      mediaUrl: "https://example.com/audio?a=1&b=2",
+    });
+  });
+  it.each(["header", "declaration", "bom"])(
+    "respects the feed's %s encoding",
+    async (source) => {
+      const input = xml.replace("Older episode", "Café");
+      const body =
+        source === "bom"
+          ? Buffer.concat([
+              Buffer.from([0xff, 0xfe]),
+              Buffer.from(input, "utf16le"),
+            ])
+          : Buffer.from(
+              source === "declaration"
+                ? `<?xml version="1.0" encoding="ISO-8859-1"?>${input}`
+                : input,
+              "latin1",
+            );
+      vi.mocked(safeFetch).mockResolvedValueOnce(
+        new Response(body, {
+          headers: {
+            "Content-Type":
+              source === "header"
+                ? "application/rss+xml; charset=iso-8859-1"
+                : "application/rss+xml",
+          },
+        }),
+      );
+
+      const feed = await fetchPodcastFeed(url);
+
+      expect(feed.episodes[1]?.episode.title).toBe("Café");
+    },
+  );
+  it("rejects invalid UTF-8 rather than storing replacement characters", async () => {
+    vi.mocked(safeFetch).mockResolvedValueOnce(
+      new Response(Buffer.from([0xff])),
+    );
+
+    await expect(fetchPodcastFeed(url)).rejects.toThrow("series.errorFeed");
+  });
   it("keeps GUID identity when an enclosure changes, and isolates different feeds", () => {
     const original = parsePodcastFeed(xml, url).episodes[0]?.key;
 
