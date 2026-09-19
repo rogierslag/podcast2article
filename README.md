@@ -332,11 +332,15 @@ source's terms. Credit and link to the original recording.
 ## Development
 
 GitHub Actions automatically runs formatting checks, ESLint, the TypeScript build,
-and all tests on every pull request and push to `main`. These checks run as six
+and all tests on every pull request and push to `main`. These checks run as seven
 independent jobs, so a failure in one check does not prevent the others from
-reporting results. The build job also checks browser-code syntax. The workflow can
+reporting results. The main-branch ruleset requires all seven checks, including
+`Browser regressions (Chromium)` and `Browser regressions (WebKit)`, directly.
+The build job also checks browser-code syntax. The workflow can
 be started manually through **Actions → Tests → Run workflow**. It uses the Node.js
 version from `.nvmrc` and installs dependencies with the existing `yarn.lock`.
+Yarn package downloads are cached by the lockfile; every job still performs a
+frozen-lockfile install, including package install scripts.
 
 The workflow uses a standard Linux runner, which is
 [free for public repositories](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
@@ -351,10 +355,18 @@ yarn run test:browser
 yarn run check:media
 ```
 
-The browser job tests desktop Chromium and mobile WebKit. It retains the HTML
-report, screenshots, and failure traces as Actions artifacts for 14 days. The media
-job processes a synthetic recording with Ubuntu's FFmpeg through an explicit
-`FFMPEG_BIN` setting. Browser and media tests run separately from `yarn run check`,
+Desktop Chromium and mobile WebKit run in separate browser jobs, each with one
+worker and its own disposable application server and data. Each installs only its
+required browser; Chromium uses the headless shell without downloading the headed
+browser. Browser binaries are cached separately by browser, runner platform, and
+Playwright browser revisions. System libraries are still installed on every fresh
+runner, and the installer verifies the required browser binaries after restoration.
+Both run the full suite for their project and retain HTML reports,
+screenshots, and failure traces for 14 days in `browser-regressions-desktop-chromium`
+and `browser-regressions-mobile-webkit` artifacts. The media job processes a
+synthetic recording with Ubuntu's FFmpeg through an explicit `FFMPEG_BIN` setting.
+It reuses `/usr/bin/ffmpeg` when available and installs it otherwise. Browser and
+media tests run separately from `yarn run check`,
 so existing production checks do not need to install browsers.
 
 ### Test limitations

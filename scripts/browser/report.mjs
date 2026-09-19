@@ -29,7 +29,7 @@ const summary = [
       `- **Known unresolved bug (${test.projectName}):** ${test.title.replace(/^known bug: /, "")}`,
   ),
   "",
-  "Known bugs are executed with an expected-failure annotation. A green run does not mean they are fixed. See the browser-regressions artifact and the README testing limitations.",
+  "Known bugs are executed with an expected-failure annotation. A green run does not mean they are fixed. See the browser-regressions-* artifacts and the README testing limitations.",
   "",
 ].join("\n");
 console.log(summary);
