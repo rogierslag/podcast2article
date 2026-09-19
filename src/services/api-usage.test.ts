@@ -41,10 +41,67 @@ describe("saved pricing estimates", () => {
     expect(estimate).toMatchObject({
       currency: "USD",
       basis: "reported_tokens",
-      pricingDate: "2026-09-15",
+      pricingDate: "2026-09-19",
       rates: { inputPerMillion: 2 },
     });
   });
+
+  it("prices Sol usage from the production job including cache writes", () => {
+    const estimate = estimateApiCost(
+      request({
+        actualModel: "gpt-5.6-sol",
+        usage: {
+          input_tokens: 22965,
+          input_tokens_details: { cached_tokens: 0, cache_write_tokens: 22962 },
+          output_tokens: 3901,
+          output_tokens_details: { reasoning_tokens: 512 },
+        },
+      }),
+    );
+
+    expect(estimate.amount).toBeCloseTo(0.192842, 10);
+    expect(estimate.rates).toMatchObject({
+      inputPerMillion: 4,
+      cachedInputPerMillion: 0.4,
+      cacheWritePerMillion: 5,
+      outputPerMillion: 20,
+    });
+  });
+
+  it.each([
+    ["default", 1],
+    ["flex", 0.5],
+    ["priority", 2],
+    ["fast", 2],
+  ])(
+    "prices Sol cached tokens with the %s tier and regional uplift",
+    (tier, multiplier) => {
+      const estimate = estimateApiCost(
+        request({
+          requestedModel: "gpt-5.6-sol",
+          actualServiceTier: tier,
+          endpointRegion: "eu",
+        }),
+      );
+
+      expect(estimate.amount).toBeCloseTo(0.01338 * multiplier * 1.1, 10);
+    },
+  );
+
+  it.each([272000, 272001])(
+    "uses Sol long-context prices only above 272K input tokens (%i)",
+    (input) => {
+      const estimate = estimateApiCost(
+        request({
+          requestedModel: "gpt-5.6-sol",
+          usage: { input_tokens: input, output_tokens: 1000 },
+        }),
+      );
+
+      const expected = input === 272000 ? 1.108 : 2.206008;
+      expect(estimate.amount).toBeCloseTo(expected, 10);
+    },
+  );
 
   it("uses actual tier, long context prices and regional processing uplift", () => {
     const estimate = estimateApiCost(
