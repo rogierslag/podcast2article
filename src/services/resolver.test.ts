@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { safeFetch } from "../lib/network.js";
 import {
+  resolveSpotifyEpisode,
   googleDriveDownloadUrl,
   googleDriveFileId,
   parseGoogleDriveMetadata,
@@ -10,7 +12,39 @@ import {
   validateYouTubeUrl,
 } from "./resolver.js";
 
+vi.mock("../lib/network.js", () => ({ safeFetch: vi.fn() }));
+
 describe("Spotify resolver", () => {
+  it("decodes podcast metadata before searching and returning the source", async () => {
+    vi.mocked(safeFetch)
+      .mockResolvedValueOnce(Response.json({ title: "We&#39;re back!" }))
+      .mockResolvedValueOnce(
+        Response.json({
+          results: [
+            {
+              trackName: "We&#39;re back!",
+              collectionName: "Caf&eacute; &amp; society",
+              description: "&#x1F600; &lt;script&gt;",
+              episodeUrl: "https://example.com/audio?a=1&b=2",
+            },
+          ],
+        }),
+      );
+
+    const episode = await resolveSpotifyEpisode(
+      "https://open.spotify.com/episode/abc",
+    );
+
+    expect(episode).toMatchObject({
+      title: "We're back!",
+      sourceName: "Café & society",
+      podcast: "Café & society",
+      description: "😀 <script>",
+      mediaUrl: "https://example.com/audio?a=1&b=2",
+    });
+    const searchUrl = String(vi.mocked(safeFetch).mock.calls[1]?.[0]);
+    expect(new URL(searchUrl).searchParams.get("term")).toBe("We're back!");
+  });
   it("accepts episode URLs and strips tracking parameters", () => {
     expect(
       validateSpotifyUrl(
@@ -90,6 +124,14 @@ describe("Google Drive resolver", () => {
     });
   });
 
+  it("decodes HTML attributes once, including named and hexadecimal entities", () => {
+    const metadata = parseGoogleDriveMetadata(
+      `<meta property="og:title" content="We&#x27;re Caf&eacute; &#x1F600; &amp;lt;tag&amp;gt; &#99999999;.mp4"><meta property="og:image" content="https://example.com/image?a=1&amp;b=2">`,
+    );
+
+    expect(metadata.title).toBe("We're Café 😀 &lt;tag&gt; �.mp4");
+    expect(metadata.imageUrl).toBe("https://example.com/image?a=1&b=2");
+  });
   it("accepts extensionless Google Meet titles using Drive MIME metadata", () => {
     const metadata = parseGoogleDriveMetadata(
       `<meta property="og:title" content="Stop simply using AI - 2026/07/28 - Recording">` +

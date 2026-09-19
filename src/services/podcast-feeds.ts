@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { decodeHTMLStrict } from "entities";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { z } from "zod";
 import { safeFetch } from "../lib/network.js";
@@ -10,6 +11,7 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   parseTagValue: false,
   processEntities: true,
+  htmlEntities: true,
 });
 
 function record(value: unknown): Record<string, unknown> {
@@ -55,7 +57,8 @@ export function parsePodcastFeed(xml: string, url: string): PodcastFeed {
   }
   const parsed: unknown = parser.parse(xml);
   const channel = record(record(record(parsed).rss).channel);
-  const title = text(channel.title);
+  // RSS display fields often contain HTML entities inside XML or CDATA.
+  const title = decodeHTMLStrict(text(channel.title));
   if (!title) {
     throw new Error("series.errorFeed");
   }
@@ -78,7 +81,7 @@ export function parsePodcastFeed(xml: string, url: string): PodcastFeed {
         );
       });
     const mediaUrl = enclosure && httpUrl(text(enclosure["@_url"]), url);
-    const episodeTitle = text(item.title);
+    const episodeTitle = decodeHTMLStrict(text(item.title));
     if (!mediaUrl || !episodeTitle) {
       continue;
     }
@@ -100,7 +103,7 @@ export function parsePodcastFeed(xml: string, url: string): PodcastFeed {
         sourceName: title,
         title: episodeTitle,
         mediaUrl,
-        description: text(item.description) || undefined,
+        description: decodeHTMLStrict(text(item.description)) || undefined,
         imageUrl:
           httpUrl(text(record(item["itunes:image"])["@_href"]), url) ||
           imageUrl,
@@ -151,7 +154,30 @@ export async function fetchPodcastFeed(value: string): Promise<PodcastFeed> {
     await reader.cancel();
   }
   // Keep the supplied URL as identity even when a host redirects its feed.
-  return parsePodcastFeed(Buffer.concat(chunks).toString("utf8"), url);
+  const buffer = Buffer.concat(chunks);
+  const charset = response.headers
+    .get("content-type")
+    ?.match(/charset=["']?([^\s;"']+)/i)?.[1];
+  const declaration = buffer
+    .toString("ascii", 0, 256)
+    .match(/^<\?xml[^>]*encoding=["']([^"']+)/i)?.[1];
+  const bomEncoding =
+    buffer[0] === 0xff && buffer[1] === 0xfe
+      ? "utf-16le"
+      : buffer[0] === 0xfe && buffer[1] === 0xff
+        ? "utf-16be"
+        : buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf
+          ? "utf-8"
+          : undefined;
+  let xml: string;
+  try {
+    xml = new TextDecoder(bomEncoding || charset || declaration || "utf-8", {
+      fatal: true,
+    }).decode(buffer);
+  } catch {
+    throw new Error("series.errorFeed");
+  }
+  return parsePodcastFeed(xml, url);
 }
 
 const searchSchema = z.object({
@@ -192,7 +218,7 @@ export async function discoverPodcastFeeds(value: string) {
     .object({ title: z.string().min(1) })
     .parse(await metadataResponse.json());
   const params = new URLSearchParams({
-    term: metadata.title,
+    term: decodeHTMLStrict(metadata.title),
     media: "podcast",
     entity: "podcast",
     limit: "10",
@@ -208,9 +234,9 @@ export async function discoverPodcastFeeds(value: string) {
     return feedUrl && item.collectionName
       ? [
           {
-            title: item.collectionName,
+            title: decodeHTMLStrict(item.collectionName),
             url: feedUrl,
-            author: item.artistName || "",
+            author: decodeHTMLStrict(item.artistName || ""),
             imageUrl: httpUrl(item.artworkUrl100 || "", feedUrl),
           },
         ]
