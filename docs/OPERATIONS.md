@@ -637,17 +637,24 @@ They are covered by the existing jobs backup. No external analytics service,
 scheduled job, new secret, or database migration is required. Existing articles
 start at zero on their first tracked load after deployment; there is no backfill.
 
-Use the owner's authenticated `GET /api/jobs/:id/share-stats` endpoint for counts.
+Owners can view counts in **Shared link activity** at the bottom of their article,
+or use the authenticated `GET /api/jobs/:id/share-stats` endpoint. The footer
+refreshes when opening or returning to an article and offers **Try again** if
+the request fails; an unavailable count is never shown as zero.
 The [monitoring reference](SHARED-ARTICLE-MONITORING.md) documents the payload,
 30-second/90% read definition, privacy, and deduplication limits. Public links must
 not return statistics. Public events cannot change owner read state.
 
-After deployment, use a test-only shared article: confirm a visible browser load
+After deployment, use a test-only shared article: confirm a browser load visible for two seconds
 increments `loads`, read actively for 30 seconds and reach the end to increment
 `reads`, then verify counts survive a normal application restart when one is
 already planned. Do not restart production just to inspect counters. Requests for
 HTML previews or audio alone must not increment them. Check that signed-out
 statistics requests return `401` and another owner's article returns `404`.
+
+WebDriver-declared automation intentionally sends no load or read events; use an
+ordinary browser for the rollout check. This is a best-effort filter, not proof
+that every counted visit is human.
 
 If counts stay at zero, check the browser's event POST responses and JavaScript
 availability. HTTPS (or localhost) is required for random visit IDs. `400` means

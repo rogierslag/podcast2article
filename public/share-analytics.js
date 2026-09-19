@@ -6,6 +6,7 @@ export function createShareTracker({ send, now = () => performance.now() }) {
   let previousTick = now();
   let lastActivity = previousTick;
   let activeMs = 0;
+  let visibleMs = 0;
   let wasVisible = false;
 
   return {
@@ -16,6 +17,12 @@ export function createShareTracker({ send, now = () => performance.now() }) {
       const current = now();
       const elapsed = current - previousTick;
       previousTick = current;
+      // A brief preview must not count as an open. Require consecutive visible time.
+      if (visible && wasVisible && elapsed >= 0 && elapsed <= 2_000) {
+        visibleMs += elapsed;
+      } else {
+        visibleMs = 0;
+      }
       // Ignore suspended timers and time spent away from the reader.
       if (
         visible &&
@@ -27,6 +34,9 @@ export function createShareTracker({ send, now = () => performance.now() }) {
       }
       wasVisible = visible;
       if (!visible || sending || read) {
+        return;
+      }
+      if (!loaded && visibleMs < 2_000) {
         return;
       }
       const event = !loaded

@@ -33,6 +33,8 @@ This file applies to the entire repository.
 - On mobile, keep the localized `Mark as read` label written out. PDF and permalink actions should use recognizable printer and share icons with accessible labels; their visible text may collapse at the mobile breakpoint.
 - Keep the same actions available at the top of the article and in the completion footer unless the task explicitly changes that behavior.
 
+- Shared-load and estimated-read counts appear only in the owner article footer, never at the top or on anonymous shared pages. Keep unavailable counts distinct from zero.
+
 ## Permalink security invariants
 
 - Public permalinks are capability URLs backed by a stable, high-entropy token. Do not replace them with a sequential identifier, username, article index, or bare job UUID.
