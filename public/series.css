@@ -1,16 +1,9 @@
-.series-page {
-  max-width: 1040px;
-  margin: 64px auto 96px;
-  padding: 0 32px;
-}
-.series-heading h1 {
-  font: 500 clamp(42px, 6vw, 72px) / 1.05 var(--serif);
-  letter-spacing: -0.035em;
-  margin: 16px 0;
-}
-.series-heading .intro {
+.series-intro {
   max-width: 660px;
-  margin-bottom: 32px;
+  margin: 28px 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
 }
 .series-page h2 {
   font: 500 32px / 1.2 var(--serif);
@@ -129,10 +122,6 @@
   font-size: 14px;
 }
 @media (max-width: 600px) {
-  .series-page {
-    margin: 36px auto 60px;
-    padding: 0 22px;
-  }
   .series-page .composer {
     padding: 20px 16px;
   }

@@ -1487,6 +1487,14 @@ function openArticleJob(jobId) {
 }
 
 function showArticleRoute() {
+  const activePath = location.pathname.replace(/\/$/, "") || "/";
+  document.querySelectorAll(".main-nav a").forEach((link) => {
+    if (link.getAttribute("href") === activePath) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
   sourcePreview.close();
   const { jobId } = readArticleLocation(location.hash);
   if (jobId) {
