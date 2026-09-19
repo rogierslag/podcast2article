@@ -2,6 +2,10 @@ import express from "express";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import {
+  AccountBudgetError,
+  spendingLimitExempt,
+} from "./services/account-budget.js";
 import { deploymentFailed } from "./services/deployment.js";
 import { resolveGitSha } from "./lib/git.js";
 import { socialMetadata, type SocialImage } from "./lib/social-metadata.js";
@@ -26,6 +30,7 @@ import {
   sessionCookie,
 } from "./services/auth.js";
 import {
+  getAccountBudget,
   createArticleShare,
   createJob,
   createPodcastJob,
@@ -70,6 +75,8 @@ const loginTemplate = await readFile(
   "utf8",
 );
 const auth = createUserAuth();
+// Validate operator configuration before the server accepts work.
+spendingLimitExempt(auth.usernames[0] ?? "local");
 const loginAttempts = new Map<
   string,
   { failures: number; blockedUntil: number }
@@ -430,6 +437,11 @@ app.get("/api/auth", (_request, response) => {
   response.json({ enabled: auth.enabled, username: response.locals.username });
 });
 
+app.get("/api/account-budget", (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  response.json(getAccountBudget(response.locals.username));
+});
+
 app.get("/api/deployment-status", async (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.json({ failed: auth.enabled && (await deploymentFailed()) });
@@ -666,6 +678,11 @@ app.post("/api/jobs", async (request, response) => {
       .status(202)
       .json(localizeJob(job, responseLanguage(response)));
   } catch (error) {
+    if (error instanceof AccountBudgetError) {
+      return response
+        .status(429)
+        .json({ error: localizeError(response, error.message) });
+    }
     if (error instanceof DuplicateJobError) {
       return response.status(409).json({
         error: localizeError(
@@ -756,7 +773,13 @@ app.post("/api/jobs/:id/retry-article", async (request, response) => {
     const message =
       error instanceof Error ? error.message : "Artikelretry kon niet starten.";
     return response
-      .status(message === "Opdracht niet gevonden." ? 404 : 409)
+      .status(
+        error instanceof AccountBudgetError
+          ? 429
+          : message === "Opdracht niet gevonden."
+            ? 404
+            : 409,
+      )
       .json({ error: localizeError(response, message) });
   }
 });

@@ -247,6 +247,20 @@ in J4 and feed recognition in J7; their value should be checked with ambiguous o
 missing artwork. Consistent button feedback supports every journey, while clear
 labels and predictable focus determine whether an action can actually be used.
 
+## Account spending visibility
+
+The account footer supports J2, J3 and J7 by showing estimated spending over the
+preceding 30 days before the reader requests more processing. Historical spending
+stays visible but is excluded from the new limit; reservations are separate from
+confirmed estimates. Operator-configured exemptions retain cost tracking and show
+**No spending limit**. Readers cannot change their own allowance.
+
+**Value test.** Compare the footer with stored request costs for a limited account,
+an exempt account and a job still processing. Confirm that the remaining allowance
+includes reservations, another account's costs are inaccessible, and a failed
+refresh shows unavailable usage rather than a zero balance. This is a validation
+criterion, not a measured product outcome.
+
 ## Measurement plan
 
 No production funnel instrumentation was found in the reviewed frontend and

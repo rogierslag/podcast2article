@@ -1,6 +1,6 @@
 import { createReadStream } from "node:fs";
 import OpenAI from "openai";
-import { endpointRegion, trackedRequest } from "./api-usage.js";
+import { endpointRegion, trackedRequest, reserveApiCost } from "./api-usage.js";
 import type { UsageRecorder } from "./api-usage.js";
 import { formatArticleWordRange } from "../../public/article-length.js";
 import { audioChunkSeconds } from "./audio.js";
@@ -86,6 +86,11 @@ export async function transcribeChunks(
           stage: "transcription",
           model,
           region: endpointRegion(openai.baseURL),
+          reservedCostUsd: reserveApiCost(
+            model,
+            endpointRegion(openai.baseURL),
+            { audioSeconds: chunkSeconds + 1 },
+          ),
           chunkNumber,
           signal,
           record: recordUsage,
@@ -371,9 +376,35 @@ export async function writeArticle(
   let response;
   try {
     const model = process.env.ARTICLE_MODEL ?? "gpt-5.6-terra";
+    const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
+      model,
+      max_output_tokens: 16_384,
+      instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
+Behoud de herkenbare stijl van de opname: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
+Gebruik verspreid door de secties enkele quote-blokken voor letterlijke, op zichzelf staande en memorabele uitspraken, maar alleen als het transcript zulke uitspraken bevat. Zet dan kind op "quote" en kopieer de gesproken woorden exact uit de gekoppelde, aaneengesloten bronfragmenten; laat omringende aanhalingstekens weg. Gebruik anders kind "paragraph". Forceer geen citaten en gebruik quote-blokken niet voor parafrases.\n
+Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea direct ondersteunen. Kies de nauwkeurigste fragmenten. Vermijd meta-commentaar zoals 'in de podcast' of 'in de opname'. Geef in styleNote in één korte zin aan welke stijleigenschappen je hebt behouden. Schrijf circa ${targetWords} woorden.`,
+      input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nTaalinstructie: ${articleLanguageInstruction(metadata.language)}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "source_linked_article",
+          strict: true,
+          schema: articleSchemaFor(validIds),
+        },
+      },
+    };
+    const reservedCostUsd = reserveApiCost(
+      model,
+      endpointRegion(openai.baseURL),
+      {
+        inputBytes: Buffer.byteLength(JSON.stringify(payload)),
+        outputTokens: 16_384,
+      },
+    );
     response = await trackedRequest(
       {
         stage: "article",
+        reservedCostUsd,
         model,
         region: endpointRegion(openai.baseURL),
         signal,
@@ -381,25 +412,7 @@ export async function writeArticle(
       },
       () =>
         openai.responses
-          .create(
-            {
-              model,
-              instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
-Behoud de herkenbare stijl van de opname: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
-Gebruik verspreid door de secties enkele quote-blokken voor letterlijke, op zichzelf staande en memorabele uitspraken, maar alleen als het transcript zulke uitspraken bevat. Zet dan kind op "quote" en kopieer de gesproken woorden exact uit de gekoppelde, aaneengesloten bronfragmenten; laat omringende aanhalingstekens weg. Gebruik anders kind "paragraph". Forceer geen citaten en gebruik quote-blokken niet voor parafrases.\n
-Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea direct ondersteunen. Kies de nauwkeurigste fragmenten. Vermijd meta-commentaar zoals 'in de podcast' of 'in de opname'. Geef in styleNote in één korte zin aan welke stijleigenschappen je hebt behouden. Schrijf circa ${targetWords} woorden.`,
-              input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nTaalinstructie: ${articleLanguageInstruction(metadata.language)}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
-              text: {
-                format: {
-                  type: "json_schema",
-                  name: "source_linked_article",
-                  strict: true,
-                  schema: articleSchemaFor(validIds),
-                },
-              },
-            },
-            { timeout: timeoutMs, signal, maxRetries: 0 },
-          )
+          .create(payload, { timeout: timeoutMs, signal, maxRetries: 0 })
           .withResponse(),
     );
   } finally {

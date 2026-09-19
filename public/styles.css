@@ -928,6 +928,46 @@ footer {
   gap: 12px;
   text-align: center;
 }
+.account-budget {
+  width: min(100%, 620px);
+  margin-bottom: 12px;
+  text-transform: none;
+  text-align: left;
+  font: 12px/1.6 var(--sans);
+  color: var(--ink);
+}
+.account-budget summary {
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+  font: 11px/1.8 var(--mono);
+}
+.account-budget-status {
+  display: block;
+  color: var(--muted);
+}
+.account-budget-breakdown dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 20px;
+  padding: 16px 0;
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.account-budget-breakdown dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.account-budget-breakdown p {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+@media print {
+  .account-budget {
+    display: none;
+  }
+}
 .footer-utilities {
   display: flex;
   flex-wrap: wrap;

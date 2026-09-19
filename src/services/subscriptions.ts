@@ -209,7 +209,9 @@ export class SubscriptionStore {
         } catch (error) {
           subscription.error =
             error instanceof Error &&
-            error.message === "error.creationUnavailable"
+            ["error.creationUnavailable", "error.accountBudget"].includes(
+              error.message,
+            )
               ? error.message
               : "series.errorCheck";
           await this.save(username, items);

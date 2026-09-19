@@ -18,11 +18,19 @@ import {
   normalizeAudio,
   splitAudio,
 } from "./audio.js";
+import {
+  assertAccountBudget,
+  AccountBudgetError,
+  accountLimitUsd,
+  spendingLimitExempt,
+  summarizeAccountBudget,
+} from "./account-budget.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource, validateSourceUrl } from "./resolver.js";
 import { downloadFathomRecording } from "./fathom.js";
 import { downloadYouTubeAudio } from "./youtube.js";
 import type {
+  AccountBudget,
   ApiRequestUsage,
   ArticleReadingPosition,
   ArticleSummary,
@@ -177,11 +185,43 @@ async function persist(username: string, job: Job): Promise<void> {
   }
 }
 
+function accountJobs(username: string): Job[] {
+  return [...memory.entries()]
+    .filter(([key]) => key.startsWith(`${username}/`))
+    .map(([, job]) => job);
+}
+
+export function getAccountBudget(username: string): AccountBudget {
+  return summarizeAccountBudget(
+    accountJobs(username),
+    spendingLimitExempt(username),
+  );
+}
+
+function checkAccountBudget(username: string, reservation = 0): void {
+  if (!spendingLimitExempt(username)) {
+    assertAccountBudget(accountJobs(username), reservation);
+  }
+}
+
 async function recordApiUsage(
   username: string,
   job: Job,
   request: ApiRequestUsage,
 ): Promise<void> {
+  if (request.status === "pending") {
+    if (request.reservedCostUsd === undefined) {
+      if (!spendingLimitExempt(username)) {
+        throw new AccountBudgetError();
+      }
+      // Continue tracking new attempts for exempt accounts, including unknown
+      // prices. Revoking an exemption must not make those requests historical.
+      request.reservedCostUsd = accountLimitUsd;
+    }
+    // No await between checking and updating the in-memory reservation: parallel
+    // jobs in this server cannot both consume the same remaining allowance.
+    checkAccountBudget(username, request.reservedCostUsd);
+  }
   const usage = job.apiUsage ?? {
     trackingStartedAt: new Date().toISOString(),
     coverage: "partial" as const,
@@ -267,6 +307,7 @@ export async function createJob(
   if (existingJob) {
     throw new DuplicateJobError(existingJob);
   }
+  checkAccountBudget(username);
   const now = new Date().toISOString();
   const sourceHost = new URL(sourceUrl).hostname.toLowerCase();
   const job: Job = {
@@ -327,6 +368,7 @@ export async function createPodcastJob(
   if (existing) {
     return existing;
   }
+  checkAccountBudget(username);
   const now = new Date().toISOString();
   const job: Job = {
     language: options.language,
@@ -771,6 +813,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
         "Deze opdracht heeft het maximum van twee artikelpogingen bereikt.",
       );
     }
+    checkAccountBudget(username);
     const retryJob: Job = {
       ...job,
       stage: "writing",
@@ -797,6 +840,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
 }
 
 export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
+  const recovered: Array<{ username: string; job: Job }> = [];
   for (const username of usernames) {
     const jobDirectory = path.join(userDirectory(username), "jobs");
     await mkdir(jobDirectory, { recursive: true });
@@ -828,14 +872,18 @@ export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
         jobLog(job.id, "queued", "Onvoltooide opdracht na serverstart hervat", {
           previousStage,
         });
-        enqueueJob(username, job, "full");
+        recovered.push({ username, job });
       } catch (error) {
         console.error(
           `${new Date().toISOString()} ERROR Kon opgeslagen jobbestand niet herstellen · file=${JSON.stringify(file)}`,
           error,
         );
+        throw error;
       }
     }
+  }
+  for (const { username, job } of recovered) {
+    enqueueJob(username, job, "full");
   }
 }
 

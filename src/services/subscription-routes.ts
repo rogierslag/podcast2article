@@ -155,20 +155,24 @@ export function subscriptionRouter(store: SubscriptionStore) {
     ) => {
       const key =
         error instanceof Error &&
-        /^(series\.error\w+|error.creationUnavailable)$/.test(error.message)
+        /^(series\.error\w+|error.creationUnavailable|error.accountBudget)$/.test(
+          error.message,
+        )
           ? error.message
           : error instanceof z.ZodError
             ? "error.input"
             : "series.errorFeed";
       response
         .status(
-          key === "series.errorNotFound"
-            ? 404
-            : key === "series.errorDuplicate" || key === "series.errorLimit"
-              ? 409
-              : key === "error.creationUnavailable"
-                ? 503
-                : 400,
+          key === "error.accountBudget"
+            ? 429
+            : key === "series.errorNotFound"
+              ? 404
+              : key === "series.errorDuplicate" || key === "series.errorLimit"
+                ? 409
+                : key === "error.creationUnavailable"
+                  ? 503
+                  : 400,
         )
         .json({
           error: translate(

@@ -58,6 +58,7 @@ const input = {
 
 beforeEach(() => {
   vi.resetModules();
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "");
   state.files.clear();
   state.writeArticle
     .mockReset()
@@ -94,6 +95,7 @@ beforeEach(() => {
 afterEach(async () => {
   const jobs = await import("./jobs.js");
   await jobs.shutdownJobs();
+  vi.unstubAllEnvs();
 });
 
 describe("processing reservations and concurrent queue", () => {
@@ -291,6 +293,7 @@ describe("independent metadata and media processing", () => {
 it("persists usage through failure and restart without duplicating attempt updates", async () => {
   resolveMetadata();
   const entry: ApiRequestUsage = {
+    reservedCostUsd: 0.1,
     id: "test-attempt",
     operationId: "test-operation",
     attempt: 1,
@@ -667,4 +670,218 @@ it("counts unread and queued podcast jobs, excluding read, deleted, failed and o
 
   expect(jobs.podcastOutstandingCount("owner", ids)).toBe(2);
   expect(jobs.podcastOutstandingCount("other", ids)).toBe(0);
+});
+
+it("reserves account budget before concurrent paid requests and isolates other accounts", async () => {
+  resolveMetadata();
+  const sent: string[] = [];
+  let attempts = 0;
+  state.transcribe.mockImplementation(
+    async (
+      _files,
+      _language,
+      _progress,
+      _status,
+      signal: AbortSignal,
+      recordUsage,
+    ) => {
+      attempts += 1;
+      const id = `budget-${attempts}`;
+      await recordUsage({
+        id,
+        operationId: id,
+        attempt: 1,
+        stage: "transcription",
+        requestedModel: "gpt-4o-transcribe-diarize",
+        requestedServiceTier: "default",
+        endpointRegion: "global",
+        startedAt: new Date().toISOString(),
+        status: "pending",
+        reservedCostUsd: 3,
+        cost: { currency: "USD", amount: null },
+      } satisfies ApiRequestUsage);
+      sent.push(id);
+      await new Promise<void>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      });
+    },
+  );
+  const jobs = await import("./jobs.js");
+  const first = await jobs.createJob("owner", input);
+  const second = await jobs.createJob("owner", {
+    ...input,
+    articleLength: "short",
+  });
+  await jobs.createJob("other", input);
+
+  await vi.waitFor(() => expect(attempts).toBe(3));
+  await vi.waitFor(() => expect(sent).toHaveLength(2));
+  await vi.waitFor(async () => {
+    const states = await Promise.all([
+      jobs.getJob("owner", first.id),
+      jobs.getJob("owner", second.id),
+    ]);
+    expect(states.some((job) => job?.error === "error.accountBudget")).toBe(
+      true,
+    );
+  });
+  const reservations = [...state.files.values()]
+    .map((content) => JSON.parse(content) as Job)
+    .flatMap((job) => job.apiUsage?.requests ?? []);
+  expect(reservations).toHaveLength(2);
+  expect(reservations.every((entry) => entry.reservedCostUsd === 3)).toBe(true);
+});
+
+it("blocks manual jobs, subscriptions and article retries from restored deleted spending", async () => {
+  const { jobs, job } = await failedArticleJob();
+  await jobs.shutdownJobs();
+  const file = path.resolve("data", "users", "owner", "jobs", `${job.id}.json`);
+  const stored = JSON.parse(state.files.get(file) ?? "{}") as Job;
+  stored.apiUsage = {
+    trackingStartedAt: new Date().toISOString(),
+    coverage: "complete",
+    knownEstimatedCostUsd: 5,
+    unknownCostRequests: 0,
+    requests: [
+      {
+        reservedCostUsd: 5,
+        id: "spent",
+        operationId: "spent",
+        attempt: 1,
+        stage: "article",
+        requestedModel: "gpt-5.6-terra",
+        requestedServiceTier: "auto",
+        endpointRegion: "global",
+        startedAt: new Date().toISOString(),
+        status: "succeeded",
+        cost: { currency: "USD", amount: 5 },
+      },
+    ],
+  };
+  state.files.set(file, JSON.stringify(stored));
+  vi.resetModules();
+  const restarted = await import("./jobs.js");
+  await restarted.resumeIncompleteJobs(["owner"]);
+
+  await expect(restarted.createJob("owner", input)).rejects.toThrow(
+    "error.accountBudget",
+  );
+  await expect(restarted.retryArticle("owner", job.id)).rejects.toThrow(
+    "error.accountBudget",
+  );
+  await expect(
+    restarted.createPodcastJob(
+      "owner",
+      {
+        key: "subscription-episode",
+        episode: {
+          sourceType: "rss",
+          sourceUrl: "https://example.com/episode",
+          title: "Episode",
+          sourceName: "Podcast",
+          mediaUrl: "https://example.com/episode.mp3",
+        },
+      },
+      input,
+    ),
+  ).rejects.toThrow("error.accountBudget");
+
+  // Deleted content must not refund the account, including after a restart.
+  stored.stage = "complete";
+  stored.deletedAt = new Date().toISOString();
+  state.files.set(file, JSON.stringify(stored));
+  await restarted.shutdownJobs();
+  vi.resetModules();
+  const afterDeletion = await import("./jobs.js");
+  await afterDeletion.resumeIncompleteJobs(["owner"]);
+  await expect(afterDeletion.createJob("owner", input)).rejects.toThrow(
+    "error.accountBudget",
+  );
+  expect(await afterDeletion.createJob("other", input)).toMatchObject({
+    stage: "queued",
+  });
+});
+
+it("does not send paid work when persisting its budget reservation fails", async () => {
+  resolveMetadata();
+  const sent = vi.fn();
+  state.transcribe.mockImplementationOnce(
+    async (_files, _language, _progress, _status, _signal, recordUsage) => {
+      state.writeFile.mockRejectedValueOnce(new Error("disk full"));
+      await recordUsage({
+        id: "reservation",
+        operationId: "reservation",
+        attempt: 1,
+        stage: "transcription",
+        requestedModel: "gpt-4o-transcribe-diarize",
+        requestedServiceTier: "default",
+        endpointRegion: "global",
+        startedAt: new Date().toISOString(),
+        status: "pending",
+        reservedCostUsd: 0.1,
+        cost: { currency: "USD", amount: null },
+      } satisfies ApiRequestUsage);
+      sent();
+    },
+  );
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+
+  await vi.waitFor(async () =>
+    expect((await jobs.getJob("owner", job.id))?.stage).toBe("failed"),
+  );
+  expect(sent).not.toHaveBeenCalled();
+});
+
+it("exempt accounts can keep processing above the limit while costs remain tracked", async () => {
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "owner");
+  resolveMetadata();
+  state.transcribe.mockImplementation(
+    async (_files, _language, _progress, _status, _signal, recordUsage) => {
+      const usage: ApiRequestUsage = {
+        id: "unlimited",
+        operationId: "unlimited",
+        attempt: 1,
+        stage: "transcription",
+        requestedModel: "gpt-4o-transcribe-diarize",
+        requestedServiceTier: "default",
+        endpointRegion: "global",
+        startedAt: new Date().toISOString(),
+        status: "pending",
+        reservedCostUsd: 10,
+        cost: { currency: "USD", amount: null },
+      };
+      await recordUsage(usage);
+      await recordUsage({
+        ...usage,
+        status: "succeeded",
+        cost: { currency: "USD", amount: 8 },
+      });
+      return [
+        { id: "t-00001", start: 0, end: 1, speaker: "Alice", text: "Hello" },
+      ];
+    },
+  );
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+  await vi.waitFor(async () =>
+    expect((await jobs.getJob("owner", job.id))?.stage).toBe("complete"),
+  );
+
+  expect(jobs.getAccountBudget("owner")).toMatchObject({
+    spentUsd: 8,
+    limitUsd: null,
+    remainingUsd: null,
+  });
+  const next = await jobs.createJob("owner", {
+    ...input,
+    articleLength: "compact",
+  });
+  expect(next).toBeDefined();
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "");
+  await expect(
+    jobs.createJob("owner", { ...input, articleLength: "long" }),
+  ).rejects.toThrow("error.accountBudget");
 });

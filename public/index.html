@@ -59,6 +59,7 @@
     />
     <link rel="stylesheet" href="/styles.css?v=brand-transition-v1" />
     <script src="/app.js?v=initial-view-v1" type="module"></script>
+    <script src="/account-budget.js" type="module"></script>
   </head>
   <body class="native-scroll">
     <div class="reading-chrome">
@@ -630,6 +631,13 @@
         </section>
       </main>
       <footer class="owner-footer">
+        <details id="account-budget" class="account-budget">
+          <summary>
+            <span class="account-budget-summary">{{budget.loading}}</span>
+            <span class="account-budget-status"></span>
+          </summary>
+          <div class="account-budget-breakdown"></div>
+        </details>
         <span>Podcast2Article</span><span data-i18n="footer">{{footer}}</span>
         <div class="footer-utilities">
           <div

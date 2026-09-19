@@ -95,6 +95,8 @@ export interface ApiRequestUsage {
   errorCode?: string;
   usage?: ApiUsageMetrics;
   audioSeconds?: number;
+  /** Persisted before sending; retained when the provider outcome is unknown. */
+  reservedCostUsd?: number;
   cost: ApiCostEstimate;
 }
 
@@ -193,4 +195,15 @@ export interface ProcessingJobSummary {
   progress: number;
   message: string;
   createdAt: string;
+}
+
+export interface AccountBudget {
+  windowDays: number;
+  spentUsd: number;
+  countedSpendUsd: number;
+  historicalSpendUsd: number;
+  reservedUsd: number;
+  unknownCostRequests: number;
+  limitUsd: number | null;
+  remainingUsd: number | null;
 }

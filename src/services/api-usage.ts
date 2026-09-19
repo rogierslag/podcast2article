@@ -21,6 +21,40 @@ const articlePricing = new Map([
   ["gpt-5.6-sol", { input: 4, cachedInput: 0.4, cacheWrite: 5, output: 20 }],
 ]);
 
+/** Conservative allowance using the same verified price table as accounting.
+ * Text tokens cannot exceed their UTF-8 bytes; allow additional framing tokens.
+ * Reserve the highest supported tier, long-context rates and cache-write rate.
+ */
+export function reserveApiCost(
+  model: string,
+  region: ApiRequestUsage["endpointRegion"],
+  size: { inputBytes?: number; outputTokens?: number; audioSeconds?: number },
+): number | undefined {
+  if (region === "custom") {
+    return undefined;
+  }
+  if (
+    model === "gpt-4o-transcribe-diarize" &&
+    size.audioSeconds !== undefined
+  ) {
+    return (size.audioSeconds / 60) * 0.006 * 1.1;
+  }
+  const rates = articlePricing.get(model);
+  if (
+    !rates ||
+    size.inputBytes === undefined ||
+    size.outputTokens === undefined
+  ) {
+    return undefined;
+  }
+  return (
+    (((size.inputBytes + 4096) * rates.cacheWrite * 4 +
+      size.outputTokens * rates.output * 3) /
+      1_000_000) *
+    1.1
+  );
+}
+
 function object(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null
     ? Object.fromEntries(Object.entries(value))
@@ -146,6 +180,7 @@ interface TrackedRequest {
   chunkNumber?: number;
   signal?: AbortSignal;
   record?: UsageRecorder;
+  reservedCostUsd?: number;
 }
 
 function retryDelay(error: unknown, attempt: number): number {
@@ -187,6 +222,7 @@ export async function trackedRequest<T>(
       endpointRegion: options.region,
       startedAt: new Date(started).toISOString(),
       status: "pending",
+      reservedCostUsd: options.reservedCostUsd,
       cost: {
         currency: "USD",
         amount: null,
