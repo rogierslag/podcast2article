@@ -123,9 +123,7 @@ describe("browser localization", () => {
       expect(label.textContent).toBe(text);
       expect(namedButton.setAttribute).toHaveBeenCalledWith(
         "aria-label",
-        expected === "nl"
-          ? "Markeer dit artikel als gelezen"
-          : "Mark this article as read",
+        expected === "nl" ? "Markeer als gelezen" : "Mark as read",
       );
     },
   );

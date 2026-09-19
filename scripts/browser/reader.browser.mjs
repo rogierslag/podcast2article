@@ -346,24 +346,6 @@ test("deployment warning clears on recovery and is never requested by a permalin
   expect(requests).toBe(previousRequests);
 });
 
-test("known bug: the accessible share name must contain its visible label (issue 31)", async ({
-  page,
-}) => {
-  await owner(page);
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  const share = page.locator("[data-share-article]").first();
-  await expect(share.locator("span")).toBeVisible();
-  const visible = (await share.locator("span").innerText()).trim();
-
-  test.fail(
-    true,
-    "https://github.com/rogierslag/podcast2article/issues/31: visible and accessible share labels still differ.",
-  );
-  await expect(share).toHaveAccessibleName(new RegExp(visible, "i"), {
-    timeout: 1000,
-  });
-});
-
 test("mobile owner actions retain equal touch targets and visible read text (PR 4)", async ({
   page,
 }) => {

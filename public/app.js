@@ -1078,7 +1078,9 @@ function articleCard(article) {
               data-article-id="${articleId}"
               data-read="${isRead}"
               aria-label="${
-                isRead ? t("article.markUnread") : t("article.markRead")
+                isRead
+                  ? t("article.markUnreadLabel")
+                  : t("article.markReadLabel")
               }"
               aria-pressed="${isRead}"
             >

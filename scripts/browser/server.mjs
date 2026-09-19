@@ -41,6 +41,7 @@ try {
     cwd: root,
     env: {
       ...process.env,
+      GIT_SHA: "1234567890123456789012345678901234567890",
       HOST: "127.0.0.1",
       PORT: "4317",
       APP_PASSWORD: "",
