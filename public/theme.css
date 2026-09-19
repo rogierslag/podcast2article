@@ -91,3 +91,83 @@
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23eee9de' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
+
+/* Shared button feedback across the owner app, series, public reader and login.
+   Components choose a role; hover and touch/keyboard press use the same colors. */
+button {
+  --button-hover-surface: var(--action-surface);
+  --button-hover-text: var(--action-text);
+  --button-hover-border: var(--action-surface);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+:where(
+    .url-row,
+    .article-read-footer,
+    .article-card-actions,
+    .source-preview-header,
+    .login-page
+  )
+  button,
+button.series-primary {
+  --button-hover-surface: var(--orange);
+  --button-hover-text: var(--accent-action-text);
+  --button-hover-border: var(--orange);
+}
+
+button.source-link {
+  --button-hover-surface: var(--green);
+  --button-hover-text: var(--green-action-text);
+  --button-hover-border: var(--green);
+}
+
+:where(.main-nav, .article-delete-footer, .article-series) button,
+button.android-install-button {
+  --button-hover-surface: transparent;
+  --button-hover-text: var(--accent-text);
+  --button-hover-border: transparent;
+}
+
+button.android-install-button,
+.article-series button {
+  --button-hover-text: var(--ink);
+}
+
+.language-switcher button {
+  --button-hover-surface: var(--takeaway-surface);
+  --button-hover-text: var(--ink);
+  --button-hover-border: var(--control-border);
+}
+
+@media (hover: hover) {
+  button:enabled:not([aria-disabled="true"]):hover {
+    background-color: var(--button-hover-surface);
+    color: var(--button-hover-text);
+    border-color: var(--button-hover-border);
+  }
+}
+
+button:enabled:not([aria-disabled="true"]):active {
+  background-color: var(--button-hover-surface);
+  color: var(--button-hover-text);
+  border-color: var(--button-hover-border);
+}
+
+button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
+}
