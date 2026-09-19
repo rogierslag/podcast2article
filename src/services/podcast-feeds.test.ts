@@ -23,6 +23,7 @@ describe("podcast feed parsing", () => {
     expect(feed.episodes[0]?.episode).toMatchObject({
       title: "A <thoughtful> conversation",
       sourceType: "rss",
+      feedUrl: url,
       sourceUrl: "https://example.com/new.mp3",
       imageUrl: "https://example.com/cover.jpg",
     });

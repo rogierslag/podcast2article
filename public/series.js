@@ -169,6 +169,8 @@ async function refresh() {
     ...subscriptions.map((subscription) => {
       const row = element("article", "", "series-item");
       row.dataset.subscriptionId = subscription.id;
+      row.id = `subscription-${subscription.id}`;
+      row.tabIndex = -1;
       const content = element("div");
       content.append(element("h3", subscription.title));
       content.append(
@@ -313,7 +315,17 @@ async function refresh() {
   );
 }
 
-void perform(refresh);
+void perform(async () => {
+  await refresh();
+  if (location.hash.startsWith("#subscription-")) {
+    document.getElementById(location.hash.slice(1))?.focus();
+  }
+  const params = new URLSearchParams(location.search);
+  if (params.get("preview") === "1" && params.get("url")) {
+    backfillSelect.value = "none";
+    await showPreview(params.get("url"));
+  }
+});
 const prefilledUrl = new URLSearchParams(location.search).get("url");
 if (prefilledUrl) {
   sourceInput.value = prefilledUrl;

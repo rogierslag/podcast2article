@@ -243,6 +243,7 @@ test("shared reader assets are public while owner routes require authentication"
     "/api/deployment-status",
     "/api/articles",
     "/api/subscriptions",
+    "/api/subscriptions/article/00000000-0000-4000-8000-000000000931",
     "/api/subscriptions/preview",
     "/api/jobs",
     `/api/jobs/${articleId}/audio`,

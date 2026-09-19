@@ -5,7 +5,8 @@ import { requestLanguage } from "../lib/i18n.js";
 import { translate } from "../../public/i18n.js";
 import type { PodcastFeed } from "../types.js";
 import { discoverPodcastFeeds, fetchPodcastFeed } from "./podcast-feeds.js";
-import { podcastJobStatus } from "./jobs.js";
+import { findEpisodeFeed } from "./resolver.js";
+import { getJob, podcastJobStatus } from "./jobs.js";
 import type { SubscriptionStore } from "./subscriptions.js";
 
 export function subscriptionRouter(store: SubscriptionStore) {
@@ -50,6 +51,35 @@ export function subscriptionRouter(store: SubscriptionStore) {
           ...podcastJobStatus(username, jobIds),
         })),
     );
+  });
+  router.get("/article/:id", async (request, response) => {
+    const id = z.string().uuid().parse(request.params.id);
+    const username: string = response.locals.username;
+    const job = await getJob(username, id);
+    if (
+      !job ||
+      job.stage !== "complete" ||
+      !job.episode ||
+      !["spotify", "rss"].includes(job.episode.sourceType)
+    ) {
+      throw new Error("series.errorNotFound");
+    }
+    const subscriptions = store.list(username);
+    let subscription = subscriptions.find((item) => item.jobIds.includes(id));
+    let feedUrl = subscription?.feedUrl || job.episode.feedUrl;
+    if (!feedUrl && job.episode.sourceType === "spotify") {
+      feedUrl = await findEpisodeFeed(job.episode);
+    }
+    if (!feedUrl) {
+      throw new Error("series.errorDiscovery");
+    }
+    subscription ??= subscriptions.find((item) => item.feedUrl === feedUrl);
+    response.json({
+      feedUrl,
+      subscription: subscription
+        ? { id: subscription.id, paused: subscription.paused }
+        : null,
+    });
   });
   router.post("/discover", async (request, response) => {
     const input = urlSchema.parse(request.body);

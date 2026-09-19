@@ -95,6 +95,7 @@ export function parsePodcastFeed(xml: string, url: string): PodcastFeed {
       key,
       episode: {
         sourceType: "rss",
+        feedUrl: url,
         sourceUrl: httpUrl(text(item.link), url) || mediaUrl,
         sourceName: title,
         title: episodeTitle,
