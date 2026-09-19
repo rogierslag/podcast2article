@@ -41,9 +41,66 @@ for (const [name, action, failed, exitCode] of [
       );
 
       assert.equal(result, exitCode);
-      assert.deepEqual(JSON.parse(await readFile(marker, "utf8")), { failed });
+      assert.equal(JSON.parse(await readFile(marker, "utf8")).failed, failed);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
   });
 }
+
+test("updater persists verified target and keeps its original deadline across retries", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "p2a-update-state-"));
+  const marker = path.join(directory, "deployment-status.json");
+  const target = "b".repeat(40);
+  const observed = Date.now() - 31 * 60_000;
+  try {
+    await writeFile(
+      marker,
+      JSON.stringify({
+        failed: true,
+        targetCommit: target,
+        targetObservedAt: observed,
+      }),
+    );
+    await run("bash", [
+      "-c",
+      `${preamble}\ndeployment_status="$1"\nremote_commit="$2"\nwrite_deployment_status deploying`,
+      "test",
+      marker,
+      target,
+    ]);
+
+    const state = JSON.parse(await readFile(marker, "utf8"));
+    assert.equal(state.phase, "deploying");
+    assert.equal(state.targetCommit, target);
+    assert.equal(state.targetObservedAt, observed);
+    assert.equal(state.failed, true);
+    assert.ok(state.lastCheckedAt > observed);
+
+    await run("bash", [
+      "-c",
+      `${preamble}\ndeployment_status="$1"\nwrite_deployment_status checking\ndeployment_attempted=true\nexit 1`,
+      "test",
+      marker,
+    ]).catch(() => {});
+    const failed = JSON.parse(await readFile(marker, "utf8"));
+    assert.equal(failed.lastCheckedAt, state.lastCheckedAt);
+    assert.equal(failed.phase, "failed");
+    assert.equal(failed.failed, true);
+
+    await run("bash", [
+      "-c",
+      `${preamble}\ndeployment_status="$1"\nremote_commit="$2"\nwrite_deployment_status deploying\nwrite_deployment_status false`,
+      "test",
+      marker,
+      "c".repeat(40),
+    ]);
+    const recovered = JSON.parse(await readFile(marker, "utf8"));
+    assert.equal(recovered.targetCommit, "c".repeat(40));
+    assert.ok(recovered.targetObservedAt > observed);
+    assert.equal(recovered.phase, "idle");
+    assert.equal(recovered.failed, false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

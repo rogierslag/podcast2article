@@ -245,6 +245,7 @@ before(async () => {
       env: {
         ...process.env,
         PORT: String(port),
+        GIT_SHA: "a".repeat(40),
         HOST: "127.0.0.1",
         OPENAI_API_KEY: "",
         APP_PASSWORD: "",
@@ -927,4 +928,36 @@ test("shared usage is persisted, deduplicated and visible only to its owner", as
   ).json();
   assert.equal(otherStats.loads, 1);
   assert.equal(otherStats.reads, 1);
+});
+
+test("public health preserves availability and exposes only deployment freshness fields", async () => {
+  const statusFile = path.join(directory, "data/deployment-status.json");
+  await writeFile(
+    statusFile,
+    JSON.stringify({
+      failed: true,
+      phase: "failed",
+      targetCommit: "b".repeat(40),
+      lastCheckedAt: Date.now(),
+      targetObservedAt: Date.now() - 60_000,
+      logs: "private-secret",
+    }),
+  );
+
+  const response = await fetch(`${origin}/api/health`);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(body.ok, true);
+  assert.equal(body.deployment.status, "delayed");
+  assert.equal(body.deployment.runningCommit, "a".repeat(40));
+  assert.deepEqual(Object.keys(body.deployment).sort(), [
+    "lastCheckedAt",
+    "runningCommit",
+    "status",
+    "targetCommit",
+  ]);
+  assert.doesNotMatch(JSON.stringify(body), /private-secret|failed|logs/);
+  await rm(statusFile);
 });

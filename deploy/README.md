@@ -241,3 +241,11 @@ the existing job JSON storage and backups. Follow the
 - `data/users`, user media, or backups;
 - Caddy certificate storage;
 - SSH private keys.
+
+## Deployment freshness rollout
+
+`/api/health` retains its availability signal and adds public commit freshness
+from local updater state. Install both the updated host updater and five-minute
+cron schedule; an application push does not replace either host file. Follow the
+[deployment-status runbook](../docs/DEPLOYMENT-STATUS.md) for thresholds, JSON
+fields, compatibility, and the focused installation commands.

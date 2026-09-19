@@ -20,12 +20,47 @@ log() {
   printf '%s %s\n' "$(date --iso-8601=seconds)" "$*"
 }
 
+# Only this lock-holding updater writes freshness; accepted webhooks do not.
 write_deployment_status() {
-  local temporary_status
-  temporary_status="$(mktemp "${deployment_status}.XXXXXX")"
-  printf '{"failed":%s}\n' "$1" >"$temporary_status"
-  chmod 0644 "$temporary_status"
-  mv -f "$temporary_status" "$deployment_status"
+  python3 - "$deployment_status" "$1" "${remote_commit:-}" <<'PYTHON'
+import json, os, re, sys, tempfile, time
+filename, event, target = sys.argv[1:]
+try:
+    with open(filename) as source:
+        state = json.load(source)
+    if not isinstance(state, dict):
+        state = {}
+except (OSError, ValueError):
+    state = {}
+now = int(time.time() * 1000)
+if event == "deploying":
+    if not re.fullmatch(r"[0-9a-f]{40}", target):
+        raise ValueError("Invalid deployment target")
+    if state.get("targetCommit") != target:
+        state["targetObservedAt"] = now
+    state.update(targetCommit=target, lastCheckedAt=now, phase="deploying")
+elif event == "true":
+    state.update(failed=True, phase="failed")
+elif event == "false":
+    state.update(failed=False, phase="idle")
+else:
+    state["phase"] = "checking"
+state.setdefault("failed", False)
+# Keep the on-disk contract bounded as well as the public response.
+state = {key: value for key, value in state.items() if key in (
+    "failed", "phase", "targetCommit", "targetObservedAt", "lastCheckedAt"
+)}
+fd, temporary = tempfile.mkstemp(prefix=os.path.basename(filename) + ".", dir=os.path.dirname(filename))
+try:
+    with os.fdopen(fd, "w") as output:
+        json.dump(state, output)
+        output.write("\n")
+    os.chmod(temporary, 0o644)
+    os.replace(temporary, filename)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PYTHON
 }
 
 cleanup() {
@@ -46,12 +81,15 @@ if ! flock -n 9; then
 fi
 
 deployment_attempted=true
+write_deployment_status checking
 
 remote_commit="$(git ls-remote "$repository" "refs/heads/$branch" | awk 'NR == 1 { print $1 }')"
 if [[ ! "$remote_commit" =~ ^[0-9a-f]{40}$ ]]; then
   log "Could not resolve $branch on $repository"
   exit 1
 fi
+
+write_deployment_status deploying
 
 current_release="$(readlink -f "$current_link" 2>/dev/null || true)"
 current_commit=""
