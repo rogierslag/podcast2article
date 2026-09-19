@@ -38,6 +38,7 @@ This file applies to the entire repository.
 - Public permalinks are capability URLs backed by a stable, high-entropy token. Do not replace them with a sequential identifier, username, article index, or bare job UUID.
 - A public token may resolve only its own completed article and its own source audio. It must not grant access to `/api/articles`, `/api/jobs`, reading state, account identity, another article, or owner-only mutations.
 - Public API responses must be explicitly shaped. Do not serialize an entire stored `Job` object.
+- Shared monitoring counters and visit receipts remain owner-only. Public events must never change owner read state, expose statistics, or copy the original analytics into a saved article.
 - Shared pages are anonymous: do not expose the username, account details, sender identity, internal job ID, share token in the payload, or read state.
 - Keep public routes narrowly registered before the authentication middleware. All owner and collection routes remain authenticated when authentication is enabled.
 - Shared pages need server-rendered Open Graph and Twitter metadata because link-preview crawlers do not execute the client application. Escape all metadata values.
@@ -48,6 +49,7 @@ This file applies to the entire repository.
 
 - `src/server.ts`: Express routes, authentication boundary, public share surface, and server startup.
 - `src/services/jobs.ts`: job persistence, per-user isolation, processing queue, read state, and share-token lookup.
+- `src/services/share-analytics.ts` and `public/share-analytics.js`: anonymous shared-visit counters and active reading detection. See [docs/SHARED-ARTICLE-MONITORING.md](docs/SHARED-ARTICLE-MONITORING.md) for definitions and limits.
 - `src/services/pdf.ts`: server-side PDF generation.
 - `src/types.ts`: persisted and API-related domain types.
 - `public/index.html` and `public/app.js`: authenticated/owner application UI.

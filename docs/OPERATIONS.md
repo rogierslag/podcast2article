@@ -1,6 +1,6 @@
 # Podcast2Article Operations
 
-Document version: 2026-09-06
+Document version: 2026-09-19
 
 This document is the production operations template for Podcast2Article.
 Replace documentation addresses and example identifiers with the values for the
@@ -582,8 +582,9 @@ The main Node process starts with:
 --max-old-space-size=384
 ```
 
-The serial job queue prevents concurrent media jobs. The updater uses a 512 MiB
-Node heap ceiling during validation and is assigned low CPU and I/O priority by
+A shared media slot prevents concurrent downloads and FFmpeg work. Three
+processing jobs can overlap remote API calls and retain temporary audio at once.
+The updater uses a 512 MiB Node heap ceiling during validation and is assigned low CPU and I/O priority by
 systemd.
 
 Useful diagnostics:
@@ -627,6 +628,34 @@ sudo journalctl -p warning --since today
 ```
 
 API keys, webhook secrets, passwords, and transcript text should not be logged.
+
+### Shared article usage
+
+Anonymous shared-reader loads and estimated reads are stored in each article's
+job JSON as `shareAnalytics`, alongside a bounded set of recent visit receipts.
+They are covered by the existing jobs backup. No external analytics service,
+scheduled job, new secret, or database migration is required. Existing articles
+start at zero on their first tracked load after deployment; there is no backfill.
+
+Use the owner's authenticated `GET /api/jobs/:id/share-stats` endpoint for counts.
+The [monitoring reference](SHARED-ARTICLE-MONITORING.md) documents the payload,
+30-second/90% read definition, privacy, and deduplication limits. Public links must
+not return statistics. Public events cannot change owner read state.
+
+After deployment, use a test-only shared article: confirm a visible browser load
+increments `loads`, read actively for 30 seconds and reach the end to increment
+`reads`, then verify counts survive a normal application restart when one is
+already planned. Do not restart production just to inspect counters. Requests for
+HTML previews or audio alone must not increment them. Check that signed-out
+statistics requests return `401` and another owner's article returns `404`.
+
+If counts stay at zero, check the browser's event POST responses and JavaScript
+availability. HTTPS (or localhost) is required for random visit IDs. `400` means
+invalid event data; `404` means the capability is unavailable; `409` means a read
+has no recent load or arrived before the server's 30-second minimum. Network and
+storage failures can lose events. Treat counts as approximate engagement signals,
+not unique-reader or billing records. Existing proxy logs are separate and may
+contain request URLs; do not export capability tokens for analysis.
 
 ## 16. OS maintenance
 

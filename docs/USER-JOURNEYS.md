@@ -13,6 +13,8 @@ how the interface should express them.
 
 This is the 19 September 2026 review, after rebasing onto `main` at `0239d8e`.
 PR preparation also validated the branch on `c091ba6` with the Node 24 tooling update.
+The shared-permalink monitoring follow-up adds the event definitions below; the
+original review is historical context, not evidence of deployed instrumentation.
 “Implemented” means present in the reviewed code, not verified deployed. Linked
 pull requests explain decisions and previous verification; their test results
 are not a substitute for checking the combined application.
@@ -207,6 +209,14 @@ confirm the recipient's copy still reads correctly. Inspect the exported PDF and
 test its links in the expected access context. A cancelled native share must not
 report delivery.
 
+Anonymous loads and estimated reads are now counted separately from explicit
+owner read state. A read requires 30 seconds of visible active time and 90% scroll
+progress. Owners retrieve counts through an authenticated API; the reader UI has
+no new controls. See [monitoring definitions](SHARED-ARTICLE-MONITORING.md).
+The value test is whether a rendered visit and qualifying read increment only the
+intended article's counters without exposing private data. No production baseline
+or evidence of improved reading outcomes has been measured.
+
 ## J7. Follow, catch up, and manage the backlog
 
 **Implemented.** Readers follow from a podcast article or discover a Spotify show
@@ -214,7 +224,7 @@ or public RSS feed on Series. Feed identity and available episodes are previewed
 before confirmation. Following defaults to future episodes only;
 catch-up is explicit and restricted to the latest three episodes. Older archive
 episodes are not downloaded automatically. Active feeds are checked at
-startup and hourly. Five unread or processing episodes in that series trigger an
+startup and hourly. Five unread, queued, or processing episodes in that series trigger an
 automatic pause. Reading frees capacity, but the reader must explicitly resume. Catch-up respects
 capacity and preserves a manual pause. See
 [PR 51](https://github.com/rogierslag/podcast2article/pull/51) and
@@ -263,8 +273,9 @@ criterion, not a measured product outcome.
 
 ## Measurement plan
 
-No production funnel instrumentation was found in the reviewed frontend and
-server. Persisted jobs support operational snapshots, not complete behavioral
+Shared permalink loads and estimated reads now have anonymous counters; see
+[shared article monitoring](SHARED-ARTICLE-MONITORING.md) for definitions and limits.
+Other journeys have no production funnel instrumentation. Persisted jobs support operational snapshots, not complete behavioral
 histories. The following are proposed definitions, not measured results or
 targets. The product owner should choose the cohort, follow-up period, and task
 sample before a comparison, then review the relevant outcome and guardrails after

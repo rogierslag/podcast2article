@@ -10,6 +10,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { recordShareEvent } from "./share-analytics.js";
 import { ConcurrencyGate } from "../lib/concurrency.js";
 import { jobError, jobLog } from "../lib/logger.js";
 import {
@@ -663,6 +664,29 @@ export function getSharedArticle(
     }
   }
   return undefined;
+}
+
+export async function recordSharedArticleEvent(
+  token: string,
+  visitId: string,
+  event: "load" | "read",
+): Promise<boolean> {
+  const shared = getSharedArticle(token);
+  if (!shared) {
+    return false;
+  }
+  const shareAnalytics = recordShareEvent(
+    shared.job.shareAnalytics,
+    visitId,
+    event,
+  );
+  if (!shareAnalytics) {
+    return false;
+  }
+  if (shareAnalytics !== shared.job.shareAnalytics) {
+    await update(shared.username, shared.job, { shareAnalytics });
+  }
+  return true;
 }
 
 function savedShareKey(token: string): string {
