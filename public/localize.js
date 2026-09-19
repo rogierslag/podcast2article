@@ -36,7 +36,7 @@ export function localizePage(root = document) {
   root.querySelectorAll("[data-build-sha]").forEach((element) => {
     const sha = element.dataset.buildSha;
     element.textContent = t("build", { sha: sha.slice(0, 7) });
-    element.setAttribute("aria-label", t("build.label", { sha }));
+    element.setAttribute("title", t("build.label", { sha }));
   });
 }
 

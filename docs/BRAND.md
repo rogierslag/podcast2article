@@ -17,7 +17,8 @@ to check what the original recording actually said. This is the intended
 impression, not a measured claim about how every reader experiences the app.
 
 - **Calm:** give reading time and space. Keep secondary actions quiet, show
-  progress clearly, and avoid competing demands for attention.
+  progress clearly, and give each screen a clear focal point. Expressive type
+  and graphics can support that hierarchy when they share one visual language.
 - **Thoughtful and editorial:** treat hierarchy, typography, source attribution,
   and small interaction details as part of the quality of the article experience.
 - **Warm and approachable:** use familiar language, comfortable spacing, warm
@@ -42,21 +43,101 @@ headings, readable article text, compact metadata, and fine dividing lines.
 Spacing and typography establish hierarchy. Controls remain restrained so the
 content holds attention.
 
+The recording-to-article transition is the central graphic idea. Its irregular
+rhythm and curved strokes bring character to the identity. Give that idea room
+on the landing page, where it explains the product, and use it compactly for
+identification in the header and login. Article pages give the reading itself
+the most space. This difference in emphasis keeps the identity expressive
+without making every screen equally busy.
+
 Preserve that character when adding features. A new action should fit the
 existing reading experience without requiring another boxed panel, accent color,
 or decorative effect. Source references should make an article easier to verify
 without interrupting the reader's place.
+
+### Brand mark
+
+Use one mark throughout the application. Four vertical strokes form an uneven
+waveform; three following strokes curve continuously into horizontal text lines.
+The waveform uses green, the outer text strokes use ink, and the middle curved
+stroke uses orange. That orange stroke marks the transition from sound to text.
+
+- Reuse the same contours, proportions, line weights, rounded ends, and color
+  roles in the owner header, public reader header, login, and landing illustration.
+  Scale the complete artwork rather than drawing a different mark for each role.
+- Use that same static mark on the processing screen. Let the episode title,
+  stage, and actual progress explain what is happening; a spinning record adds
+  a competing audio metaphor without useful progress information.
+- Preserve the uneven waveform heights and staggered line lengths. The curved
+  strokes must visibly become text lines; keep the transition continuous.
+- Keep the mark open, without a surrounding badge, divider, or extra icon.
+  Keep literal words out of the artwork so it works across interface languages.
+- Keep the landing kicker text-only. The header identifies the product and the
+  larger landing illustration explains the transformation; a third illustrated
+  version above the headline adds no distinct role.
+- Retain a compact landing illustration on mobile. Adjust its placement and
+  surrounding spacing so the headline, introduction, and source input remain
+  easy to reach. Check that the curved strokes stay distinct at the smallest size.
+- Keep the mark static. Its shape should communicate the transformation without
+  requiring animation.
+
+### Favicons and app icons
+
+Use the same identity in browser tabs and installed-app icons. Place the artwork
+on a cream square tile with enough space to survive the platform's corner shape
+or mask. Keep the mark's green, ink, and orange roles; do not add a black disc or
+an orange surround.
+
+Installed-app icons use the complete four-waveform, three-curve mark. The tiny
+favicon is an optical size variant: use two green waveform strokes, an orange
+curved stroke, and a short ink curve into a text line. It must still show sound
+becoming text. Check the favicon at its actual 16px and 32px display sizes, where
+the full artwork's details would merge. Keep this simplification confined to
+small icons; it does not replace the full mark elsewhere.
+
+### Social previews
+
+The site's social preview uses a 1200 × 630 composition with the shared mark,
+editorial typography, and the light paper palette. Keep the product name and
+short headline readable when reduced to a feed thumbnail. Provide Dutch and
+English versions with the same composition and meaning. Leave room around the
+content so minor preview crops do not cut into the identity.
+
+Article previews should retain the recording's source image when one is
+available. Use the generic product card as a fallback for articles without an
+image. Keep the article's own title and description in its preview metadata in
+both cases; the fallback artwork identifies the product without inventing an
+illustration of the recording. Shared previews remain anonymous.
+
+Run `node scripts/build-brand-assets.mjs` to regenerate the checked-in SVG, PNG,
+and ICO assets. The script uses the owner header's master mark, the light theme
+tokens, and the translated hero copy. It requires the project's Playwright
+Chromium installation and access to Google Fonts; production builds serve the
+generated files without either dependency. Review the images after regeneration.
+
+Preview metadata is rendered on the server with absolute public image URLs,
+descriptive image alternatives, and dimensions for the generated cards, following
+the [Open Graph image properties](https://ogp.me/#structured). Use
+`PUBLIC_BASE_URL` for the production origin. Public image access must not expose
+account data or owner-only routes.
 
 ## Typography and layout
 
 - Use Newsreader for editorial headings and article typography, Manrope for
   interface text, and DM Mono for compact metadata and utility labels. Reuse the
   existing `--serif`, `--sans`, and `--mono` properties.
+- The login screen uses Georgia and system interface fonts so signing in does
+  not depend on external font loading. Its shared mark, paper palette, and
+  heading hierarchy maintain the connection to the reader.
 - Keep long text comfortable to read through line length, line height, and space
   between sections. Preserve the distinction between headlines, introductions,
   body text, and metadata.
 - Use alignment, whitespace, and thin rules to group content. Article lists keep
   their editorial layout rather than becoming a collection of rounded cards.
+- On the landing page, let the headline lead, the illustration explain the
+  transformation, and the introduction lead into the source input. Balance these
+  elements as one composition; avoid enlarging each independently until they
+  compete. Keep the source input close enough to make the next action clear.
 - Keep images rectangular and aligned with the surrounding content. Let the
   source imagery supply variety without adding decorative frames.
 - On smaller screens, adapt spacing and arrangement while preserving hierarchy,
@@ -91,7 +172,7 @@ while straight edges preserve the structure of the editorial page.
 | Bounded buttons, selects, and input fields                          | 3px                       | Apply consistently to standalone controls, including language controls and dialog buttons.                |
 | Floating modals and dialogs                                         | 4px                       | Keep the current source-preview treatment, with paper background, a thin border, and a restrained shadow. |
 | Composer, article layout, article images, and structural containers | 0                         | Preserve the page's straight edges and alignment.                                                         |
-| Circular brand marks, audio controls, and waveform details          | Existing functional shape | Preserve circles and rounded strokes where they express the mark or playback function.                    |
+| Audio controls, icon tiles, and waveform details                    | Existing functional shape | Preserve rounded waveform strokes, playback controls, and icon shapes required by their platform.         |
 | Native media controls                                               | Browser-defined           | Preserve native behavior and accessibility.                                                               |
 
 Text links, underlined input rows, and dividing lines do not need rounded corners.
@@ -135,6 +216,11 @@ Keep labels short enough to scan without making their meaning ambiguous. Errors
 should explain the problem and the available next step. Avoid promotional claims
 and unnecessary technical details in the reading flow.
 
+Keep processing failures beside the source title and recovery actions. Distinguish
+checking an unavailable status from starting paid work. Explain when an existing
+transcript can be reused and when regenerating the article incurs additional cost.
+Returning to the source form should preserve its link, language, and length.
+
 Dutch is the default user-facing language. Where the interface offers English,
 preserve the same meaning and tone across translations. Keep source attribution
 clear and respect the anonymous nature of public article pages.
@@ -145,6 +231,11 @@ For a design or copy change, identify the intended impression and the component'
 role before choosing its wording, shape,
 type, or color. Reuse existing styles and semantic properties, and update this
 guide when a deliberate design decision changes the rules.
+
+Check the identity across surfaces as well as within a single screen. The mark
+should remain recognizable at header and illustration sizes, while the
+headline, source input, and article retain their intended priority. Additional
+graphic variants need a distinct role that the existing artwork cannot serve.
 
 Verify the real application on desktop and mobile, including affected light,
 dark, focus, print, and reduced-motion states. Follow the screenshot and recording

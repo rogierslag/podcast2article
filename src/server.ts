@@ -4,6 +4,7 @@ import path from "node:path";
 import { z } from "zod";
 import { deploymentFailed } from "./services/deployment.js";
 import { resolveGitSha } from "./lib/git.js";
+import { socialMetadata, type SocialImage } from "./lib/social-metadata.js";
 import {
   localizeJob,
   localizeProcessingJob,
@@ -105,7 +106,17 @@ function localizeError(
 function renderPage(response: express.Response, template: string): string {
   const language = responseLanguage(response);
   response.setHeader("Content-Language", language);
-  return localizeTemplate(template, language);
+  return localizeTemplate(template, language).replace(
+    "<!-- SITE_METADATA -->",
+    socialMetadata({
+      type: "website",
+      title: translate(language, "page.title"),
+      description: translate(language, "page.description"),
+      // Private routes and incoming source URLs never belong in the product preview.
+      url: `${publicOrigin(response.req)}/`,
+      image: brandSocialImage(response),
+    }),
+  );
 }
 
 async function sendIndex(
@@ -135,6 +146,17 @@ function publicOrigin(request: express.Request): string {
   return configured || `${request.protocol}://${request.get("host")}`;
 }
 
+function brandSocialImage(response: express.Response): SocialImage {
+  const language = responseLanguage(response);
+  return {
+    url: `${publicOrigin(response.req)}/social-card-${language}.png`,
+    alt: translate(language, "social.imageAlt"),
+    width: 1200,
+    height: 630,
+    type: "image/png",
+  };
+}
+
 function htmlAttribute(value: string): string {
   return value.replace(
     /[&<>"']/g,
@@ -155,7 +177,7 @@ function loginBuildMarkup(response: express.Response): string {
   }
   const shortSha = gitSha.slice(0, 7);
   const language = responseLanguage(response);
-  return `<p class="build-sha" data-build-sha="${gitSha}" aria-label="${translate(language, "build.label", { sha: gitSha })}">${translate(language, "build", { sha: shortSha })}</p>`;
+  return `<p class="build-sha" data-build-sha="${gitSha}" title="${translate(language, "build.label", { sha: gitSha })}">${translate(language, "build", { sha: shortSha })}</p>`;
 }
 
 app.get("/api/health", (_request, response) => {
@@ -182,28 +204,20 @@ app.get("/s/:token", async (request, response) => {
   const url = `${publicOrigin(request)}/s/${request.params.token}`;
   const title = job.article!.title;
   const description = job.article!.dek;
-  const image = job.episode!.imageUrl;
+  const sourceImage = job.episode!.imageUrl;
   const metadata = [
     `<title>${htmlAttribute(title)} — Podcast2Article</title>`,
     `<meta name="description" content="${htmlAttribute(description)}">`,
-    `<link rel="canonical" href="${htmlAttribute(url)}">`,
-    `<meta property="og:type" content="article">`,
-    `<meta property="og:site_name" content="Podcast2Article">`,
-    `<meta property="og:title" content="${htmlAttribute(title)}">`,
-    `<meta property="og:description" content="${htmlAttribute(description)}">`,
-    `<meta property="og:url" content="${htmlAttribute(url)}">`,
-    `<meta property="article:published_time" content="${htmlAttribute(job.completedAt ?? job.updatedAt)}">`,
-    ...(image
-      ? [
-          `<meta property="og:image" content="${htmlAttribute(image)}">`,
-          `<meta property="og:image:alt" content="${htmlAttribute(job.episode!.title)}">`,
-          `<meta name="twitter:card" content="summary_large_image">`,
-          `<meta name="twitter:image" content="${htmlAttribute(image)}">`,
-          `<meta name="twitter:image:alt" content="${htmlAttribute(job.episode!.title)}">`,
-        ]
-      : [`<meta name="twitter:card" content="summary">`]),
-    `<meta name="twitter:title" content="${htmlAttribute(title)}">`,
-    `<meta name="twitter:description" content="${htmlAttribute(description)}">`,
+    socialMetadata({
+      type: "article",
+      title,
+      description,
+      url,
+      publishedAt: job.completedAt ?? job.updatedAt,
+      image: sourceImage
+        ? { url: sourceImage, alt: job.episode!.title }
+        : brandSocialImage(response),
+    }),
   ].join("\n  ");
   const template = await readFile(
     path.join(publicDirectory, "share.html"),
@@ -275,6 +289,10 @@ app.get(
     "/styles.css",
     "/theme.css",
     "/favicon.svg",
+    "/favicon.ico",
+    "/app-icon.svg",
+    "/social-card-nl.png",
+    "/social-card-en.png",
     "/favicon-32.png",
     "/apple-touch-icon.png",
     "/manifest.webmanifest",
@@ -286,6 +304,7 @@ app.get(
       ".js": "text/javascript",
       ".css": "text/css",
       ".svg": "image/svg+xml",
+      ".ico": "image/vnd.microsoft.icon",
       ".png": "image/png",
       ".webmanifest": "application/manifest+json",
     };

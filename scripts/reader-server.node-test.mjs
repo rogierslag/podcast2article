@@ -1,19 +1,49 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
+import { translate } from "../public/i18n.js";
 
 const articleId = "00000000-0000-4000-8000-000000000917";
+const exhaustedArticleId = "00000000-0000-4000-8000-000000000919";
 const token = "a".repeat(43);
 const otherToken = "b".repeat(43);
+const publicBaseUrl = "https://reads.example.test";
+const episodeImage =
+  "https://cdn.example.test/episode.jpg?crop=cover&width=1200";
+const escapedFixtureText = "A <tag> \"quoted\" & 'apostrophe'";
 const audioBytes = Buffer.from("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 let directory;
 let child;
 let origin;
+
+function tagAttribute(tag, name) {
+  return tag.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1];
+}
+
+function metaContent(markup, name) {
+  const tags = [...markup.matchAll(/<meta\b[^>]*>/g)]
+    .map(([tag]) => tag)
+    .filter(
+      (tag) =>
+        tagAttribute(tag, "name") === name ||
+        tagAttribute(tag, "property") === name,
+    );
+  assert.equal(tags.length, 1, `Expected one ${name} meta tag`);
+  return tagAttribute(tags[0], "content");
+}
+
+function canonicalUrl(markup) {
+  const tags = [...markup.matchAll(/<link\b[^>]*>/g)]
+    .map(([tag]) => tag)
+    .filter((tag) => tagAttribute(tag, "rel") === "canonical");
+  assert.equal(tags.length, 1, "Expected one canonical link");
+  return tagAttribute(tags[0], "href");
+}
 
 test("incoming links survive authentication and failed login without creating jobs", async () => {
   const sourceUrl =
@@ -158,13 +188,36 @@ before(async () => {
     const root = path.join(directory, "data", "users", username);
     await mkdir(path.join(root, "jobs"), { recursive: true });
     await mkdir(path.join(root, "media"), { recursive: true });
+    const article = fixture(id, shareToken, title);
+    if (shareToken === otherToken) {
+      article.episode.imageUrl = episodeImage;
+      article.episode.title = escapedFixtureText;
+      article.article.dek = escapedFixtureText;
+    }
     await writeFile(
       path.join(root, "jobs", `${id}.json`),
-      JSON.stringify(fixture(id, shareToken, title)),
+      JSON.stringify(article),
     );
     await writeFile(path.join(root, "media", `${id}.mp3`), audio);
   }
   const portReservation = createServer();
+  await writeFile(
+    path.join(
+      directory,
+      "data",
+      "users",
+      "owner",
+      "jobs",
+      `${exhaustedArticleId}.json`,
+    ),
+    JSON.stringify({
+      ...fixture(exhaustedArticleId, "c".repeat(43), "Failed article"),
+      article: undefined,
+      stage: "failed",
+      articleRetryAttempts: 2,
+      error: "Article generation failed",
+    }),
+  );
   portReservation.listen(0, "127.0.0.1");
   await once(portReservation, "listening");
   const port = portReservation.address().port;
@@ -181,6 +234,7 @@ before(async () => {
         HOST: "127.0.0.1",
         OPENAI_API_KEY: "",
         APP_PASSWORD: "",
+        PUBLIC_BASE_URL: `${publicBaseUrl}/`,
         APP_USERS: JSON.stringify({
           owner: "test-only-password-owner",
           other: "test-only-password-other",
@@ -252,6 +306,171 @@ test("shared reader assets are public while owner routes require authentication"
   }
 });
 
+test("brand images and icons are available without a session as actual image files", async () => {
+  for (const [route, width, height] of [
+    ["/social-card-nl.png", 1200, 630],
+    ["/social-card-en.png", 1200, 630],
+    ["/favicon-32.png", 32, 32],
+    ["/apple-touch-icon.png", 180, 180],
+    ["/icon-192.png", 192, 192],
+    ["/icon-512.png", 512, 512],
+  ]) {
+    const response = await fetch(origin + route, { redirect: "manual" });
+    const bytes = Buffer.from(await response.arrayBuffer());
+
+    assert.equal(response.status, 200, route);
+    assert.equal(response.headers.get("location"), null, route);
+    assert.match(response.headers.get("content-type"), /^image\/png\b/, route);
+    assert.deepEqual(
+      bytes.subarray(0, 8),
+      Buffer.from("89504e470d0a1a0a", "hex"),
+      route,
+    );
+    assert.equal(bytes.readUInt32BE(16), width, route);
+    assert.equal(bytes.readUInt32BE(20), height, route);
+  }
+
+  const icon = await fetch(`${origin}/favicon.ico`, { redirect: "manual" });
+  const bytes = Buffer.from(await icon.arrayBuffer());
+  assert.equal(icon.status, 200);
+  assert.match(
+    icon.headers.get("content-type"),
+    /^image\/vnd\.microsoft\.icon\b/,
+  );
+  assert.deepEqual(bytes.subarray(0, 4), Buffer.from([0, 0, 1, 0]));
+  assert.ok(bytes.readUInt16LE(4) > 0);
+
+  const svg = await fetch(`${origin}/favicon.svg`, { redirect: "manual" });
+  assert.equal(svg.status, 200);
+  assert.match(svg.headers.get("content-type"), /^image\/svg\+xml\b/);
+  assert.match(await svg.text(), /<svg\b/);
+});
+
+test("website previews use localized public branding without incoming query data", async () => {
+  const cookie = await loginAs("owner");
+  const query = new URLSearchParams({
+    sourceUrl: "https://example.com/private-source-recording",
+    error: "private-error-detail",
+    job: articleId,
+  });
+  const imageDescriptions = new Map();
+
+  for (const language of ["nl", "en"]) {
+    for (const route of ["/login", "/"]) {
+      const response = await fetch(`${origin}${route}?${query}`, {
+        headers: {
+          "Accept-Language": language,
+          ...(route === "/" ? { Cookie: cookie } : {}),
+        },
+        redirect: "manual",
+      });
+      const markup = await response.text();
+      const head = markup.slice(0, markup.indexOf("</head>"));
+      const image = `${publicBaseUrl}/social-card-${language}.png`;
+
+      assert.equal(response.status, 200, `${route} ${language}`);
+      assert.equal(canonicalUrl(head), `${publicBaseUrl}/`);
+      assert.equal(metaContent(head, "og:url"), `${publicBaseUrl}/`);
+      assert.equal(metaContent(head, "og:type"), "website");
+      assert.match(metaContent(head, "og:title"), /^Podcast2Article\b/);
+      assert.equal(
+        metaContent(head, "twitter:title"),
+        metaContent(head, "og:title"),
+      );
+      assert.equal(
+        metaContent(head, "og:description"),
+        translate(language, "page.description"),
+      );
+      assert.equal(
+        metaContent(head, "twitter:description"),
+        metaContent(head, "og:description"),
+      );
+      assert.equal(metaContent(head, "og:image"), image);
+      assert.equal(metaContent(head, "twitter:image"), image);
+      assert.equal(metaContent(head, "twitter:card"), "summary_large_image");
+      assert.equal(metaContent(head, "og:image:width"), "1200");
+      assert.equal(metaContent(head, "og:image:height"), "630");
+      assert.equal(metaContent(head, "og:image:type"), "image/png");
+      const description = metaContent(head, "og:image:alt");
+      assert.ok(description.length > 0);
+      assert.equal(metaContent(head, "twitter:image:alt"), description);
+      imageDescriptions.set(language, description);
+      assert.doesNotMatch(
+        head,
+        /private-source-recording|private-error-detail/,
+      );
+      assert.equal(head.includes(articleId), false);
+    }
+  }
+  assert.notEqual(imageDescriptions.get("nl"), imageDescriptions.get("en"));
+});
+
+test("articles without artwork use localized branding while preserving article identity and privacy", async () => {
+  const imageDescriptions = new Map();
+  for (const language of ["nl", "en"]) {
+    const response = await fetch(`${origin}/s/${token}`, {
+      headers: { "Accept-Language": language },
+    });
+    const markup = await response.text();
+    const image = `${publicBaseUrl}/social-card-${language}.png`;
+
+    assert.equal(response.status, 200);
+    assert.equal(metaContent(markup, "og:type"), "article");
+    assert.equal(metaContent(markup, "og:title"), "Intended article");
+    assert.equal(metaContent(markup, "og:description"), "A test article");
+    assert.equal(canonicalUrl(markup), `${publicBaseUrl}/s/${token}`);
+    assert.equal(metaContent(markup, "og:url"), `${publicBaseUrl}/s/${token}`);
+    assert.equal(metaContent(markup, "og:image"), image);
+    assert.equal(metaContent(markup, "twitter:image"), image);
+    assert.equal(metaContent(markup, "twitter:card"), "summary_large_image");
+    assert.equal(metaContent(markup, "og:image:width"), "1200");
+    assert.equal(metaContent(markup, "og:image:height"), "630");
+    assert.equal(metaContent(markup, "og:image:type"), "image/png");
+    assert.ok(metaContent(markup, "og:image:alt").length > 0);
+    imageDescriptions.set(language, metaContent(markup, "og:image:alt"));
+    assert.equal(
+      metaContent(markup, "twitter:image:alt"),
+      metaContent(markup, "og:image:alt"),
+    );
+    assert.equal(metaContent(markup, "robots"), "noindex, nofollow");
+    for (const privateValue of [
+      articleId,
+      "Private transcript text",
+      "Private speaker",
+      "private-media",
+      "private-billing-request",
+      "readAt",
+      "articleRetryAttempts",
+      "username",
+    ]) {
+      assert.equal(markup.includes(privateValue), false, privateValue);
+    }
+  }
+  assert.notEqual(imageDescriptions.get("nl"), imageDescriptions.get("en"));
+});
+
+test("article artwork is preserved and untrusted preview fields are escaped", async () => {
+  const response = await fetch(`${origin}/s/${otherToken}`);
+  const markup = await response.text();
+  const escapedImage = episodeImage.replaceAll("&", "&amp;");
+  const escapedText =
+    "A &lt;tag&gt; &quot;quoted&quot; &amp; &#39;apostrophe&#39;";
+
+  assert.equal(response.status, 200);
+  assert.equal(metaContent(markup, "og:image"), escapedImage);
+  assert.equal(metaContent(markup, "twitter:image"), escapedImage);
+  assert.equal(metaContent(markup, "og:image:alt"), escapedText);
+  assert.equal(metaContent(markup, "twitter:image:alt"), escapedText);
+  assert.equal(metaContent(markup, "og:description"), escapedText);
+  assert.equal(metaContent(markup, "twitter:description"), escapedText);
+  assert.equal(metaContent(markup, "twitter:card"), "summary_large_image");
+  assert.doesNotMatch(
+    markup,
+    /<meta property="og:image:(?:width|height|type)"/,
+  );
+  assert.equal(markup.includes(escapedFixtureText), false);
+});
+
 test("series discovery, confirmation and mutations require an owner session", async () => {
   for (const [route, method] of [
     ["/api/subscriptions/discover", "POST"],
@@ -310,6 +529,7 @@ test("each public token returns only its own article and minimal source fields",
     "apiUsage",
     "private-billing-request",
     "readAt",
+    "articleRetryAttempts",
     "username",
   ]) {
     assert.equal(
@@ -497,6 +717,71 @@ test("saving creates one independent personal copy with only public content and 
     await fetch(`${origin}/api/articles`, { headers })
   ).json();
   assert.ok(JSON.stringify(overview).includes(savedId));
+});
+
+test("completed articles reject regeneration with a localized conflict and retain their saved state", async () => {
+  const cookie = await loginAs("owner");
+  const file = path.join(
+    directory,
+    "data",
+    "users",
+    "owner",
+    "jobs",
+    `${articleId}.json`,
+  );
+  const saved = await readFile(file, "utf8");
+  const endpoint = `${origin}/api/jobs/${articleId}`;
+  const headers = { Cookie: cookie };
+  const original = await (await fetch(endpoint, { headers })).json();
+
+  for (const language of ["nl", "en"]) {
+    const response = await fetch(`${endpoint}/retry-article`, {
+      method: "POST",
+      headers: { ...headers, "Accept-Language": language },
+    });
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: translate(language, "error.articleRetryNotFailed"),
+    });
+    assert.deepEqual(
+      await (await fetch(endpoint, { headers })).json(),
+      original,
+    );
+    assert.equal(await readFile(file, "utf8"), saved);
+  }
+});
+
+test("exhausted article retries return a localized conflict without changing the saved job", async () => {
+  const cookie = await loginAs("owner");
+  const file = path.join(
+    directory,
+    "data",
+    "users",
+    "owner",
+    "jobs",
+    `${exhaustedArticleId}.json`,
+  );
+  const saved = await readFile(file, "utf8");
+  const endpoint = `${origin}/api/jobs/${exhaustedArticleId}`;
+
+  for (const language of ["nl", "en"]) {
+    const response = await fetch(`${endpoint}/retry-article`, {
+      method: "POST",
+      headers: {
+        Cookie: cookie,
+        "Accept-Language": language,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ articleRetryAttempts: 0 }),
+    });
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: translate(language, "error.articleRetryLimit"),
+    });
+    assert.equal(await readFile(file, "utf8"), saved);
+  }
 });
 
 test("owner permalink creation reuses the same capability and rejects another account (PR 3)", async () => {

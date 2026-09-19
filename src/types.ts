@@ -134,6 +134,8 @@ export interface Job {
   transcript?: TranscriptSegment[];
   article?: Article;
   error?: string;
+  /** Accepted article-only retries, excluding the initial generation. */
+  articleRetryAttempts?: number;
   apiUsage?: JobApiUsage;
 }
 

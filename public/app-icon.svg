@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Podcast2Article</title>
+  <rect width="512" height="512" fill="#f4f0e7"/>
+  <svg
+            class="brand-mark"
+            x="56" y="156" width="400"
+            height="200"
+            viewBox="0 0 240 120"
+            fill="none"
+            stroke-width="9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <g stroke="#376453">
+              <path d="M14 52v16" />
+              <path d="M34 34v52" />
+              <path d="M54 14v92" />
+              <path d="M74 28v64" />
+            </g>
+            <path stroke="#1b201d" d="M98 96V54Q98 26 126 26h100" />
+            <path stroke="#e85e2a" d="M124 96V64Q124 50 138 50h72" />
+            <path stroke="#1b201d" d="M150 96v-8q0-14 14-14h62" />
+          </svg>
+</svg>

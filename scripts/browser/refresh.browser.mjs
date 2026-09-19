@@ -76,7 +76,7 @@ for (const [name, url, api, ready] of [
     expect(await page.evaluate(() => window.landingWasVisible)).toBe(false);
   });
 
-  test(`${name}: an API failure reveals the existing error instead of leaving the loading shell`, async ({
+  test(`${name}: an API failure reveals a contextual error instead of leaving the loading shell`, async ({
     page,
   }) => {
     await page.route(api, (route) =>
@@ -86,7 +86,7 @@ for (const [name, url, api, ready] of [
     await page.goto(url);
 
     const error = page.locator(
-      name === "article" ? "#form-error" : "#articles-error",
+      name === "article" ? "#progress-error" : "#articles-error",
     );
     await expect(error).toBeVisible();
     await expect(error).not.toHaveText("");

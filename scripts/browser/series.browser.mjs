@@ -197,10 +197,10 @@ test("series: a Spotify show submitted on the landing page opens series setup", 
   );
 });
 
-test("series: mobile navigation shares the wordmark baseline", async ({
+test("series: single-row navigation shares the wordmark baseline", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 768, height: 1000 });
   await page.goto("/series");
   await expect(page.locator("#logout-form")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
@@ -225,8 +225,31 @@ test("series: mobile navigation shares the wordmark baseline", async ({
         }),
     );
 
-  expect(baselines).toHaveLength(4);
+  expect(baselines).toHaveLength(5);
   expect(Math.max(...baselines) - Math.min(...baselines)).toBeLessThan(0.5);
+});
+
+test("series: narrow navigation sits below the wordmark without overlap", async ({
+  page,
+}) => {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/series");
+    await expect(page.locator("#logout-form")).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+
+    const brand = await page.locator(".brand").boundingBox();
+    const navigation = await page.locator(".main-nav").boundingBox();
+    expect(navigation.y).toBeGreaterThanOrEqual(brand.y + brand.height);
+    expect(navigation.x + navigation.width).toBeLessThanOrEqual(width);
+    await expect(page.locator('.main-nav a[href="/articles"]')).toBeVisible();
+    await expect(page.locator('.main-nav a[href="/series"]')).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  }
 });
 
 test("series: covers and fallbacks render in discovery, preview and followed series", async ({

@@ -2,6 +2,7 @@
 <html lang="{{language}}" class="login-page">
   <head>
     <meta charset="utf-8" />
+    <!-- SITE_METADATA -->
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
@@ -19,7 +20,21 @@
     />
     <link rel="stylesheet" href="/theme.css?v=system-dark-v1" />
     <title data-i18n="login.title">{{login.title}}</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="icon"
+      href="/favicon.svg?v=brand-transition-v1"
+      type="image/svg+xml"
+    />
+    <link
+      rel="icon"
+      href="/favicon-32.png?v=brand-transition-v1"
+      sizes="32x32"
+      type="image/png"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="/apple-touch-icon.png?v=brand-transition-v1"
+    />
     <style>
       * {
         box-sizing: border-box;
@@ -54,41 +69,24 @@
       }
       main {
         width: min(100%, 560px);
+        min-width: 0;
         background: var(--paper);
         border: 1px solid var(--line);
         padding: clamp(32px, 6vw, 58px);
         box-shadow: 0 24px 70px #18211d12;
       }
       .mark {
-        height: 35px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-bottom: 36px;
-      }
-      .mark i {
         display: block;
-        width: 4px;
-        border-radius: 4px;
-        background: var(--orange);
-      }
-      .mark i:nth-child(1) {
-        height: 14px;
-      }
-      .mark i:nth-child(2) {
-        height: 27px;
-      }
-      .mark i:nth-child(3) {
-        height: 35px;
-      }
-      .mark i:nth-child(4) {
-        height: 20px;
+        width: 72px;
+        height: 36px;
+        margin-bottom: 36px;
       }
       h1 {
         font:
           600 clamp(44px, 8vw, 64px) / 0.95 Georgia,
           serif;
         letter-spacing: -0.04em;
+        overflow-wrap: anywhere;
         margin: 0 0 16px;
       }
       .intro {
@@ -262,7 +260,28 @@
   </head>
   <body>
     <main>
-      <div class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <svg
+        class="mark"
+        width="72"
+        height="36"
+        viewBox="0 0 240 120"
+        fill="none"
+        stroke-width="9"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <g stroke="var(--green)">
+          <path d="M14 52v16" />
+          <path d="M34 34v52" />
+          <path d="M54 14v92" />
+          <path d="M74 28v64" />
+        </g>
+        <path stroke="var(--ink)" d="M98 96V54Q98 26 126 26h100" />
+        <path stroke="var(--orange)" d="M124 96V64Q124 50 138 50h72" />
+        <path stroke="var(--ink)" d="M150 96v-8q0-14 14-14h62" />
+      </svg>
       <h1 data-i18n="login.heading">{{login.heading}}</h1>
       <p class="intro" data-i18n="login.intro">{{login.intro}}</p>
       <p id="login-error" class="error" role="alert" data-i18n="login.error">

@@ -429,6 +429,14 @@ export const messages = {
     nl: "Deze opdracht wordt al verwerkt.",
     en: "This request is already being processed.",
   },
+  "error.articleRetryNotFailed": {
+    nl: "Je kunt het artikel alleen opnieuw maken als de verwerking is mislukt.",
+    en: "You can only regenerate the article if processing has failed.",
+  },
+  "error.articleRetryLimit": {
+    nl: "Het maximum van twee pogingen om dit artikel opnieuw te maken is bereikt.",
+    en: "The limit of two attempts to regenerate this article has been reached.",
+  },
   "error.transcriptIncomplete": {
     nl: "Het transcript is niet compleet, dus we kunnen het artikel nog niet opnieuw schrijven.",
     en: "The transcript is incomplete, so we can’t rewrite the article yet.",
@@ -721,6 +729,10 @@ export const messages = {
     nl: "Podcast2Article — van stem naar verhaal",
     en: "Podcast2Article — from voice to story",
   },
+  "social.imageAlt": {
+    nl: "Podcast2Article — Liever lezen dan luisteren? Een geluidsgolf buigt door naar tekstregels.",
+    en: "Podcast2Article — Rather read than listen? A sound wave curves into lines of text.",
+  },
   "page.description": {
     nl: "Lees een openbare podcast, YouTube-video, Fathom- of Google Meet-opname als artikel, met verwijzingen naar het oorspronkelijke gesprek.",
     en: "Read a public podcast, YouTube video, Fathom recording, or Google Meet recording as an article, with links back to the original conversation.",
@@ -880,6 +892,50 @@ export const messages = {
   "processing.title": {
     nl: "We maken je artikel…",
     en: "We’re working on your article…",
+  },
+  "processing.leaveHint": {
+    nl: "Je kunt dit scherm verlaten. De voortgang en het resultaat vind je bij Artikelen.",
+    en: "You can leave this screen. Find the progress and result in Articles.",
+  },
+  "processing.failed": {
+    nl: "Verwerking gestopt",
+    en: "Processing stopped",
+  },
+  "processing.statusUnavailable": {
+    nl: "Status niet beschikbaar",
+    en: "Status unavailable",
+  },
+  "processing.statusHint": {
+    nl: "De verwerking kan nog doorgaan. Controleer de status opnieuw; dit start geen nieuwe opdracht.",
+    en: "Processing may still be running. Check the status again; this does not start a new job.",
+  },
+  "processing.reuseHint": {
+    nl: "Je transcript is bewaard. Opnieuw proberen maakt alleen het artikel opnieuw en brengt extra API-kosten met zich mee.",
+    en: "Your transcript is saved. Retrying only regenerates the article and incurs additional API costs.",
+  },
+  "processing.restartHint": {
+    nl: "Bekijk de bron en instellingen voordat je opnieuw begint. Een nieuwe opdracht brengt opnieuw verwerkingskosten met zich mee.",
+    en: "Review the source and settings before starting again. A new job incurs processing costs again.",
+  },
+  "processing.checkStatus": {
+    nl: "Controleer status opnieuw",
+    en: "Check status again",
+  },
+  "processing.retryArticle": {
+    nl: "Maak artikel opnieuw",
+    en: "Regenerate article",
+  },
+  "processing.editSource": {
+    nl: "Bekijk bron en instellingen",
+    en: "Review source and settings",
+  },
+  "processing.library": {
+    nl: "Naar artikelen",
+    en: "Go to articles",
+  },
+  "processing.progress": {
+    nl: "Voortgang van de verwerking",
+    en: "Processing progress",
   },
   "progress.label": {
     nl: "Leesvoortgang van het artikel",

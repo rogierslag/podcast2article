@@ -49,6 +49,11 @@ De [merkrichtlijnen](docs/BRAND.md) beschrijven de visuele identiteit, typografi
 kleuren, interacties en het bedoelde gebruik van afgeronde hoeken. Gebruik deze
 samen met [AGENTS.md](AGENTS.md) bij wijzigingen aan de interface.
 
+De [gebruikersreizen](docs/USER-JOURNEYS.md) leggen vast wat iemand wil bereiken,
+welke functies daarbij helpen en hoe we hun waarde kunnen toetsen. De
+[toegankelijkheidsreview](docs/ACCESSIBILITY-AUDIT.md) beschrijft de gecontroleerde
+schermen, gevonden problemen en resterende beperkingen.
+
 ## Snel starten
 
 Vereisten: Node.js 24+, Python 3.11+ en een OpenAI API-key.
@@ -215,6 +220,21 @@ hergebruikt:
 curl -X POST http://localhost:3000/api/jobs/<job-id>/retry-article
 ```
 
+Dit kan alleen voor mislukte opdrachten, maximaal twee keer per opdracht naast
+de oorspronkelijke generatie. Elke geaccepteerde poging telt mee, ook als deze
+mislukt. De teller wordt opgeslagen voordat het betaalde werk begint en blijft
+behouden na een herstart. Voltooide artikelen en opdrachten die de limiet hebben
+bereikt geven `409`; hun inhoud en leesstatus blijven intact.
+
+Voor oudere opdrachten zonder teller tellen geregistreerde artikeloperaties mee
+als eerdere pogingen. Alleen bij complete gebruikshistorie trekken we de eerste
+generatie af; bij gedeeltelijke historie tellen alle bekende operaties mee.
+Automatische API-retries binnen dezelfde operatie tellen samen als één poging.
+Zonder geregistreerde historie begint de
+teller bij nul; onbekende eerdere pogingen kunnen niet worden gereconstrueerd.
+Deze limiet geldt voor artikelregeneratie, niet voor nieuwe opdrachten of de
+nog openstaande hervattingslogica na een serverherstart.
+
 De lengtekeuze toont de beoogde woordenaantallen: compact (700–1.000),
 standaard (1.100–1.700) en uitgebreid (1.800–2.600). Dit zijn richtlijnen voor
 de generatie, geen gegarandeerde aantallen. Dezelfde bron kan in een andere
@@ -307,7 +327,8 @@ de ingestelde betaalde transcriptie- en artikelmodellen.
 
 De server controleert actieve series bij het starten en daarna elk uur. Hij moet
 hiervoor blijven draaien; dit vereist geen externe cronjob. De bestaande wachtrij
-verwerkt één opname tegelijk. Via **Pauzeer** stop je nieuwe controles; opdrachten
+verwerkt maximaal drie opnames tegelijk; het voorbereiden van media blijft serieel.
+Via **Pauzeer** stop je nieuwe controles; opdrachten
 die al in de verwerkingswachtrij staan worden nog afgerond. **Hervat** haalt ook
 sinds de pauze gemiste afleveringen op, voor zover die nog in de feed staan.
 

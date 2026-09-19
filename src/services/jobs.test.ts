@@ -7,9 +7,79 @@ import {
   toArticleSummary,
   toProcessingJobSummary,
 } from "./jobs.js";
-import type { ArticleSummary, Job } from "../types.js";
+import type { ApiRequestUsage, ArticleSummary, Job } from "../types.js";
 
 describe("stored job compatibility", () => {
+  it.each([
+    { operations: [], counter: undefined, expected: 0 },
+    {
+      operations: ["first", "first", "retry-one"],
+      counter: undefined,
+      expected: 1,
+    },
+    {
+      operations: ["first", "retry-one", "retry-two"],
+      counter: undefined,
+      expected: 2,
+    },
+    { operations: ["first", "restart"], counter: 0, expected: 0 },
+    {
+      operations: ["retry-one", "retry-two"],
+      counter: undefined,
+      coverage: "partial" as const,
+      expected: 2,
+    },
+    {
+      operations: [],
+      counter: undefined,
+      coverage: "partial" as const,
+      expected: 0,
+    },
+    { operations: [], counter: 2, expected: 2 },
+    { operations: [], counter: -1, expected: 2 },
+    { operations: [], counter: 0.5, expected: 2 },
+  ])(
+    "retains the paid retry allowance when loading $operations and counter $counter",
+    ({ operations, counter, expected, coverage = "complete" }) => {
+      const requests = operations.map(
+        (operationId, index) =>
+          ({
+            id: `request-${index}`,
+            operationId,
+            attempt: index + 1,
+            stage: "article",
+            requestedModel: "test-model",
+            requestedServiceTier: "auto",
+            endpointRegion: "global",
+            startedAt: "2026-09-19T10:00:00Z",
+            status: "failed",
+            cost: { currency: "USD", amount: null },
+          }) satisfies ApiRequestUsage,
+      );
+      const job: Job = {
+        id: "00000000-0000-4000-8000-000000000719",
+        sourceUrl: "https://example.com/recording",
+        language: "nl",
+        articleLength: "standard",
+        stage: "failed",
+        progress: 82,
+        message: "Artikel schrijven mislukt",
+        createdAt: "2026-09-19T10:00:00Z",
+        updatedAt: "2026-09-19T10:00:00Z",
+        articleRetryAttempts: counter,
+        apiUsage: {
+          trackingStartedAt: "2026-09-19T10:00:00Z",
+          coverage,
+          requests,
+          knownEstimatedCostUsd: 0,
+          unknownCostRequests: requests.length,
+        },
+      };
+
+      expect(normalizeStoredJob(job).articleRetryAttempts).toBe(expected);
+    },
+  );
+
   it("upgrades Spotify jobs created before generic source support", () => {
     const legacy = {
       id: "11111111-1111-1111-1111-111111111111",
