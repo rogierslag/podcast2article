@@ -1,10 +1,20 @@
 :root {
+  --page-width: 1440px;
+  --page-gutter: clamp(22px, 6vw, 96px);
+  --page-inset: max(
+    var(--page-gutter),
+    calc((100% - var(--page-width)) / 2 + var(--page-gutter))
+  );
   --mono: "DM Mono", monospace;
   --sans: "Manrope", sans-serif;
   --serif: "Newsreader", serif;
 }
 * {
   box-sizing: border-box;
+}
+html:has(body.native-scroll),
+.page-scroll {
+  scrollbar-gutter: stable;
 }
 html {
   height: 100%;
@@ -20,8 +30,9 @@ body {
 .initial-loading {
   display: none;
   min-height: calc(100svh - 76px - env(safe-area-inset-top));
-  padding: clamp(42px, 6vw, 88px) max(8vw, env(safe-area-inset-right)) 42px
-    max(8vw, env(safe-area-inset-left));
+  max-width: var(--page-width);
+  margin: auto;
+  padding: clamp(42px, 6vw, 88px) var(--page-gutter) 42px;
   color: var(--muted);
   font: 500 12px var(--mono);
 }
@@ -61,8 +72,8 @@ body.scroll-shell {
   align-items: center;
   justify-content: space-between;
   padding: env(safe-area-inset-top)
-    max(clamp(22px, 4vw, 68px), env(safe-area-inset-right)) 0
-    max(clamp(22px, 4vw, 68px), env(safe-area-inset-left));
+    max(var(--page-inset), env(safe-area-inset-right)) 0
+    max(var(--page-inset), env(safe-area-inset-left));
   border-bottom: 1px solid var(--line);
 }
 .brand {
@@ -91,8 +102,8 @@ body.scroll-shell {
   text-decoration: none;
 }
 .landing {
-  padding: 72px clamp(22px, 8vw, 140px) 110px;
-  max-width: 1440px;
+  padding: 72px var(--page-gutter) 110px;
+  max-width: var(--page-width);
   margin: auto;
 }
 .landing-opening {
@@ -369,7 +380,9 @@ body.scroll-shell {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 48px 24px 64px;
+  max-width: var(--page-width);
+  margin: auto;
+  padding: 48px var(--page-gutter) 64px;
 }
 .processing-mark {
   flex: none;
@@ -448,7 +461,7 @@ body.scroll-shell {
   font: 11px var(--mono);
 }
 .episode-hero {
-  padding: 64px clamp(22px, 8vw, 140px);
+  padding: 64px var(--page-inset);
   background: var(--inverse-surface);
   color: var(--inverse-text);
   display: grid;
@@ -519,11 +532,15 @@ body.scroll-shell {
 }
 .content-layout {
   display: grid;
-  grid-template-columns: minmax(0, 760px) 230px;
-  gap: 90px;
-  max-width: 1180px;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: clamp(32px, 6vw, 90px);
+  max-width: var(--page-width);
   margin: 0 auto;
-  padding: 90px 30px;
+  padding: 90px var(--page-gutter);
+}
+.article-column,
+.shared-layout > .article {
+  max-width: 760px;
 }
 .article-column {
   min-width: 0;
@@ -890,9 +907,9 @@ audio {
 }
 footer {
   border-top: 1px solid var(--line);
-  padding: 28px max(clamp(22px, 4vw, 68px), env(safe-area-inset-right))
+  padding: 28px max(var(--page-inset), env(safe-area-inset-right))
     max(28px, env(safe-area-inset-bottom))
-    max(clamp(22px, 4vw, 68px), env(safe-area-inset-left));
+    max(var(--page-inset), env(safe-area-inset-left));
   display: flex;
   justify-content: space-between;
   font: 10px var(--mono);
@@ -1170,6 +1187,11 @@ footer {
   color: inherit;
   text-decoration: none;
 }
+.main-nav a[aria-current="page"] {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
 .main-nav a:hover {
   color: var(--accent-text);
 }
@@ -1194,30 +1216,31 @@ footer {
   line-height: 1.6;
 }
 
-.articles-view {
-  max-width: 1440px;
+.collection-page {
+  max-width: var(--page-width);
   margin: auto;
-  padding: 82px clamp(22px, 6vw, 96px) 120px;
+  padding: 82px var(--page-gutter) 120px;
   min-height: calc(100vh - 76px);
 }
-.articles-heading {
+.collection-heading {
   display: flex;
   justify-content: space-between;
   align-items: end;
   padding-bottom: 46px;
   border-bottom: 1px solid var(--line);
 }
-.articles-heading > div {
+.collection-heading > div {
   min-width: 0;
   max-width: 100%;
 }
-.articles-heading h1 {
+.collection-heading h1 {
   font: 600 clamp(58px, 8vw, 108px) / 0.9 var(--serif);
   letter-spacing: -0.055em;
   overflow-wrap: anywhere;
   margin: 26px 0 0;
 }
 .articles-count {
+  min-height: 14px;
   font: 500 11px var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -1326,6 +1349,7 @@ footer {
   color: var(--accent-text);
 }
 .articles-loading {
+  animation: initial-loading-reveal 0s 250ms both;
   grid-column: 1/-1;
   color: var(--muted);
   font: 11px var(--mono);
@@ -1382,15 +1406,15 @@ footer {
   .main-nav button {
     font-size: 9px;
   }
-  .articles-view {
+  .collection-page {
     padding-top: 55px;
   }
-  .articles-heading {
+  .collection-heading {
     align-items: start;
     gap: 20px;
     flex-direction: column;
   }
-  .articles-heading h1 {
+  .collection-heading h1 {
     font-size: 58px;
   }
   .article-card {

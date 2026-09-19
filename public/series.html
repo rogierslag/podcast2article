@@ -42,7 +42,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=optional"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css?v=brand-transition-v1" />
@@ -89,19 +89,27 @@
         >
           <a href="/" data-i18n="nav.newArticle">{{nav.newArticle}}</a>
           <a href="/articles" data-i18n="nav.articles">{{nav.articles}}</a>
-          <a href="/series" data-i18n="nav.series">{{nav.series}}</a>
+          <a href="/series" aria-current="page" data-i18n="nav.series"
+            >{{nav.series}}</a
+          >
           <form id="logout-form" class="hidden" method="post" action="/logout">
             <button type="submit" data-i18n="nav.logout">{{nav.logout}}</button>
           </form>
         </nav>
       </header>
 
-      <main class="series-page">
-        <div class="series-heading">
-          <p class="eyebrow" data-i18n="series.kicker">{{series.kicker}}</p>
-          <h1 data-i18n="series.title">{{series.title}}</h1>
-          <p class="intro" data-i18n="series.intro">{{series.intro}}</p>
+      <main class="series-page collection-page">
+        <div class="series-heading collection-heading">
+          <div>
+            <p class="eyebrow">
+              <span></span>
+              <span data-i18n="series.kicker">{{series.kicker}}</span>
+            </p>
+            <h1 data-i18n="series.title">{{series.title}}</h1>
+          </div>
+          <p id="series-count" class="articles-count" aria-live="polite"></p>
         </div>
+        <p class="series-intro" data-i18n="series.intro">{{series.intro}}</p>
         <form id="series-search" class="composer">
           <label for="series-url" data-i18n="series.url">{{series.url}}</label>
           <div class="url-row">

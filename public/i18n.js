@@ -64,9 +64,10 @@ export const messages = {
     nl: "Van aflevering naar leeslijst",
     en: "From episodes to your reading list",
   },
+  "series.total": { nl: "{count} gevolgd", en: "{count} followed" },
   "series.title": {
-    nl: "Blijf bij met je podcasts.",
-    en: "Keep up with your podcasts.",
+    nl: "Alle series.",
+    en: "All series.",
   },
   "series.intro": {
     nl: "Volg een serie, haal eerdere afleveringen in en lees nieuwe afleveringen automatisch als artikel.",

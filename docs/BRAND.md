@@ -140,6 +140,13 @@ account data or owner-only routes.
   compete. Keep the source input close enough to make the next action clear.
 - Keep images rectangular and aligned with the surrounding content. Let the
   source imagery supply variety without adding decorative frames.
+- Use the shared 1440px outer container and horizontal gutter for the landing
+  page, collections, processing states, and owner/public readers. Full-width
+  headers and source bars align their contents with those same edges. Keep
+  article text capped at 760px and the sign-in form compact inside its page;
+  a shared outer container does not require stretching text or form fields.
+- Reserve scrollbar space and avoid late font swaps. Loading messages appear
+  only after a short delay, while errors and completed content remain immediate.
 - On smaller screens, adapt spacing and arrangement while preserving hierarchy,
   readable labels, and usable controls. Compact metadata must still be legible.
 

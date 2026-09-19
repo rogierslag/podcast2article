@@ -5,6 +5,9 @@
   color: var(--muted);
 }
 .shared-loading {
+  max-width: var(--page-width);
+  margin: auto;
+  padding-inline: var(--page-gutter);
   min-height: 70vh;
   display: grid;
   place-items: center;
@@ -16,7 +19,7 @@
   display: flex;
   align-items: center;
   gap: 40px;
-  padding: 24px max(22px, calc((100vw - 1120px) / 2));
+  padding: 24px var(--page-inset);
   background: var(--paper);
   border-bottom: 1px solid var(--line);
 }
@@ -37,19 +40,21 @@
   margin: 0;
 }
 .shared-layout {
-  grid-template-columns: minmax(0, 760px) 230px;
+  grid-template-columns: minmax(0, 1fr) 230px;
 }
 .shared-layout > .article {
   min-width: 0;
 }
 .shared-error {
+  max-width: var(--page-width);
+  margin: auto;
   min-height: calc(100vh - 76px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 40px;
+  padding: 40px var(--page-gutter);
 }
 .shared-error h1 {
   max-width: 760px;
@@ -85,7 +90,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  padding: 18px max(22px, calc((100vw - 1120px) / 2));
+  padding: 18px var(--page-inset);
   border-bottom: 1px solid var(--line);
 }
 .shared-save-actions a {
@@ -100,4 +105,8 @@
   .shared-save-actions {
     display: none;
   }
+}
+
+.shared-loading > span {
+  animation: initial-loading-reveal 0s 250ms both;
 }

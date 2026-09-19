@@ -196,6 +196,9 @@ followForm.addEventListener("submit", (event) => {
 
 async function refresh() {
   const subscriptions = await api("/api/subscriptions");
+  document.querySelector("#series-count").textContent = t("series.total", {
+    count: subscriptions.length,
+  });
   if (!subscriptions.length) {
     subscriptionList.replaceChildren(
       element("p", t("series.empty"), "series-hint"),

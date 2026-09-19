@@ -37,7 +37,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=optional"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/theme.css?v=system-dark-v1" />
@@ -92,12 +92,8 @@
         >
       </header>
       <main id="shared-main" aria-live="polite">
-        <section
-          id="shared-loading"
-          class="shared-loading"
-          data-i18n="shared.loading"
-        >
-          {{shared.loading}}
+        <section id="shared-loading" class="shared-loading" role="status">
+          <span data-i18n="shared.loading">{{shared.loading}}</span>
         </section>
         <section id="shared-result" class="hidden">
           <button
