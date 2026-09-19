@@ -69,16 +69,11 @@
   cursor: pointer;
 }
 .series-primary {
-  color: var(--paper);
-  background: var(--ink);
+  color: var(--action-text);
+  background: var(--action-surface);
 }
 .series-page button:disabled {
-  opacity: 0.6;
   cursor: wait;
-}
-.series-page :focus-visible {
-  outline: 2px solid var(--accent-text);
-  outline-offset: 4px;
 }
 .series-candidate {
   display: flex;
@@ -96,8 +91,8 @@
 .series-item {
   padding: 24px 0;
   border-top: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
   align-items: start;
   gap: 24px;
 }
@@ -114,8 +109,19 @@
   font: 12px var(--mono);
   color: var(--accent-text);
 }
+.series-controls {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
 .series-item .series-control {
-  flex-shrink: 0;
+  width: 100%;
+  min-height: 44px;
+  line-height: 1.5;
+}
+.series-item > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .series-overview {
   display: inline-block;
@@ -149,7 +155,7 @@
     gap: 8px;
   }
   .series-item {
-    flex-wrap: wrap;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media print {
@@ -159,12 +165,6 @@
   }
 }
 
-.series-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: start;
-}
 .series-item .series-limit-note {
   max-width: 560px;
   font-weight: 600;
@@ -232,8 +232,5 @@
   }
   .series-identity {
     flex-basis: 100%;
-  }
-  .series-item .series-controls {
-    margin-left: 80px;
   }
 }

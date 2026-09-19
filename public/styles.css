@@ -235,8 +235,8 @@ body.scroll-shell {
 .android-install summary:focus-visible,
 .shortcut-install a:focus-visible,
 .android-install a:focus-visible {
-  outline: 2px solid var(--accent-text);
-  outline-offset: 4px;
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 @media print {
   .shortcut-install,
@@ -273,10 +273,6 @@ body.scroll-shell {
   padding: 17px 24px;
   font: 600 13px var(--sans);
   cursor: pointer;
-}
-.url-row button:hover {
-  background: var(--orange);
-  color: var(--accent-action-text);
 }
 .options {
   display: flex;
@@ -641,13 +637,6 @@ body.scroll-shell {
   padding: 11px 15px;
   font: 600 11px var(--mono);
   cursor: pointer;
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-}
-.article-actions button:hover {
-  background: var(--action-surface);
-  color: var(--action-text);
 }
 .article-actions button:focus-visible {
   outline: 3px solid var(--focus);
@@ -735,10 +724,6 @@ body.scroll-shell {
   border-radius: var(--control-radius);
   padding: 4px 7px;
   cursor: pointer;
-}
-.source-link:hover {
-  background: var(--green);
-  color: var(--green-action-text);
 }
 .takeaways {
   background: var(--takeaway-surface);
@@ -843,10 +828,6 @@ audio {
   font: 11px/1.4 var(--mono);
   cursor: pointer;
 }
-.transcript-empty button:hover {
-  background: var(--action-surface);
-  color: var(--action-text);
-}
 .segment {
   display: grid;
   grid-template-columns: 85px 110px 1fr;
@@ -928,17 +909,13 @@ footer {
   font: 11px var(--mono);
   cursor: pointer;
 }
-.language-switcher button:hover {
-  color: var(--ink);
-  background: var(--paper);
-}
 .language-switcher button[aria-pressed="true"] {
   color: var(--ink);
   border-color: var(--line);
   background: var(--paper);
 }
 .language-switcher button:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .language-switcher .language-flag {
@@ -1174,8 +1151,7 @@ footer {
   color: inherit;
   text-decoration: none;
 }
-.main-nav a:hover,
-.main-nav button:hover {
+.main-nav a:hover {
   color: var(--accent-text);
 }
 .main-nav form {
@@ -1513,13 +1489,9 @@ footer {
   font: inherit;
   cursor: pointer;
 }
-.article-delete-footer button:hover {
-  color: var(--ink);
-  text-decoration: underline;
-}
 .article-delete-footer button:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 4px;
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 .article-delete-footer button:disabled {
   cursor: wait;
@@ -1561,15 +1533,6 @@ footer {
   padding: 13px 17px;
   font: 600 11px var(--mono);
   cursor: pointer;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s,
-    color 0.2s;
-}
-.article-read-footer button:hover {
-  background: var(--orange);
-  border-color: var(--orange);
-  color: var(--accent-action-text);
 }
 .article-read-footer button:focus-visible {
   outline: 3px solid var(--focus);
@@ -1729,15 +1692,6 @@ footer {
   font: 600 10px var(--mono);
   text-transform: uppercase;
   cursor: pointer;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s,
-    color 0.2s;
-}
-.article-card-actions button:hover {
-  background: var(--orange);
-  border-color: var(--orange);
-  color: var(--accent-action-text);
 }
 .article-card-actions button[aria-pressed="true"] {
   background: var(--green);
@@ -2095,10 +2049,6 @@ footer {
   font: 500 11px/1.4 var(--mono);
   cursor: pointer;
 }
-.source-preview-header button:hover {
-  background: var(--green);
-  color: var(--green-action-text);
-}
 .source-preview-header button:focus-visible,
 .source-link:focus-visible {
   outline: 3px solid var(--focus);
@@ -2171,8 +2121,8 @@ input::placeholder {
   cursor: pointer;
 }
 .android-install-button:focus-visible {
-  outline: 2px solid var(--accent-text);
-  outline-offset: 4px;
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 
 .article-series {
@@ -2200,8 +2150,8 @@ input::placeholder {
 }
 .article-series a:focus-visible,
 .article-series button:focus-visible {
-  outline: 2px solid var(--accent-text);
-  outline-offset: 4px;
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 @media print {
   .article-series {

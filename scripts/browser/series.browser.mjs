@@ -313,3 +313,83 @@ test("series: covers and fallbacks render in discovery, preview and followed ser
     fullPage: true,
   });
 });
+
+for (const language of ["nl", "en"]) {
+  test(`series: controls align across subscriptions in ${language}`, async ({
+    page,
+  }, testInfo) => {
+    await page.route("**/api/subscriptions", (route) =>
+      route.fulfill({
+        json: [
+          {
+            id: previewId,
+            title: "The Pragmatic Engineer",
+            paused: false,
+            complete: 8,
+            processing: 2,
+            outstanding: 6,
+            archiveCount: 12,
+            pendingCount: 0,
+            failed: [],
+          },
+          {
+            id: "00000000-0000-4000-8000-000000000772",
+            title: "StaffEng",
+            paused: true,
+            pauseReason: "limit",
+            complete: 7,
+            processing: 3,
+            outstanding: 10,
+            archiveCount: 12,
+            pendingCount: 0,
+            failed: [],
+          },
+        ],
+      }),
+    );
+    await page.goto("/series");
+    await page.locator(`[data-ui-language="${language}"]`).click();
+    const buttons = page.locator(".series-control");
+    await expect(buttons).toHaveCount(4);
+    await expect(buttons.nth(2)).toBeDisabled();
+    await expect(buttons.nth(3)).toBeDisabled();
+
+    const assertAlignment = async () => {
+      const boxes = await buttons.evaluateAll((elements) =>
+        elements.map((element) => {
+          const { x, width, height } = element.getBoundingClientRect();
+          return { x, width, height };
+        }),
+      );
+      for (const box of boxes) {
+        expect(Math.abs(box.x - boxes[0].x)).toBeLessThan(1);
+        expect(Math.abs(box.width - boxes[0].width)).toBeLessThan(1);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      if (page.viewportSize().width <= 600) {
+        for (const item of await page.locator(".series-item").all()) {
+          const content = await item
+            .locator(":scope > div")
+            .first()
+            .boundingBox();
+          const controls = await item.locator(".series-controls").boundingBox();
+          expect(controls.x).toBe(content.x);
+          expect(controls.width).toBe(content.width);
+          expect(controls.y).toBeGreaterThanOrEqual(content.y + content.height);
+        }
+      }
+    };
+    await assertAlignment();
+    await page.locator(".series-following").screenshot({
+      path: testInfo.outputPath(`series-alignment-${language}.png`),
+    });
+    // The narrower desktop layout must keep the same column without overflowing.
+    await page.setViewportSize({ width: 768, height: 1000 });
+    await assertAlignment();
+  });
+}

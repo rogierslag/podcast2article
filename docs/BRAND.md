@@ -110,6 +110,13 @@ Actions should have clear labels and predictable results. Preserve the article
 actions and mobile labels described in [AGENTS.md](../AGENTS.md). Icons may save
 space where their meaning is recognizable, but they still need accessible names.
 
+Button interaction styles are shared in `theme.css`. Primary actions use an orange
+hover and pressed state; secondary buttons use an inverse surface, source references
+use green, and text actions change text color. Use the same 3px focus ring for keyboard
+navigation. Disabled buttons do not respond to hover or press. Color transitions take
+150ms and are disabled when reduced motion is requested; hover feedback applies only
+on devices that support hover.
+
 Use motion to explain a state change or maintain orientation. Keep it brief and
 subtle; avoid decorative movement around reading content. Respect reduced-motion
 preferences. The source-preview dialog's current 150ms entrance and 100ms exit
