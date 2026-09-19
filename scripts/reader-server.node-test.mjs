@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -9,6 +9,7 @@ import { after, before, test } from "node:test";
 import { translate } from "../public/i18n.js";
 
 const articleId = "00000000-0000-4000-8000-000000000917";
+const exhaustedArticleId = "00000000-0000-4000-8000-000000000919";
 const token = "a".repeat(43);
 const otherToken = "b".repeat(43);
 const publicBaseUrl = "https://reads.example.test";
@@ -200,6 +201,23 @@ before(async () => {
     await writeFile(path.join(root, "media", `${id}.mp3`), audio);
   }
   const portReservation = createServer();
+  await writeFile(
+    path.join(
+      directory,
+      "data",
+      "users",
+      "owner",
+      "jobs",
+      `${exhaustedArticleId}.json`,
+    ),
+    JSON.stringify({
+      ...fixture(exhaustedArticleId, "c".repeat(43), "Failed article"),
+      article: undefined,
+      stage: "failed",
+      articleRetryAttempts: 2,
+      error: "Article generation failed",
+    }),
+  );
   portReservation.listen(0, "127.0.0.1");
   await once(portReservation, "listening");
   const port = portReservation.address().port;
@@ -422,6 +440,7 @@ test("articles without artwork use localized branding while preserving article i
       "private-media",
       "private-billing-request",
       "readAt",
+      "articleRetryAttempts",
       "username",
     ]) {
       assert.equal(markup.includes(privateValue), false, privateValue);
@@ -510,6 +529,7 @@ test("each public token returns only its own article and minimal source fields",
     "apiUsage",
     "private-billing-request",
     "readAt",
+    "articleRetryAttempts",
     "username",
   ]) {
     assert.equal(
@@ -697,6 +717,71 @@ test("saving creates one independent personal copy with only public content and 
     await fetch(`${origin}/api/articles`, { headers })
   ).json();
   assert.ok(JSON.stringify(overview).includes(savedId));
+});
+
+test("completed articles reject regeneration with a localized conflict and retain their saved state", async () => {
+  const cookie = await loginAs("owner");
+  const file = path.join(
+    directory,
+    "data",
+    "users",
+    "owner",
+    "jobs",
+    `${articleId}.json`,
+  );
+  const saved = await readFile(file, "utf8");
+  const endpoint = `${origin}/api/jobs/${articleId}`;
+  const headers = { Cookie: cookie };
+  const original = await (await fetch(endpoint, { headers })).json();
+
+  for (const language of ["nl", "en"]) {
+    const response = await fetch(`${endpoint}/retry-article`, {
+      method: "POST",
+      headers: { ...headers, "Accept-Language": language },
+    });
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: translate(language, "error.articleRetryNotFailed"),
+    });
+    assert.deepEqual(
+      await (await fetch(endpoint, { headers })).json(),
+      original,
+    );
+    assert.equal(await readFile(file, "utf8"), saved);
+  }
+});
+
+test("exhausted article retries return a localized conflict without changing the saved job", async () => {
+  const cookie = await loginAs("owner");
+  const file = path.join(
+    directory,
+    "data",
+    "users",
+    "owner",
+    "jobs",
+    `${exhaustedArticleId}.json`,
+  );
+  const saved = await readFile(file, "utf8");
+  const endpoint = `${origin}/api/jobs/${exhaustedArticleId}`;
+
+  for (const language of ["nl", "en"]) {
+    const response = await fetch(`${endpoint}/retry-article`, {
+      method: "POST",
+      headers: {
+        Cookie: cookie,
+        "Accept-Language": language,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ articleRetryAttempts: 0 }),
+    });
+
+    assert.equal(response.status, 409);
+    assert.deepEqual(await response.json(), {
+      error: translate(language, "error.articleRetryLimit"),
+    });
+    assert.equal(await readFile(file, "utf8"), saved);
+  }
 });
 
 test("owner permalink creation reuses the same capability and rejects another account (PR 3)", async () => {

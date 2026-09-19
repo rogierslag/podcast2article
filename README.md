@@ -220,6 +220,21 @@ hergebruikt:
 curl -X POST http://localhost:3000/api/jobs/<job-id>/retry-article
 ```
 
+Dit kan alleen voor mislukte opdrachten, maximaal twee keer per opdracht naast
+de oorspronkelijke generatie. Elke geaccepteerde poging telt mee, ook als deze
+mislukt. De teller wordt opgeslagen voordat het betaalde werk begint en blijft
+behouden na een herstart. Voltooide artikelen en opdrachten die de limiet hebben
+bereikt geven `409`; hun inhoud en leesstatus blijven intact.
+
+Voor oudere opdrachten zonder teller tellen geregistreerde artikeloperaties mee
+als eerdere pogingen. Alleen bij complete gebruikshistorie trekken we de eerste
+generatie af; bij gedeeltelijke historie tellen alle bekende operaties mee.
+Automatische API-retries binnen dezelfde operatie tellen samen als één poging.
+Zonder geregistreerde historie begint de
+teller bij nul; onbekende eerdere pogingen kunnen niet worden gereconstrueerd.
+Deze limiet geldt voor artikelregeneratie, niet voor nieuwe opdrachten of de
+nog openstaande hervattingslogica na een serverherstart.
+
 De lengtekeuze toont de beoogde woordenaantallen: compact (700–1.000),
 standaard (1.100–1.700) en uitgebreid (1.800–2.600). Dit zijn richtlijnen voor
 de generatie, geen gegarandeerde aantallen. Dezelfde bron kan in een andere

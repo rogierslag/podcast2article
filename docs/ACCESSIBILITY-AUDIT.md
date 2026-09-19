@@ -136,8 +136,8 @@ repeated article actions through state changes, login version opacity, numbered
 cover names, owner/shared continuation names and keyboard destinations, and
 320px reflow with increased text spacing. Existing reader and interaction tests
 cover dialog behavior, source seeking, button feedback, and reduced-motion
-styles. The final combined branch passed 369 Vitest tests, 54 Node tests, and
-156 browser tests across Chromium and mobile WebKit, along with formatting,
+styles. The final combined branch passed 387 Vitest tests, 56 Node tests, and
+168 browser tests across Chromium and mobile WebKit, along with formatting,
 lint, build, frontend syntax, and diff checks. Reproduce these checks with:
 
 ```sh
@@ -148,9 +148,13 @@ node --check public/share.js
 git diff --check
 ```
 
-Final branch verification passed: `npm run check` completed with 369 Vitest
-tests and 54 Node tests, and the browser suite passed all 156 checks across
+Final branch verification passed: `npm run check` completed with 387 Vitest
+tests and 56 Node tests, and the browser suite passed all 168 checks across
 Chromium and WebKit, including the new naming, spacing, and recovery cases.
+The follow-up regeneration limit was also checked on desktop and mobile in Dutch
+and English: the original error remains visible, the exhausted allowance is
+explained, and source/library actions remain available. These visual and DOM
+checks supplement the earlier axe matrix; they were not an additional full axe audit.
 The temporary preview and browser-test servers were stopped and the test fixture
 was removed after verification.
 

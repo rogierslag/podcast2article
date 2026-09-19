@@ -38,6 +38,7 @@ function storeArticle(username: string, patch: Partial<Job> = {}): Job {
     language: "nl",
     articleLength: "standard",
     stage: "complete",
+    articleRetryAttempts: 0,
     progress: 100,
     message: "Klaar",
     createdAt: "2026-08-01T12:00:00.000Z",

@@ -44,6 +44,8 @@ const pendingRuns: Array<{
   type: "full" | "article";
 }> = [];
 const pendingJobIds = new Set<string>();
+const articleRetryReservations = new Set<string>();
+const maxArticleRetries = 2;
 // Metadata can advance through the whole queue without waiting for OpenAI.
 const metadataSlots = new ConcurrencyGate(3);
 const processingSlots = new ConcurrencyGate(3);
@@ -93,6 +95,29 @@ function mediaLimit(
 
 export function normalizeStoredJob(job: Job): Job {
   job.sourceUrl ??= job.spotifyUrl ?? "";
+  if (job.articleRetryAttempts === undefined) {
+    // Older jobs have no counter. Provider retries share an operation ID.
+    // Only complete history proves the initial generation was recorded;
+    // partial histories and restarted generations count conservatively.
+    const operations = new Set(
+      (job.apiUsage?.requests ?? [])
+        .filter(
+          (request) =>
+            request.stage === "article" &&
+            typeof request.operationId === "string" &&
+            request.operationId.length > 0,
+        )
+        .map((request) => request.operationId),
+    );
+    const initialGeneration = job.apiUsage?.coverage === "complete" ? 1 : 0;
+    job.articleRetryAttempts = Math.max(0, operations.size - initialGeneration);
+  } else if (
+    !Number.isSafeInteger(job.articleRetryAttempts) ||
+    job.articleRetryAttempts < 0
+  ) {
+    // Invalid persisted limits must not enable additional paid work.
+    job.articleRetryAttempts = maxArticleRetries;
+  }
   if (job.stage === "complete") {
     job.completedAt ??= job.updatedAt;
   }
@@ -253,6 +278,7 @@ export async function createJob(
       ? { spotifyUrl: sourceUrl }
       : {}),
     id: randomUUID(),
+    articleRetryAttempts: 0,
     apiUsage: {
       trackingStartedAt: new Date().toISOString(),
       coverage: "complete",
@@ -308,6 +334,7 @@ export async function createPodcastJob(
     id: randomUUID(),
     sourceUrl: item.episode.sourceUrl,
     podcastEpisodeKey: item.key,
+    articleRetryAttempts: 0,
     apiUsage: {
       trackingStartedAt: now,
       coverage: "complete",
@@ -716,32 +743,57 @@ async function copySharedArticle(
 
 export async function retryArticle(username: string, id: string): Promise<Job> {
   const key = jobKey(username, id);
-  const job = await getJob(username, id);
-  if (!job) {
-    throw new Error("Opdracht niet gevonden.");
-  }
-  if (activeRuns.has(key) || pendingJobIds.has(key)) {
+  if (articleRetryReservations.has(key)) {
     throw new Error("Deze opdracht wordt al verwerkt.");
   }
-  if (job.savedShareKey || !job.transcript?.length || !job.episode) {
-    throw new Error(
-      "Deze opdracht heeft geen complete transcriptie om te hergebruiken.",
-    );
+  articleRetryReservations.add(key);
+  try {
+    const job = await getJob(username, id);
+    if (!job) {
+      throw new Error("Opdracht niet gevonden.");
+    }
+    if (activeRuns.has(key) || pendingJobIds.has(key)) {
+      throw new Error("Deze opdracht wordt al verwerkt.");
+    }
+    if (job.savedShareKey || !job.transcript?.length || !job.episode) {
+      throw new Error(
+        "Deze opdracht heeft geen complete transcriptie om te hergebruiken.",
+      );
+    }
+    if (job.stage !== "failed") {
+      throw new Error(
+        "Alleen mislukte opdrachten kunnen opnieuw worden geprobeerd.",
+      );
+    }
+    const attempts = job.articleRetryAttempts ?? 0;
+    if (attempts >= maxArticleRetries) {
+      throw new Error(
+        "Deze opdracht heeft het maximum van twee artikelpogingen bereikt.",
+      );
+    }
+    const retryJob: Job = {
+      ...job,
+      stage: "writing",
+      progress: 82,
+      message: "Artikel opnieuw genereren met bestaand transcript",
+      error: undefined,
+      article: undefined,
+      readAt: undefined,
+      readingPosition: undefined,
+      articleRetryAttempts: attempts + 1,
+    };
+    // Persist the allowance before paid work starts; failed writes leave the
+    // original in-memory job intact. The reservation also covers cold reads.
+    await persist(username, retryJob);
+    jobLog(job.id, "writing", "Artikel-only retry gestart", {
+      transcriptSegments: job.transcript.length,
+      attempt: retryJob.articleRetryAttempts,
+    });
+    enqueueJob(username, retryJob, "article");
+    return retryJob;
+  } finally {
+    articleRetryReservations.delete(key);
   }
-  await update(username, job, {
-    stage: "writing",
-    progress: 82,
-    message: "Artikel opnieuw genereren met bestaand transcript",
-    error: undefined,
-    article: undefined,
-    readAt: undefined,
-    readingPosition: undefined,
-  });
-  jobLog(job.id, "writing", "Artikel-only retry gestart", {
-    transcriptSegments: job.transcript.length,
-  });
-  enqueueJob(username, job, "article");
-  return job;
 }
 
 export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {

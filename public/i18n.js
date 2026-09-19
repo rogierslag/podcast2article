@@ -429,6 +429,14 @@ export const messages = {
     nl: "Deze opdracht wordt al verwerkt.",
     en: "This request is already being processed.",
   },
+  "error.articleRetryNotFailed": {
+    nl: "Je kunt het artikel alleen opnieuw maken als de verwerking is mislukt.",
+    en: "You can only regenerate the article if processing has failed.",
+  },
+  "error.articleRetryLimit": {
+    nl: "Het maximum van twee pogingen om dit artikel opnieuw te maken is bereikt.",
+    en: "The limit of two attempts to regenerate this article has been reached.",
+  },
   "error.transcriptIncomplete": {
     nl: "Het transcript is niet compleet, dus we kunnen het artikel nog niet opnieuw schrijven.",
     en: "The transcript is incomplete, so we can’t rewrite the article yet.",

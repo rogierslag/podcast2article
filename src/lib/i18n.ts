@@ -169,6 +169,14 @@ const legacyMessageKeys = new Map([
   ["Dit artikel is nog niet klaar om te delen.", "error.articleShareNotReady"],
   ["Deze opdracht wordt al verwerkt.", "error.jobAlreadyProcessing"],
   [
+    "Alleen mislukte opdrachten kunnen opnieuw worden geprobeerd.",
+    "error.articleRetryNotFailed",
+  ],
+  [
+    "Deze opdracht heeft het maximum van twee artikelpogingen bereikt.",
+    "error.articleRetryLimit",
+  ],
+  [
     "Deze opdracht heeft geen complete transcriptie om te hergebruiken.",
     "error.transcriptIncomplete",
   ],

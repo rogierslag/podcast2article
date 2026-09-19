@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { articleFixture, articleId, password } from "./fixture.mjs";
+import { UI_LANGUAGE_COOKIE } from "../../public/i18n.js";
 
 test.beforeEach(async ({ page }) => {
   await page.route(/^https?:\/\/(?!127\.0\.0\.1:4317)/, (route) =>
@@ -126,6 +127,186 @@ test("processing: early failure restores source, language and length without sta
   await expect(page.locator('[name="articleLength"]')).toHaveValue("compact");
   await expect(page.locator("#progress-view")).toBeHidden();
   expect(mutations).toEqual([]);
+});
+
+test("processing: only the first two article regenerations are offered after failures", async ({
+  page,
+}) => {
+  let job = processingFixture({
+    stage: "failed",
+    error: "Het oorspronkelijke artikel kon niet worden geschreven.",
+  });
+  let retries = 0;
+  await page.route(`**/api/jobs/${articleId}`, (route) =>
+    route.fulfill({ json: job }),
+  );
+  await page.route(`**/api/jobs/${articleId}/retry-article`, async (route) => {
+    expect(route.request().method()).toBe("POST");
+    retries += 1;
+    job = processingFixture({
+      stage: "failed",
+      articleRetryAttempts: retries,
+      error: `Ook artikelpoging ${retries} is mislukt.`,
+    });
+    await route.fulfill({
+      status: 202,
+      json: { ...job, stage: "writing", error: undefined },
+    });
+  });
+  await page.goto(`/#job=${articleId}`);
+
+  for (const attempt of [1, 2]) {
+    await expect(page.locator("#job-article-retry")).toBeVisible();
+    await expect(page.locator("#progress-hint")).toContainText(
+      "extra API-kosten",
+    );
+    await page.locator("#job-article-retry").click();
+
+    await expect(page.locator("#progress-error")).toHaveText(
+      `Ook artikelpoging ${attempt} is mislukt.`,
+    );
+    expect(retries).toBe(attempt);
+  }
+
+  await expect(page.locator("#job-article-retry")).toBeHidden();
+  await expect(page.locator("#progress-hint")).toHaveText(
+    "Het maximum van twee pogingen om dit artikel opnieuw te maken is bereikt.",
+  );
+  await page.reload();
+
+  await expect(page.locator("#progress-error")).toHaveText(job.error);
+  await expect(page.locator("#job-article-retry")).toBeHidden();
+  await expect(page.locator("#job-edit-source")).toBeVisible();
+  expect(retries).toBe(2);
+});
+
+for (const [language, attempts, limitMessage, libraryLabel] of [
+  [
+    "nl",
+    2,
+    "Het maximum van twee pogingen om dit artikel opnieuw te maken is bereikt.",
+    "Naar artikelen",
+  ],
+  [
+    "en",
+    3,
+    "The limit of two attempts to regenerate this article has been reached.",
+    "Go to articles",
+  ],
+]) {
+  test(`processing: the exhausted limit preserves the failure and recovery actions in ${language}`, async ({
+    page,
+    context,
+  }) => {
+    await context.addCookies([
+      {
+        name: UI_LANGUAGE_COOKIE,
+        value: language,
+        url: "http://127.0.0.1:4317",
+      },
+    ]);
+    const job = processingFixture({
+      stage: "failed",
+      articleRetryAttempts: attempts,
+      error: "De artikeldienst gaf geen bruikbaar resultaat terug.",
+    });
+    const mutations = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/api/jobs") && request.method() !== "GET") {
+        mutations.push(request.url());
+      }
+    });
+    await openJob(page, job);
+
+    await expect(page.locator("#progress-error")).toHaveText(job.error);
+    await expect(page.locator("#progress-hint")).toHaveText(limitMessage);
+    await expect(page.locator("#job-article-retry")).toBeHidden();
+    await expect(page.locator("#job-status-retry")).toBeHidden();
+    await expect(page.locator("#job-edit-source")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: libraryLabel, exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+
+    await page.locator("#job-edit-source").click();
+
+    await expect(page.locator("#source-url")).toBeFocused();
+    await expect(page.locator("#source-url")).toHaveValue(job.sourceUrl);
+    expect(mutations).toEqual([]);
+  });
+}
+
+for (const responseState of ["lost", "rejected"]) {
+  test(`processing: a ${responseState} final retry response reconciles the limit without an extra POST`, async ({
+    page,
+  }) => {
+    let job = processingFixture({
+      stage: "failed",
+      articleRetryAttempts: 1,
+      error: "De eerste artikelpoging is mislukt.",
+    });
+    let retries = 0;
+    await page.route(`**/api/jobs/${articleId}`, (route) =>
+      route.fulfill({ json: job }),
+    );
+    await page.route(
+      `**/api/jobs/${articleId}/retry-article`,
+      async (route) => {
+        retries += 1;
+        job = {
+          ...job,
+          articleRetryAttempts: 2,
+          error: "Ook de tweede artikelpoging is mislukt.",
+        };
+        if (responseState === "lost") {
+          await route.abort("failed");
+        } else {
+          await route.fulfill({
+            status: 409,
+            json: {
+              error:
+                "Het maximum van twee pogingen om dit artikel opnieuw te maken is bereikt.",
+            },
+          });
+        }
+      },
+    );
+    await page.goto(`/#job=${articleId}`);
+
+    await page.locator("#job-article-retry").click();
+    await expect(page.locator("#job-article-retry")).toBeHidden();
+    await page.locator("#job-status-retry").click();
+
+    await expect(page.locator("#progress-error")).toHaveText(job.error);
+    await expect(page.locator("#progress-hint")).toHaveText(
+      "Het maximum van twee pogingen om dit artikel opnieuw te maken is bereikt.",
+    );
+    await expect(page.locator("#job-article-retry")).toBeHidden();
+    await expect(page.locator("#job-status-retry")).toBeHidden();
+    await expect(page.locator("#job-edit-source")).toBeVisible();
+    expect(retries).toBe(1);
+  });
+}
+
+test("processing: a saved shared copy never offers article regeneration", async ({
+  page,
+}) => {
+  await openJob(
+    page,
+    processingFixture({
+      stage: "failed",
+      savedShareKey: "saved-public-article",
+      articleRetryAttempts: 0,
+      error: "Verwerking mislukt.",
+    }),
+  );
+
+  await expect(page.locator("#job-article-retry")).toBeHidden();
+  await expect(page.locator("#job-edit-source")).toBeVisible();
 });
 
 test("processing: unavailable status can be checked again without paid processing", async ({

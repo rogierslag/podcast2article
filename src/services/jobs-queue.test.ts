@@ -343,6 +343,162 @@ it("persists usage through failure and restart without duplicating attempt updat
   expect(restarted.listProcessingJobs("other")).toEqual([]);
 });
 
+it.each([
+  "queued",
+  "resolving",
+  "downloading",
+  "transcribing",
+  "writing",
+  "complete",
+] as const)(
+  "rejects regeneration of a stored %s job without changing content or reading state",
+  async (stage) => {
+    const job = {
+      ...input,
+      id: "00000000-0000-4000-8000-000000000719",
+      stage,
+      progress: 100,
+      message: "Klaar",
+      createdAt: "2026-09-19T10:00:00Z",
+      updatedAt: "2026-09-19T10:00:00Z",
+      readAt: "2026-09-19T10:05:00Z",
+      readingPosition: { sectionIndex: 0, updatedAt: "2026-09-19T10:04:00Z" },
+      episode: {
+        sourceType: "youtube",
+        sourceUrl: input.sourceUrl,
+        title: "A saved recording",
+        mediaUrl: "https://example.com/audio.mp3",
+      },
+      transcript: [
+        { id: "t-00001", start: 0, end: 10, speaker: "Alice", text: "Hello" },
+      ],
+      article: {
+        title: "A saved article",
+        dek: "An article to keep.",
+        readingTimeMinutes: 1,
+        styleNote: "Clear",
+        sections: [{ heading: "First section", paragraphs: [] }],
+        takeaways: [],
+      },
+    } satisfies Job;
+    const file = path.resolve(
+      "data",
+      "users",
+      "owner",
+      "jobs",
+      `${job.id}.json`,
+    );
+    const saved = JSON.stringify(job);
+    state.files.set(file, saved);
+    const jobs = await import("./jobs.js");
+    const original = structuredClone(await jobs.getJob("owner", job.id));
+
+    await expect(jobs.retryArticle("owner", job.id)).rejects.toThrow(
+      "Alleen mislukte opdrachten kunnen opnieuw worden geprobeerd.",
+    );
+
+    expect(await jobs.getJob("owner", job.id)).toEqual(original);
+    expect(state.files.get(file)).toBe(saved);
+    expect(state.writeFile).not.toHaveBeenCalled();
+    expect(state.writeArticle).not.toHaveBeenCalled();
+    expect(state.transcribe).not.toHaveBeenCalled();
+  },
+);
+
+async function failedArticleJob() {
+  resolveMetadata();
+  state.transcribe.mockResolvedValue([
+    { id: "t-00001", start: 0, end: 10, speaker: "Alice", text: "Hello" },
+  ]);
+  state.writeArticle.mockRejectedValue(new Error("Article generation failed"));
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+  await vi.waitFor(async () =>
+    expect((await jobs.getJob("owner", job.id))?.stage).toBe("failed"),
+  );
+  return { jobs, job };
+}
+
+it("allows two article retries total and retains the limit after a restart", async () => {
+  const { jobs, job } = await failedArticleJob();
+  await jobs.retryArticle("owner", job.id);
+  await vi.waitFor(async () =>
+    expect(await jobs.getJob("owner", job.id)).toMatchObject({
+      stage: "failed",
+      articleRetryAttempts: 1,
+    }),
+  );
+  await jobs.shutdownJobs();
+  vi.resetModules();
+  const restarted = await import("./jobs.js");
+  await restarted.resumeIncompleteJobs(["owner"]);
+
+  await restarted.retryArticle("owner", job.id);
+  await vi.waitFor(async () =>
+    expect(await restarted.getJob("owner", job.id)).toMatchObject({
+      stage: "failed",
+      articleRetryAttempts: 2,
+    }),
+  );
+  const saved = structuredClone(await restarted.getJob("owner", job.id));
+  await expect(restarted.retryArticle("owner", job.id)).rejects.toThrow(
+    "Deze opdracht heeft het maximum van twee artikelpogingen bereikt.",
+  );
+
+  expect(await restarted.getJob("owner", job.id)).toEqual(saved);
+  expect(state.writeArticle).toHaveBeenCalledTimes(3);
+  expect(state.transcribe).toHaveBeenCalledTimes(1);
+  const file = path.resolve("data", "users", "owner", "jobs", `${job.id}.json`);
+  expect(JSON.parse(state.files.get(file) ?? "{}").articleRetryAttempts).toBe(
+    2,
+  );
+});
+
+it("reserves a retry before loading a stored job so simultaneous requests start paid work once", async () => {
+  const { jobs, job } = await failedArticleJob();
+  await jobs.shutdownJobs();
+  vi.resetModules();
+  const restarted = await import("./jobs.js");
+
+  const attempts = await Promise.allSettled([
+    restarted.retryArticle("owner", job.id),
+    restarted.retryArticle("owner", job.id),
+  ]);
+  await vi.waitFor(async () =>
+    expect((await restarted.getJob("owner", job.id))?.stage).toBe("failed"),
+  );
+
+  expect(
+    attempts.filter((attempt) => attempt.status === "fulfilled"),
+  ).toHaveLength(1);
+  expect(
+    attempts.filter((attempt) => attempt.status === "rejected"),
+  ).toHaveLength(1);
+  expect((await restarted.getJob("owner", job.id))?.articleRetryAttempts).toBe(
+    1,
+  );
+  expect(state.writeArticle).toHaveBeenCalledTimes(2);
+});
+
+it("does not spend an attempt or start paid work when its reservation cannot be persisted", async () => {
+  const { jobs, job } = await failedArticleJob();
+  const original = structuredClone(await jobs.getJob("owner", job.id));
+  state.writeFile.mockRejectedValueOnce(new Error("disk full"));
+
+  await expect(jobs.retryArticle("owner", job.id)).rejects.toThrow("disk full");
+
+  expect(await jobs.getJob("owner", job.id)).toEqual(original);
+  expect(state.writeArticle).toHaveBeenCalledTimes(1);
+  await jobs.retryArticle("owner", job.id);
+  await vi.waitFor(async () =>
+    expect(await jobs.getJob("owner", job.id)).toMatchObject({
+      stage: "failed",
+      articleRetryAttempts: 1,
+    }),
+  );
+  expect(state.writeArticle).toHaveBeenCalledTimes(2);
+});
+
 it("keeps earlier charges when retrying article generation", async () => {
   resolveMetadata();
   state.transcribe.mockResolvedValue([
@@ -389,6 +545,7 @@ it("keeps earlier charges when retrying article generation", async () => {
     2,
   );
   expect(state.transcribe).toHaveBeenCalledTimes(1);
+  expect((await jobs.getJob("owner", job.id))?.articleRetryAttempts).toBe(1);
 });
 
 describe("podcast jobs", () => {

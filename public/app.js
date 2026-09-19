@@ -501,6 +501,7 @@ function showProcessingError(
     !processingJob.savedShareKey &&
     processingJob.transcript?.length > 0 &&
     Boolean(processingJob.episode);
+  const retryLimitReached = processingJob.articleRetryAttempts >= 2;
   $("#progress-kicker").textContent = t(
     failedJob ? "processing.failed" : "processing.statusUnavailable",
   );
@@ -517,13 +518,18 @@ function showProcessingError(
     ? ""
     : t(
         failedJob
-          ? canReuseTranscript
-            ? "processing.reuseHint"
-            : "processing.restartHint"
+          ? retryLimitReached
+            ? "error.articleRetryLimit"
+            : canReuseTranscript
+              ? "processing.reuseHint"
+              : "processing.restartHint"
           : "processing.statusHint",
       );
   $("#job-status-retry").classList.toggle("hidden", failedJob || missingJob);
-  $("#job-article-retry").classList.toggle("hidden", !canReuseTranscript);
+  $("#job-article-retry").classList.toggle(
+    "hidden",
+    !canReuseTranscript || retryLimitReached,
+  );
   $("#job-edit-source").classList.toggle(
     "hidden",
     !failedJob || !processingJob.sourceUrl,
@@ -548,7 +554,14 @@ $("#job-article-retry").addEventListener("click", async (event) => {
   const button = event.currentTarget;
   const version = routeVersion;
   const jobId = processingJob.id;
-  if (pendingArticleRetryIds.has(jobId)) {
+  if (
+    pendingArticleRetryIds.has(jobId) ||
+    processingJob.stage !== "failed" ||
+    processingJob.savedShareKey ||
+    !processingJob.transcript?.length ||
+    !processingJob.episode ||
+    processingJob.articleRetryAttempts >= 2
+  ) {
     return;
   }
   pendingArticleRetryIds.add(jobId);

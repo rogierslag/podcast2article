@@ -100,7 +100,18 @@ appear in the library, with source metadata loaded separately. Up to three jobs
 process concurrently while media preparation stays serial. Usage attempts and
 known cost estimates are stored per job. A failure stays in the job context with
 its source and error. If a complete transcript exists, the reader can regenerate
-only the article, with the additional cost stated. Returning to the form restores
+only the article, with the additional cost stated. The server permits at most two
+accepted regeneration attempts per failed job, excluding the initial generation.
+Failed attempts count; the allowance is saved before work starts and survives
+restarts. At the limit, the interface explains why regeneration is unavailable.
+For older jobs, distinct recorded article operations count against the allowance;
+the first is excluded only when usage history is complete. Partial histories count
+all known operations conservatively. Automatic API retries within one operation
+count together.
+If no history exists, earlier regeneration attempts are unknown and the counter
+starts at zero. This cap does not limit new jobs or fix restart recovery.
+Completed articles cannot be regenerated or have their content and reading state
+cleared through the retry endpoint. Returning to the form restores
 the source, language, and length. A transient status-fetch failure offers a
 read-only status check that creates no new job. An ambiguous regeneration response
 also requires checking the saved job status before another paid retry is offered;
