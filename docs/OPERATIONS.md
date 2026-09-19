@@ -884,3 +884,28 @@ Run only one server against a data directory: reservations coordinate concurrent
 requests within that process, not across replicas. Startup loads all account
 histories before resuming work and fails if a stored job cannot be read, because
 ignoring that history could grant an incorrect allowance.
+
+### Viewing spending and exempting accounts
+
+The owner-page footer contains an expandable **Usage** summary, refreshed every
+30 seconds and when the page regains focus. It shows estimated costs for the last
+30 days, historical spending excluded from the limit, counted spending, reserved
+budget and the remaining allowance. **No spending limit** replaces the allowance
+for exempt accounts. These totals reuse the stored request-level usage; historical
+article totals remain unchanged. The private `/api/account-budget` endpoint returns
+only the authenticated account's summary and is never cached.
+
+To exempt accounts, set a comma-separated list of exact usernames in
+`/etc/podcast2article.env`, then restart the application when no jobs are running:
+
+```dotenv
+SPENDING_LIMIT_EXEMPT_USERS=rogier
+```
+
+This is an operator setting, not an account control in the interface. Empty means
+all accounts are limited; wildcards and malformed names are rejected at startup.
+Exempt accounts continue recording usage and reservations. Removing an exemption
+restores the USD 5 limit, including that account's new spending during the preceding
+30 days. Exempt accounts can also use models with unknown pricing; those requests
+retain a conservative USD 5 reservation if their cost cannot be established, so
+removing the exemption cannot turn new unknown spending into free historical work.

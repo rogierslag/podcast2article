@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiRequestUsage, Job } from "../types.js";
 import {
   accountSpend,
+  summarizeAccountBudget,
+  spendingLimitExempt,
   assertAccountBudget,
   budgetWindowMs,
 } from "./account-budget.js";
@@ -174,4 +176,44 @@ describe("rolling account budget", () => {
       reserveApiCost("gpt-4o-transcribe-diarize", "eu", { audioSeconds: 601 }),
     ).toBeGreaterThan(0.06);
   });
+});
+
+afterEach(() => vi.unstubAllEnvs());
+
+it("shows historical and counted spending separately from reservations", () => {
+  const jobs = [
+    job([
+      request(1.2),
+      request(0.24, { reservedCostUsd: undefined }),
+      request(null, { status: "pending", reservedCostUsd: 0.6 }),
+      request(10, { startedAt: new Date(now - budgetWindowMs).toISOString() }),
+    ]),
+  ];
+
+  expect(summarizeAccountBudget(jobs, false, now)).toEqual({
+    windowDays: 30,
+    spentUsd: 1.44,
+    countedSpendUsd: 1.2,
+    historicalSpendUsd: 0.24,
+    reservedUsd: 0.6,
+    unknownCostRequests: 1,
+    limitUsd: 5,
+    remainingUsd: 3.1999999999999997,
+  });
+  expect(summarizeAccountBudget(jobs, true, now)).toMatchObject({
+    spentUsd: 1.44,
+    limitUsd: null,
+    remainingUsd: null,
+  });
+});
+
+it("only exempts exact operator-configured account names", () => {
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "rogier, melvin");
+
+  expect(spendingLimitExempt("rogier")).toBe(true);
+  expect(spendingLimitExempt("melvin")).toBe(true);
+  expect(spendingLimitExempt("rogier-other")).toBe(false);
+  expect(spendingLimitExempt("other")).toBe(false);
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "*");
+  expect(() => spendingLimitExempt("other")).toThrow("comma-separated");
 });

@@ -18,12 +18,19 @@ import {
   normalizeAudio,
   splitAudio,
 } from "./audio.js";
-import { assertAccountBudget, AccountBudgetError } from "./account-budget.js";
+import {
+  assertAccountBudget,
+  AccountBudgetError,
+  accountLimitUsd,
+  spendingLimitExempt,
+  summarizeAccountBudget,
+} from "./account-budget.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource, validateSourceUrl } from "./resolver.js";
 import { downloadFathomRecording } from "./fathom.js";
 import { downloadYouTubeAudio } from "./youtube.js";
 import type {
+  AccountBudget,
   ApiRequestUsage,
   ArticleReadingPosition,
   ArticleSummary,
@@ -184,6 +191,19 @@ function accountJobs(username: string): Job[] {
     .map(([, job]) => job);
 }
 
+export function getAccountBudget(username: string): AccountBudget {
+  return summarizeAccountBudget(
+    accountJobs(username),
+    spendingLimitExempt(username),
+  );
+}
+
+function checkAccountBudget(username: string, reservation = 0): void {
+  if (!spendingLimitExempt(username)) {
+    assertAccountBudget(accountJobs(username), reservation);
+  }
+}
+
 async function recordApiUsage(
   username: string,
   job: Job,
@@ -191,11 +211,16 @@ async function recordApiUsage(
 ): Promise<void> {
   if (request.status === "pending") {
     if (request.reservedCostUsd === undefined) {
-      throw new AccountBudgetError();
+      if (!spendingLimitExempt(username)) {
+        throw new AccountBudgetError();
+      }
+      // Continue tracking new attempts for exempt accounts, including unknown
+      // prices. Revoking an exemption must not make those requests historical.
+      request.reservedCostUsd = accountLimitUsd;
     }
     // No await between checking and updating the in-memory reservation: parallel
     // jobs in this server cannot both consume the same remaining allowance.
-    assertAccountBudget(accountJobs(username), request.reservedCostUsd);
+    checkAccountBudget(username, request.reservedCostUsd);
   }
   const usage = job.apiUsage ?? {
     trackingStartedAt: new Date().toISOString(),
@@ -282,7 +307,7 @@ export async function createJob(
   if (existingJob) {
     throw new DuplicateJobError(existingJob);
   }
-  assertAccountBudget(accountJobs(username));
+  checkAccountBudget(username);
   const now = new Date().toISOString();
   const sourceHost = new URL(sourceUrl).hostname.toLowerCase();
   const job: Job = {
@@ -343,7 +368,7 @@ export async function createPodcastJob(
   if (existing) {
     return existing;
   }
-  assertAccountBudget(accountJobs(username));
+  checkAccountBudget(username);
   const now = new Date().toISOString();
   const job: Job = {
     language: options.language,
@@ -788,7 +813,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
         "Deze opdracht heeft het maximum van twee artikelpogingen bereikt.",
       );
     }
-    assertAccountBudget(accountJobs(username));
+    checkAccountBudget(username);
     const retryJob: Job = {
       ...job,
       stage: "writing",

@@ -429,6 +429,39 @@ export const messages = {
     nl: "Je kunt het artikel alleen opnieuw maken als de verwerking is mislukt.",
     en: "You can only regenerate the article if processing has failed.",
   },
+  "budget.loading": { nl: "Verbruik laden…", en: "Loading usage…" },
+  "budget.summary": {
+    nl: "Verbruik · {amount} in 30 dagen",
+    en: "Usage · {amount} in 30 days",
+  },
+  "budget.available": { nl: "{amount} beschikbaar", en: "{amount} available" },
+  "budget.unlimited": { nl: "Geen bestedingslimiet", en: "No spending limit" },
+  "budget.spent": {
+    nl: "Geschatte kosten · afgelopen 30 dagen",
+    en: "Estimated spend · last 30 days",
+  },
+  "budget.historical": {
+    nl: "Historische kosten · vrijgesteld",
+    en: "Historical spend · excluded",
+  },
+  "budget.counted": {
+    nl: "Kosten die meetellen",
+    en: "Spend counted towards the limit",
+  },
+  "budget.reserved": { nl: "Gereserveerd budget", en: "Reserved budget" },
+  "budget.limit": { nl: "Limiet per 30 dagen", en: "30-day limit" },
+  "budget.explanation": {
+    nl: "Kosten zijn schattingen voor transcripties en artikelen. Historische kosten tellen niet mee voor de limiet. Gereserveerd budget dekt lopende verzoeken en onzekere kosten. Bedragen vervallen na 30 dagen.",
+    en: "Costs are estimates for transcriptions and articles. Historical spending does not count towards the limit. Reserved budget covers requests in progress and uncertain costs. Amounts expire after 30 days.",
+  },
+  "budget.unknown": {
+    nl: "Verzoeken met onbekende kosten: {count}.",
+    en: "Requests with unknown costs: {count}.",
+  },
+  "budget.unavailable": {
+    nl: "Verbruik tijdelijk niet beschikbaar",
+    en: "Usage temporarily unavailable",
+  },
   "error.accountBudget": {
     nl: "Er is onvoldoende budget binnen de limiet van $5 per account over de afgelopen 30 dagen. Lopende verzoeken en kosten die nog niet bekend zijn tellen mee. Probeer het later opnieuw.",
     en: "There is not enough budget within the $5 account limit over the last 30 days. Requests in progress and costs that are not yet known count towards this limit. Try again later.",

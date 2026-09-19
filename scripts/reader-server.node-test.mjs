@@ -234,6 +234,7 @@ before(async () => {
         HOST: "127.0.0.1",
         OPENAI_API_KEY: "",
         APP_PASSWORD: "",
+        SPENDING_LIMIT_EXEMPT_USERS: "other",
         PUBLIC_BASE_URL: `${publicBaseUrl}/`,
         APP_USERS: JSON.stringify({
           owner: "test-only-password-owner",
@@ -807,4 +808,40 @@ test("owner permalink creation reuses the same capability and rejects another ac
   assert.equal(second.status, 201);
   assert.deepEqual(await first.json(), await second.json());
   assert.equal(unauthorized.status, 404);
+});
+
+test("account budget requires a session and exposes only that account's summary", async () => {
+  const anonymous = await fetch(`${origin}/api/account-budget`);
+  assert.equal(anonymous.status, 401);
+  const ownerCookie = await loginAs("owner");
+  const ownerResponse = await fetch(
+    `${origin}/api/account-budget?username=other`,
+    { headers: { Cookie: ownerCookie } },
+  );
+  assert.equal(ownerResponse.headers.get("cache-control"), "no-store");
+  const owner = await ownerResponse.json();
+  assert.equal(owner.limitUsd, 5);
+  assert.equal(owner.windowDays, 30);
+  assert.equal(owner.remainingUsd, 5);
+  assert.deepEqual(
+    Object.keys(owner).sort(),
+    [
+      "windowDays",
+      "spentUsd",
+      "countedSpendUsd",
+      "historicalSpendUsd",
+      "reservedUsd",
+      "unknownCostRequests",
+      "limitUsd",
+      "remainingUsd",
+    ].sort(),
+  );
+  const otherCookie = await loginAs("other");
+  const other = await (
+    await fetch(`${origin}/api/account-budget`, {
+      headers: { Cookie: otherCookie },
+    })
+  ).json();
+  assert.equal(other.limitUsd, null);
+  assert.equal(other.remainingUsd, null);
 });

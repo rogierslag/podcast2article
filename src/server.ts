@@ -1,8 +1,11 @@
-import { AccountBudgetError } from "./services/account-budget.js";
 import express from "express";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import {
+  AccountBudgetError,
+  spendingLimitExempt,
+} from "./services/account-budget.js";
 import { deploymentFailed } from "./services/deployment.js";
 import { resolveGitSha } from "./lib/git.js";
 import { socialMetadata, type SocialImage } from "./lib/social-metadata.js";
@@ -27,6 +30,7 @@ import {
   sessionCookie,
 } from "./services/auth.js";
 import {
+  getAccountBudget,
   createArticleShare,
   createJob,
   createPodcastJob,
@@ -71,6 +75,8 @@ const loginTemplate = await readFile(
   "utf8",
 );
 const auth = createUserAuth();
+// Validate operator configuration before the server accepts work.
+spendingLimitExempt(auth.usernames[0] ?? "local");
 const loginAttempts = new Map<
   string,
   { failures: number; blockedUntil: number }
@@ -429,6 +435,11 @@ app.post("/logout", (request, response) => {
 app.get("/api/auth", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.json({ enabled: auth.enabled, username: response.locals.username });
+});
+
+app.get("/api/account-budget", (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  response.json(getAccountBudget(response.locals.username));
 });
 
 app.get("/api/deployment-status", async (_request, response) => {

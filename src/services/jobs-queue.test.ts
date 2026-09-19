@@ -58,6 +58,7 @@ const input = {
 
 beforeEach(() => {
   vi.resetModules();
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "");
   state.files.clear();
   state.writeArticle
     .mockReset()
@@ -94,6 +95,7 @@ beforeEach(() => {
 afterEach(async () => {
   const jobs = await import("./jobs.js");
   await jobs.shutdownJobs();
+  vi.unstubAllEnvs();
 });
 
 describe("processing reservations and concurrent queue", () => {
@@ -831,4 +833,55 @@ it("does not send paid work when persisting its budget reservation fails", async
     expect((await jobs.getJob("owner", job.id))?.stage).toBe("failed"),
   );
   expect(sent).not.toHaveBeenCalled();
+});
+
+it("exempt accounts can keep processing above the limit while costs remain tracked", async () => {
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "owner");
+  resolveMetadata();
+  state.transcribe.mockImplementation(
+    async (_files, _language, _progress, _status, _signal, recordUsage) => {
+      const usage: ApiRequestUsage = {
+        id: "unlimited",
+        operationId: "unlimited",
+        attempt: 1,
+        stage: "transcription",
+        requestedModel: "gpt-4o-transcribe-diarize",
+        requestedServiceTier: "default",
+        endpointRegion: "global",
+        startedAt: new Date().toISOString(),
+        status: "pending",
+        reservedCostUsd: 10,
+        cost: { currency: "USD", amount: null },
+      };
+      await recordUsage(usage);
+      await recordUsage({
+        ...usage,
+        status: "succeeded",
+        cost: { currency: "USD", amount: 8 },
+      });
+      return [
+        { id: "t-00001", start: 0, end: 1, speaker: "Alice", text: "Hello" },
+      ];
+    },
+  );
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+  await vi.waitFor(async () =>
+    expect((await jobs.getJob("owner", job.id))?.stage).toBe("complete"),
+  );
+
+  expect(jobs.getAccountBudget("owner")).toMatchObject({
+    spentUsd: 8,
+    limitUsd: null,
+    remainingUsd: null,
+  });
+  const next = await jobs.createJob("owner", {
+    ...input,
+    articleLength: "compact",
+  });
+  expect(next).toBeDefined();
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "");
+  await expect(
+    jobs.createJob("owner", { ...input, articleLength: "long" }),
+  ).rejects.toThrow("error.accountBudget");
 });

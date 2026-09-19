@@ -196,3 +196,14 @@ export interface ProcessingJobSummary {
   message: string;
   createdAt: string;
 }
+
+export interface AccountBudget {
+  windowDays: number;
+  spentUsd: number;
+  countedSpendUsd: number;
+  historicalSpendUsd: number;
+  reservedUsd: number;
+  unknownCostRequests: number;
+  limitUsd: number | null;
+  remainingUsd: number | null;
+}
