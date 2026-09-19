@@ -251,7 +251,7 @@ flowchart TD
     Push["GitHub push webhook"] --> Verify{"Valid signed<br/>main push?"}
     Verify -->|No| Ignore["Reject or ignore"]
     Verify -->|Yes| Trigger["Write trigger<br/>systemd starts updater"]
-    Daily["Daily cron or manual systemd start"] --> Lock
+    Daily["Five-minute cron or manual systemd start"] --> Lock
     Trigger --> Lock{"Acquire updater lock?"}
     Lock -->|No| Skip["Skip update"]
     Lock -->|Yes| Revision{"Already current?"}

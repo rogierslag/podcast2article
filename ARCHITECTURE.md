@@ -114,11 +114,13 @@ Important middleware decisions:
 The unauthenticated health endpoint is intentionally small:
 
 ```text
-GET /api/health -> {"ok":true}
+GET /api/health -> {"ok":true,"deployment":{"status":"unknown","runningCommit":null,"targetCommit":null,"lastCheckedAt":null}}
 ```
 
-It is used by the deployment health check. It does not expose configuration,
-data, model output, or secrets.
+The updater uses `ok` for availability independently of deployment freshness.
+Freshness reads local updater state, never GitHub per request. See the
+[deployment-status contract](docs/DEPLOYMENT-STATUS.md) for timing, states, and
+required host installation. It exposes no logs, user data, or secrets.
 
 ### 3.3 Authentication
 

@@ -389,17 +389,11 @@ The canonical deployment source is the `main` branch on GitHub.
 
 Every valid push to `main` triggers an immediate update attempt.
 
-### Daily reconciliation
+### Periodic reconciliation
 
-Cron starts the same systemd update service every day at 04:00 in the host's
-configured timezone. The intended production timezone is `Europe/Amsterdam`;
-verify it with `timedatectl`. The checked-in cron file does not set a timezone:
-
-```text
-/etc/cron.d/podcast2article-update
-```
-
-The daily check recovers from a missed or delayed webhook.
+Cron starts the same systemd update service every five minutes through
+`/etc/cron.d/podcast2article-update`. This discovers missed webhooks and refreshes
+locally persisted deployment information. The updater lock prevents overlap.
 
 ### Update algorithm
 
@@ -476,7 +470,8 @@ GitHub Actions checks the code on its own runner. Neither proves that the VPS
 installed or activated that commit. Compare the current release's
 `.deployed-commit` with GitHub `main`, then inspect the update service and log.
 The public `/login` page also exposes the running build in `data-build-sha`.
-`/api/health` reports availability, not whether the release is current.
+`/api/health` reports availability in `ok` and deployment freshness separately
+in `deployment`. See [status rules and thresholds](DEPLOYMENT-STATUS.md).
 
 On 2026-09-06, production remained on `857b546` while pushes and CI succeeded.
 Every update failed during dependency installation: the host ran Node.js

@@ -6,7 +6,7 @@ import {
   AccountBudgetError,
   spendingLimitExempt,
 } from "./services/account-budget.js";
-import { deploymentFailed } from "./services/deployment.js";
+import { deploymentFailed, deploymentHealth } from "./services/deployment.js";
 import { resolveGitSha } from "./lib/git.js";
 import { socialMetadata, type SocialImage } from "./lib/social-metadata.js";
 import {
@@ -188,8 +188,9 @@ function loginBuildMarkup(response: express.Response): string {
   return `<p class="build-sha" data-build-sha="${gitSha}" title="${translate(language, "build.label", { sha: gitSha })}">${translate(language, "build", { sha: shortSha })}</p>`;
 }
 
-app.get("/api/health", (_request, response) => {
-  response.json({ ok: true });
+app.get("/api/health", async (_request, response) => {
+  response.set("Cache-Control", "no-store");
+  response.json({ ok: true, deployment: await deploymentHealth(gitSha) });
 });
 
 app.get("/s/:token", async (request, response) => {
