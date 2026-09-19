@@ -1294,6 +1294,28 @@ export const messages = {
     nl: "artikel",
     en: "article",
   },
+  "share.statsTitle": {
+    nl: "Activiteit via gedeelde link",
+    en: "Shared link activity",
+  },
+  "share.statsLoads": { nl: "Keer geladen", en: "Shared loads" },
+  "share.statsReads": {
+    nl: "Geschatte lezingen via link",
+    en: "Estimated shared reads",
+  },
+  "share.statsNote": {
+    nl: "Alleen activiteit via de gedeelde link. Lezen in je eigen bibliotheek telt niet mee. Een lezing wordt geschat na 30 seconden actief lezen en 90% leesvoortgang; dit zijn geen unieke lezers.",
+    en: "Only activity through the shared link. Reading in your own library does not count. Reads are estimated after 30 seconds of active reading and 90% progress; these are not unique readers.",
+  },
+  "share.statsLoading": {
+    nl: "Statistieken laden…",
+    en: "Loading statistics\u2026",
+  },
+  "share.statsError": {
+    nl: "Statistieken konden niet worden geladen.",
+    en: "Could not load statistics.",
+  },
+  "share.statsRetry": { nl: "Opnieuw proberen", en: "Try again" },
   "share.completed": {
     nl: "Artikel gedeeld.",
     en: "Article shared.",

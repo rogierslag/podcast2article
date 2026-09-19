@@ -565,6 +565,40 @@
                 ></span>
               </div>
               <div class="article-series hidden" data-article-series></div>
+              <section
+                class="article-share-stats"
+                aria-labelledby="share-stats-heading"
+              >
+                <h2
+                  id="share-stats-heading"
+                  class="kicker"
+                  data-i18n="share.statsTitle"
+                >
+                  {{share.statsTitle}}
+                </h2>
+                <dl id="share-stats-values" class="hidden">
+                  <div>
+                    <dt data-i18n="share.statsLoads">{{share.statsLoads}}</dt>
+                    <dd id="share-stats-loads">—</dd>
+                  </div>
+                  <div>
+                    <dt data-i18n="share.statsReads">{{share.statsReads}}</dt>
+                    <dd id="share-stats-reads">—</dd>
+                  </div>
+                </dl>
+                <p id="share-stats-note" data-i18n="share.statsNote">
+                  {{share.statsNote}}
+                </p>
+                <p id="share-stats-status" role="status"></p>
+                <button
+                  id="share-stats-retry"
+                  class="hidden"
+                  type="button"
+                  data-i18n="share.statsRetry"
+                >
+                  {{share.statsRetry}}
+                </button>
+              </section>
               <div class="article-delete-footer">
                 <button
                   id="delete-article"

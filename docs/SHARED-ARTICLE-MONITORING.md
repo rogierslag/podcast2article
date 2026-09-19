@@ -5,7 +5,8 @@ loads the article and spends time reading it. This measures engagement, not
 comprehension or unique people. Collection starts when this version is deployed;
 there is no historical backfill.
 
-- **Load:** the article has rendered in a visible browser tab. HTML previews,
+- **Load:** the article has rendered and remained in a visible browser tab for
+  two consecutive seconds. Hidden or suspended time resets that window. HTML previews,
   audio requests, and article API requests alone do not count.
 - **Read:** that visit accumulates at least 30 seconds in a visible tab, with
   activity within the previous minute, and reaches at least 90% scroll progress.
@@ -17,7 +18,13 @@ The owner can retrieve counts from `GET /api/jobs/:id/share-stats` using their
 normal authenticated session. The response contains `loads`, `reads`, and the
 optional `lastLoadedAt` and `lastReadAt` timestamps. Another account cannot access
 these statistics. The public reader receives neither counts nor visitor receipts.
-No new interface controls are added.
+**Shared link activity** appears only at the bottom of the owner article, below
+the completion actions. It shows shared loads and estimated shared reads, with their
+definition. Counts refresh when opening an article or returning to its tab.
+Loading and failed requests are distinguished from zero counts; failures offer
+**Try again**. Statistics are absent from the article header, public reader, and
+printed page. Reading through the owner library does not count; opening the
+public permalink does, even when the visitor is the owner.
 
 Counts are persisted with the article. Up to 256 recent visit receipts are kept
 for 24 hours to deduplicate retries and reject reads without a corresponding load.
@@ -25,6 +32,17 @@ Receipts contain only a digest of a random page-visit ID, its load time, and a r
 flag. They are pruned on the next newly counted event; totals remain. Retries after
 receipt eviction can count as another load, and old visits cannot record a read.
 The server also requires 30 seconds between accepting a load and accepting a read.
+
+Monitoring is skipped when `navigator.webdriver === true`, the browser's
+[standard automation signal](https://www.w3.org/TR/webdriver2/#interface).
+This suppresses both loads and reads without restricting article access. A false
+or absent flag follows the normal timing rules. No plugin, screen, graphics, or
+other browser fingerprint is collected or used to classify readers.
+
+The two-second delay and automation flag filter some previews, not all crawlers. A crawler that
+hides or omits the automation flag, runs JavaScript, and remains visible long
+enough can still count, and a capability
+holder can submit events directly. The delay is a browser-side engagement rule.
 
 No IP address, user agent, referrer, cookie, or cross-page visitor ID is collected
 by this feature. Monitoring requests omit credentials. Existing infrastructure

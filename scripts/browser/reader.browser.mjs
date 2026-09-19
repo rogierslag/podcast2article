@@ -370,6 +370,10 @@ test("mobile owner actions retain equal touch targets and visible read text (PR 
 test("shared resume uses device storage and never writes an owner reading position (PR 18)", async ({
   page,
 }) => {
+  // Exercise the ordinary-reader path; automation suppression has its own test.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => false });
+  });
   await shared(page);
   const writes = [];
   page.on("request", (request) => {

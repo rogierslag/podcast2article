@@ -370,7 +370,9 @@ with unverified reservation prices. Credentials and exemptions are separate sett
 ### Shared permalink monitoring
 
 `public/share-analytics.js` counts visible reading time, and `public/share.js`
-sends credential-free `load` and `read` events after rendering. Reads require
+sends credential-free `load` and `read` events after rendering. Loads require
+two consecutive visible seconds; hidden or suspended time resets that window.
+Browsers declaring `navigator.webdriver === true` send no monitoring events. Reads require
 30 seconds of active visible time and 90% scroll progress. The public POST endpoint
 validates the capability and event schema; the server also enforces 30 seconds
 between the load and read.
@@ -378,7 +380,9 @@ between the load and read.
 `src/services/share-analytics.ts` updates aggregate counts and up to 256 recent
 visit receipts per job. Receipts store a random visit ID's digest, load time, and
 read flag, with a 24-hour deduplication window. Job persistence keeps the totals
-and receipts across restarts. An owner-only endpoint returns the aggregate fields;
+and receipts across restarts. An owner-only endpoint returns the aggregate fields for the owner article footer.
+The footer refreshes on article opening and tab return, guards against stale
+responses after navigation, and offers a retry on failure;
 public article payloads and saved copies omit the original analytics.
 
 See [shared article monitoring](docs/SHARED-ARTICLE-MONITORING.md) for request and

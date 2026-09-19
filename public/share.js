@@ -546,7 +546,8 @@ saveButtons.forEach((button) =>
 );
 
 function startShareMonitoring() {
-  if (!globalThis.crypto?.randomUUID) {
+  // Skip explicitly declared automation without fingerprinting ordinary readers.
+  if (navigator.webdriver === true || !globalThis.crypto?.randomUUID) {
     return;
   }
   const visitId = crypto.randomUUID();

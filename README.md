@@ -191,10 +191,13 @@ copy in their own library. Deleting the original disables its permalink while
 preserving previously saved copies. Public pages never expose the owner's
 identity, private transcript, read state, API costs, or usage statistics.
 
-Shared pages record a load after rendering in a visible tab. An estimated read
+Shared pages skip monitoring when the browser declares WebDriver automation.
+Other visits record a load only after two consecutive seconds in a visible tab. An estimated read
 requires 30 seconds of visible, active reading and at least 90% scroll progress.
 Counts survive restarts and are available to the owner through
-`GET /api/jobs/:id/share-stats`; there is no statistics dashboard. These count
+`GET /api/jobs/:id/share-stats` and in **Shared link activity** at the bottom of
+the owner article. The footer shows shared loads and estimated shared reads, including
+zero counts, and offers a retry when statistics are unavailable. These count
 page visits, not unique people or confirmed comprehension. They do not change
 **Mark as read** in the owner's library.
 

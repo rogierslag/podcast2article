@@ -210,9 +210,10 @@ test its links in the expected access context. A cancelled native share must not
 report delivery.
 
 Anonymous loads and estimated reads are now counted separately from explicit
-owner read state. A read requires 30 seconds of visible active time and 90% scroll
-progress. Owners retrieve counts through an authenticated API; the reader UI has
-no new controls. See [monitoring definitions](SHARED-ARTICLE-MONITORING.md).
+owner read state. A load requires two consecutive visible seconds. A read requires 30 seconds of visible active time and 90% scroll
+progress. Owners see shared loads and estimated shared reads only in the article footer, or
+retrieve them through the authenticated API. Loading failures offer a retry;
+public readers never see the statistics. See [monitoring definitions](SHARED-ARTICLE-MONITORING.md).
 The value test is whether a rendered visit and qualifying read increment only the
 intended article's counters without exposing private data. No production baseline
 or evidence of improved reading outcomes has been measured.

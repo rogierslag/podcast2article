@@ -707,6 +707,7 @@ function renderResult(job) {
   sourcePreview.close();
   currentJob = job;
   void updateArticleSeries(job);
+  void updateArticleShareStats(job);
   progressView.classList.add("hidden");
   landing.classList.add("hidden");
   articlesView.classList.add("hidden");
@@ -1603,6 +1604,7 @@ async function updateArticleSeries(job) {
 window.addEventListener("pageshow", (event) => {
   if (event.persisted && currentJob) {
     void updateArticleSeries(currentJob);
+    void updateArticleShareStats(currentJob);
   }
 });
 document.addEventListener("visibilitychange", () => {
@@ -1612,5 +1614,55 @@ document.addEventListener("visibilitychange", () => {
     !resultView.classList.contains("hidden")
   ) {
     void updateArticleSeries(currentJob);
+    void updateArticleShareStats(currentJob);
+  }
+});
+
+const shareStatsValues = $("#share-stats-values");
+const shareStatsStatus = $("#share-stats-status");
+const shareStatsRetry = $("#share-stats-retry");
+let shareStatsRequest = 0;
+
+async function updateArticleShareStats(job) {
+  const requestId = ++shareStatsRequest;
+  shareStatsValues.classList.add("hidden");
+  shareStatsRetry.classList.add("hidden");
+  shareStatsStatus.textContent = t("share.statsLoading");
+  try {
+    const response = await localizedFetch(
+      `/api/jobs/${encodeURIComponent(job.id)}/share-stats`,
+    );
+    if (!response.ok) {
+      throw new Error("Statistics unavailable");
+    }
+    const statistics = await response.json();
+    if (
+      !Number.isSafeInteger(statistics.loads) ||
+      statistics.loads < 0 ||
+      !Number.isSafeInteger(statistics.reads) ||
+      statistics.reads < 0
+    ) {
+      throw new Error("Invalid statistics");
+    }
+    if (currentJob !== job || requestId !== shareStatsRequest) {
+      return;
+    }
+    $("#share-stats-loads").textContent =
+      statistics.loads.toLocaleString(locale);
+    $("#share-stats-reads").textContent =
+      statistics.reads.toLocaleString(locale);
+    shareStatsValues.classList.remove("hidden");
+    shareStatsStatus.textContent = "";
+  } catch {
+    if (currentJob !== job || requestId !== shareStatsRequest) {
+      return;
+    }
+    shareStatsStatus.textContent = t("share.statsError");
+    shareStatsRetry.classList.remove("hidden");
+  }
+}
+shareStatsRetry.addEventListener("click", () => {
+  if (currentJob) {
+    void updateArticleShareStats(currentJob);
   }
 });
