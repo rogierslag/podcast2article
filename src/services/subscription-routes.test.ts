@@ -27,6 +27,7 @@ const enqueue = vi.fn();
 const feed: PodcastFeed = {
   url: "https://example.com/feed",
   title: "Public podcast",
+  imageUrl: "https://example.com/cover.jpg",
   episodes: [
     {
       key: "one",
@@ -100,6 +101,7 @@ describe("subscription API", () => {
       url: feed.url,
     });
     const preview = await previewResponse.json();
+    expect(preview.imageUrl).toBe(feed.imageUrl);
 
     const other = await request(
       "/",
@@ -124,6 +126,7 @@ describe("subscription API", () => {
     expect(ownList[0]).not.toHaveProperty("seen");
     expect(ownList[0]).not.toHaveProperty("pending");
     expect(ownList[0]).not.toHaveProperty("previewId");
+    expect(ownList[0].imageUrl).toBe(feed.imageUrl);
     expect(await (await request("/", "GET", undefined, "bob")).json()).toEqual(
       [],
     );

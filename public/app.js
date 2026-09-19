@@ -1057,20 +1057,17 @@ function articleCard(article) {
       </a>
       <div class="article-card-body">
         <p class="article-card-meta">
-          <span>
-            ${escapeHtml(
-              sourceLabels[article.sourceType] || article.sourceType,
-            )}
-          </span>
           ${escapeHtml(articleDate(article))} · ${article.readingTimeMinutes}
           ${t("duration.abbreviation")}
         </p>
         <a class="article-card-title" href="${articleUrl}">
           <h3>${escapeHtml(article.title)}</h3>
         </a>
+        <p class="article-card-publication">
+          ${escapeHtml(article.sourceName)}
+        </p>
         <p class="article-card-dek">${escapeHtml(article.dek)}</p>
         <div class="article-card-footer">
-          <span>${escapeHtml(article.sourceName)}</span>
           <div class="article-card-actions">
             <a href="${articleUrl}">
               ${t("article.readAction")} <span aria-hidden="true">→</span>

@@ -97,6 +97,7 @@ export function subscriptionRouter(store: SubscriptionStore) {
     response.json({
       id,
       title: feed.title,
+      imageUrl: feed.imageUrl,
       url: feed.url,
       count: feed.episodes.length,
       episodes: feed.episodes.slice(0, 3).map(({ episode }) => ({

@@ -46,6 +46,37 @@ function element(tag, content, className) {
   return node;
 }
 
+function seriesCover(imageUrl) {
+  const cover = element("span", "", "series-cover");
+  cover.setAttribute("aria-hidden", "true");
+  cover.append(element("span", "♪", "series-cover-placeholder"));
+  if (typeof imageUrl !== "string") {
+    return cover;
+  }
+  try {
+    const url = new URL(imageUrl);
+    if (
+      !["https:", "http:"].includes(url.protocol) ||
+      url.username ||
+      url.password
+    ) {
+      return cover;
+    }
+    const image = document.createElement("img");
+    image.alt = "";
+    image.width = 80;
+    image.height = 80;
+    image.loading = "lazy";
+    image.referrerPolicy = "no-referrer";
+    image.addEventListener("error", () => image.remove(), { once: true });
+    image.src = url.href;
+    cover.append(image);
+  } catch {
+    // Missing or malformed artwork must not prevent following a series.
+  }
+  return cover;
+}
+
 async function perform(action) {
   if (busy) {
     return;
@@ -89,6 +120,9 @@ async function showPreview(url) {
   previewSection.hidden = false;
   const heading = document.querySelector("#series-preview-title");
   heading.textContent = preview.title;
+  document
+    .querySelector("#series-preview-cover")
+    .replaceChildren(seriesCover(preview.imageUrl));
   document.querySelector("#series-feed-link").href = preview.url;
   document.querySelector("#series-available").textContent = t(
     "series.available",
@@ -119,10 +153,13 @@ searchForm.addEventListener("submit", (event) => {
     const list = document.querySelector("#series-candidate-list");
     list.replaceChildren(
       ...candidates.map((candidate) => {
-        const button = element(
-          "button",
-          `${candidate.title}${candidate.author ? ` · ${candidate.author}` : ""}`,
-          "series-candidate",
+        const button = element("button", "", "series-candidate");
+        button.append(
+          seriesCover(candidate.imageUrl),
+          element(
+            "span",
+            `${candidate.title}${candidate.author ? ` · ${candidate.author}` : ""}`,
+          ),
         );
         button.type = "button";
         button.addEventListener(
@@ -309,7 +346,9 @@ async function refresh() {
         );
         controls.append(more);
       }
-      row.append(content, controls);
+      const identity = element("div", "", "series-identity");
+      identity.append(seriesCover(subscription.imageUrl), content);
+      row.append(identity, controls);
       return row;
     }),
   );

@@ -124,6 +124,7 @@ export class SubscriptionStore {
         id: randomUUID(),
         feedUrl: feed.url,
         title: feed.title,
+        imageUrl: feed.imageUrl,
         paused: false,
         createdAt: new Date().toISOString(),
         seen: feed.episodes
@@ -177,6 +178,7 @@ export class SubscriptionStore {
             continue;
           }
           const feed = await this.dependencies.fetchFeed(subscription.feedUrl);
+          subscription.imageUrl = feed.imageUrl;
           const seen = new Set(subscription.seen);
           subscription.pending = feed.episodes.filter(
             (episode) => !seen.has(episode.key),
@@ -277,6 +279,7 @@ export class SubscriptionStore {
         throw new Error("series.errorLimit");
       }
       const feed = await this.dependencies.fetchFeed(subscription.feedUrl);
+      subscription.imageUrl = feed.imageUrl;
       const archive = new Set(subscription.archiveKeys || []);
       const selected = feed.episodes
         .filter((item) => archive.has(item.key))
@@ -327,6 +330,7 @@ function validSubscription(value: unknown): value is PodcastSubscription {
     typeof item.id === "string" &&
     typeof item.feedUrl === "string" &&
     typeof item.title === "string" &&
+    (item.imageUrl === undefined || typeof item.imageUrl === "string") &&
     typeof item.language === "string" &&
     ["compact", "standard", "long"].includes(String(item.articleLength)) &&
     typeof item.paused === "boolean" &&

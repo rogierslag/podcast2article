@@ -145,6 +145,7 @@ export interface PodcastEpisode {
 export interface PodcastFeed {
   url: string;
   title: string;
+  imageUrl?: string;
   episodes: PodcastEpisode[];
 }
 
@@ -154,6 +155,7 @@ export interface PodcastSubscription {
   id: string;
   feedUrl: string;
   title: string;
+  imageUrl?: string;
   language: string;
   articleLength: Job["articleLength"];
   paused: boolean;
