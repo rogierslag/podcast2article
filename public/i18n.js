@@ -1090,6 +1090,14 @@ export const messages = {
     nl: "Met Podcast2Article lees je een podcast, video of opname als artikel. De verwijzingen naar het oorspronkelijke gesprek blijven erbij, zodat je een passage ook zelf kunt terugluisteren.",
     en: "Podcast2Article lets you read a podcast, video, or recording as an article. Links to the original conversation let you listen back to any referenced passage.",
   },
+  "login.exampleOpen": {
+    nl: "Lees een voorbeeldartikel ↗",
+    en: "Read an example article ↗",
+  },
+  "login.exampleHint": {
+    nl: "Zonder inloggen. Opent in een nieuw tabblad.",
+    en: "No sign-in needed. Opens in a new tab.",
+  },
   "login.error": {
     nl: "Die gebruikersnaam of dat wachtwoord klopt niet. Probeer het opnieuw.",
     en: "That username or password is incorrect. Please try again.",
