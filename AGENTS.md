@@ -5,7 +5,8 @@ This file applies to the entire repository.
 ## Product and language
 
 - Podcast2Article turns public Spotify episodes, YouTube videos, and Google Drive recordings into source-linked articles.
-- User-facing copy is Dutch unless the surrounding UI explicitly uses another language.
+- Write repository documentation in English, including headings, examples, and explanatory comments in documentation code blocks. Use English interface labels in guides; preserve exact identifiers and quoted diagnostic output when needed for accuracy.
+- The interface follows the primary browser language: Dutch for Dutch locales, English otherwise. Keep both translations consistent; generated-article language is a separate user choice.
 - Preserve the editorial visual style in `public/styles.css`: warm paper colors, serif article typography, compact monospace metadata, and restrained controls.
 - Read [docs/BRAND.md](docs/BRAND.md) before changing user-facing design or copy. It defines the intended visual identity, component roles, and corner-radius rules.
 - Use [docs/USER-JOURNEYS.md](docs/USER-JOURNEYS.md) to identify the user outcome, critical failure states, and value test for a feature or journey change. Distinguish proposed metrics from measured results.
@@ -28,8 +29,8 @@ This file applies to the entire repository.
 
 ## Current article-action behavior
 
-- Article pages expose three owner actions: `Markeer als gelezen`, PDF export, and permalink copy.
-- On mobile, keep `Markeer als gelezen` written out. PDF and permalink actions should use recognizable printer and share icons with accessible labels; their visible text may collapse at the mobile breakpoint.
+- Article pages expose three owner actions: `Mark as read`, PDF export, and permalink copy.
+- On mobile, keep the localized `Mark as read` label written out. PDF and permalink actions should use recognizable printer and share icons with accessible labels; their visible text may collapse at the mobile breakpoint.
 - Keep the same actions available at the top of the article and in the completion footer unless the task explicitly changes that behavior.
 
 ## Permalink security invariants

@@ -9,7 +9,7 @@ submission in Reads.
 
 ## Installation
 
-Open Reads on your iPhone or iPad, expand **Voeg toe vanaf je iPhone of iPad** below the form,
+Open Reads on your iPhone or iPad, expand **Add from your iPhone or iPad** below the form,
 and choose **Download Add to Reads**. Open the downloaded `.shortcut` file
 in Apple's Shortcuts app and choose **Add Shortcut**. Depending on Safari's
 download behaviour, open it from Downloads or Files first.
