@@ -273,8 +273,8 @@ each event enables and preserve anonymous-reader boundaries.
   [issue 31](https://github.com/rogierslag/podcast2article/issues/31).
 - **Physical mobile behavior remains a separate check.** Native share-sheet
   registration, Shortcut installation, voice control, and operating-system
-  gestures cannot be inferred from a resized desktop browser. The browser suite
-  also records a Linux WebKit article overflow limitation at 320px without webfonts.
+  gestures cannot be inferred from a resized desktop browser. The article layout
+  now passes the 320px fallback-font regression on Linux WebKit as well.
 - **Source quality needs representative audio.** Issue 33 covers model continuity,
   timestamps, and speaker attribution. Existing UI fixtures cannot establish the
   quality of real generated articles or prove a replacement model equivalent.

@@ -453,17 +453,10 @@ test("navigation fits at 320px without webfonts", async ({ page }) => {
     .toEqual([]);
 });
 
-test("known bug: article page must fit at 320px without webfonts", async ({
-  page,
-  browserName,
-}) => {
+test("article page fits at 320px without webfonts", async ({ page }) => {
   await owner(page);
   await page.setViewportSize({ width: 320, height: 844 });
 
-  test.fail(
-    process.platform === "linux" && browserName === "webkit",
-    "The existing Linux WebKit article overflow at 320px remains outside the navigation fix.",
-  );
   await noOverflow(page);
 });
 

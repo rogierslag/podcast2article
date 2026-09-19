@@ -89,6 +89,10 @@ This pass repaired these additional cases:
   action groups needed to wrap within the card. Ordinary desktop and 390px
   layouts retain their type sizes.
 
+The existing 320px article regression without webfonts also passes on Linux
+WebKit. Its previous expected-failure annotation was removed so future overflow
+fails the check on every tested platform.
+
 Read, PDF, and link-copy actions retained their visible labels in both languages
 at the top and bottom of the article, including the pending, read, and error
 states. Mobile icon-only actions retained their accessible names. These checks
