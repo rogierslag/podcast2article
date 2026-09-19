@@ -6,6 +6,9 @@ This document describes the application architecture of Podcast2Article.
 Infrastructure, deployment, security operations, recovery, and server
 administration are documented separately in `docs/OPERATIONS.md`.
 
+The [service flow diagrams](docs/SERVICE-FLOWS.md) show request handling,
+processing, recovery, subscriptions, public sharing, and API budget enforcement.
+
 ## 1. Purpose
 
 Podcast2Article turns a public Spotify podcast episode, YouTube video, or public

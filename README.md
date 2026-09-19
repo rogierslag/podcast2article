@@ -123,17 +123,20 @@ OPENAI_REGION=eu
 
 ## How it works
 
-```text
-Spotify episode link         YouTube video link      Public Drive recording link
-  → Spotify + Apple/RSS        → yt-dlp metadata        → Drive file metadata
-  └────────────────────────────┴───────────────────────┘
-Fathom share link → yt-dlp metadata → download audio or video
-  → create compact playback audio and delete temporary video
-  → compress and split with FFmpeg
-  → gpt-4o-transcribe-diarize (speakers + timestamps)
-  → source-grounded article through the Responses API
-  → article with clickable transcript references
+```mermaid
+flowchart LR
+    Sources["Public Spotify, YouTube,<br/>Drive or Fathom link"] --> Queue
+    RSS["Followed podcast RSS feed"] --> Queue["Per-user job"]
+    Queue --> Resolve["Resolve or reuse source metadata<br/>and public media location"]
+    Resolve --> Audio["Download and prepare<br/>audio with FFmpeg"]
+    Audio --> Transcript["Transcribe with speakers<br/>and timestamps"]
+    Transcript --> Article["Generate article<br/>with source references"]
+    Article --> Library["Read, verify, export<br/>or share"]
 ```
+
+See the [service flow diagrams](docs/SERVICE-FLOWS.md) for request validation,
+processing stages, failure recovery, podcast subscriptions, budget enforcement,
+and the boundary between owner access and public permalinks.
 
 Jobs are stored per user as JSON in `data/users/<username>/jobs/`.
 Compact playback audio is stored in `data/users/<username>/media/`; downloaded
