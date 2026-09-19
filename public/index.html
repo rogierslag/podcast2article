@@ -2,6 +2,7 @@
 <html lang="{{language}}">
   <head>
     <meta charset="utf-8" />
+    <!-- SITE_METADATA -->
     <script>
       // Hash routes never reach the server. Select the loading shell before paint.
       if (
@@ -33,18 +34,30 @@
     />
     <link rel="stylesheet" href="/theme.css?v=system-dark-v1" />
     <title data-i18n="page.title">{{page.title}}</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link
+      rel="icon"
+      href="/favicon.svg?v=brand-transition-v1"
+      type="image/svg+xml"
+    />
+    <link
+      rel="icon"
+      href="/favicon-32.png?v=brand-transition-v1"
+      sizes="32x32"
+      type="image/png"
+    />
     <link rel="manifest" href="/manifest.webmanifest" />
     <script src="/android-install.js" defer></script>
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link
+      rel="apple-touch-icon"
+      href="/apple-touch-icon.png?v=brand-transition-v1"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=initial-view-v1" />
+    <link rel="stylesheet" href="/styles.css?v=brand-transition-v1" />
     <script src="/app.js?v=initial-view-v1" type="module"></script>
   </head>
   <body class="native-scroll">
@@ -72,9 +85,28 @@
           aria-label="{{home}}"
           data-i18n-aria-label="home"
         >
-          <span class="brand-mark" aria-hidden="true"
-            ><i></i><i></i><i></i><i></i
-          ></span>
+          <svg
+            class="brand-mark"
+            width="48"
+            height="24"
+            viewBox="0 0 240 120"
+            fill="none"
+            stroke-width="9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <g stroke="var(--green)">
+              <path d="M14 52v16" />
+              <path d="M34 34v52" />
+              <path d="M54 14v92" />
+              <path d="M74 28v64" />
+            </g>
+            <path stroke="var(--ink)" d="M98 96V54Q98 26 126 26h100" />
+            <path stroke="var(--orange)" d="M124 96V64Q124 50 138 50h72" />
+            <path stroke="var(--ink)" d="M150 96v-8q0-14 14-14h62" />
+          </svg>
           <span>Podcast<span>2</span>Article</span>
         </a>
         <nav
@@ -98,24 +130,6 @@
         <section id="landing" class="landing">
           <div class="landing-opening">
             <div class="eyebrow landing-kicker">
-              <svg
-                class="sound-to-text"
-                width="60"
-                height="20"
-                viewBox="0 0 60 20"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path
-                  class="sound-to-text-wave"
-                  d="M2 7v6M8 4v12M14 1v18M20 7v6"
-                />
-                <path d="M30 5h20M30 10h17M30 15h20" />
-                <path class="sound-to-text-reference" d="M55 5h3v10h-3" />
-              </svg>
               <span data-i18n="hero.kicker">{{hero.kicker}}</span>
             </div>
             <h1>
@@ -127,23 +141,25 @@
             <p class="intro" data-i18n="intro">{{intro}}</p>
             <svg
               class="landing-sound-art"
-              width="340"
-              height="220"
-              viewBox="0 0 340 220"
+              width="320"
+              height="160"
+              viewBox="0 0 240 120"
               fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
+              stroke-width="9"
+              stroke-linecap="round"
+              stroke-linejoin="round"
               aria-hidden="true"
               focusable="false"
             >
-              <path
-                class="landing-sound-art-wave"
-                d="M10 106v8M18 100v20M26 90v40M34 78v64M42 94v32M50 62v96M58 82v56M66 42v136M74 70v80M82 94v32M90 84v52M98 72v76M106 94v32M114 100v20M122 88v44M130 98v24M138 104v12"
-              />
-              <path class="landing-sound-art-reference" d="M155 95v30" />
-              <path
-                d="M174 82h146M174 96h130M174 110h146M174 124h116M174 138h138"
-              />
+              <g stroke="var(--green)">
+                <path d="M14 52v16" />
+                <path d="M34 34v52" />
+                <path d="M54 14v92" />
+                <path d="M74 28v64" />
+              </g>
+              <path stroke="var(--ink)" d="M98 96V54Q98 26 126 26h100" />
+              <path stroke="var(--orange)" d="M124 96V64Q124 50 138 50h72" />
+              <path stroke="var(--ink)" d="M150 96v-8q0-14 14-14h62" />
             </svg>
           </div>
 

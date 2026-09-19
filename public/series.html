@@ -24,16 +24,28 @@
     />
     <link rel="stylesheet" href="/theme.css?v=system-dark-v1" />
     <title data-i18n="page.title">{{page.title}}</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link
+      rel="icon"
+      href="/favicon.svg?v=brand-transition-v1"
+      type="image/svg+xml"
+    />
+    <link
+      rel="icon"
+      href="/favicon-32.png?v=brand-transition-v1"
+      sizes="32x32"
+      type="image/png"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="/apple-touch-icon.png?v=brand-transition-v1"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=sound-to-text-v2" />
+    <link rel="stylesheet" href="/styles.css?v=brand-transition-v1" />
     <script src="/series.js" type="module"></script>
     <link rel="stylesheet" href="/series.css" />
   </head>
@@ -46,9 +58,28 @@
           aria-label="{{home}}"
           data-i18n-aria-label="home"
         >
-          <span class="brand-mark" aria-hidden="true"
-            ><i></i><i></i><i></i><i></i
-          ></span>
+          <svg
+            class="brand-mark"
+            width="48"
+            height="24"
+            viewBox="0 0 240 120"
+            fill="none"
+            stroke-width="9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <g stroke="var(--green)">
+              <path d="M14 52v16" />
+              <path d="M34 34v52" />
+              <path d="M54 14v92" />
+              <path d="M74 28v64" />
+            </g>
+            <path stroke="var(--ink)" d="M98 96V54Q98 26 126 26h100" />
+            <path stroke="var(--orange)" d="M124 96V64Q124 50 138 50h72" />
+            <path stroke="var(--ink)" d="M150 96v-8q0-14 14-14h62" />
+          </svg>
           <span>Podcast<span>2</span>Article</span>
         </a>
         <nav

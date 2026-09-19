@@ -721,6 +721,10 @@ export const messages = {
     nl: "Podcast2Article — van stem naar verhaal",
     en: "Podcast2Article — from voice to story",
   },
+  "social.imageAlt": {
+    nl: "Podcast2Article — Liever lezen dan luisteren? Een geluidsgolf buigt door naar tekstregels.",
+    en: "Podcast2Article — Rather read than listen? A sound wave curves into lines of text.",
+  },
   "page.description": {
     nl: "Lees een openbare podcast, YouTube-video, Fathom- of Google Meet-opname als artikel, met verwijzingen naar het oorspronkelijke gesprek.",
     en: "Read a public podcast, YouTube video, Fathom recording, or Google Meet recording as an article, with links back to the original conversation.",

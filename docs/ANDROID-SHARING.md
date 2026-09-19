@@ -15,7 +15,8 @@ use Chrome as the supported installation path. The iOS Shortcut stays separate.
 ## Implementation
 
 The public web manifest and 192/512-pixel icons describe the installable app.
-Icons are raster versions of the existing favicon. The manifest registers a GET
+Icons use the full brand mark; the tiny browser favicon uses its simplified
+variant. Rebuild both with `node scripts/build-brand-assets.mjs`. The manifest registers a GET
 share target at `/share-target`, which extracts a single HTTP(S) URL from the URL,
 text, or title field and redirects to the existing form-prefill route. Android
 commonly sends a URL as text. Ambiguous multi-link text is ignored. Values remain
