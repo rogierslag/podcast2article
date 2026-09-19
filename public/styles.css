@@ -1287,10 +1287,6 @@ footer {
   color: var(--muted);
   margin: 0 0 13px;
 }
-.article-card-meta span {
-  color: var(--accent-text);
-  margin-right: 8px;
-}
 .article-card h2 {
   font: 600 29px/1.04 var(--serif);
   letter-spacing: -0.025em;
@@ -1687,6 +1683,12 @@ footer {
   letter-spacing: -0.025em;
   margin: 0 0 12px;
 }
+.article-card-publication {
+  margin: -4px 0 14px;
+  color: var(--muted);
+  font: 500 12px/1.5 var(--sans);
+  overflow-wrap: anywhere;
+}
 .article-card-title:hover {
   color: var(--accent-text);
 }
@@ -1697,13 +1699,6 @@ footer {
   align-items: end;
   margin-top: auto;
   font-size: 11px;
-}
-.article-card-footer > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
 }
 .article-card-actions {
   flex: none;

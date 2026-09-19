@@ -117,7 +117,7 @@ export function parsePodcastFeed(xml: string, url: string): PodcastFeed {
       left.episode.publishedAt || "",
     ),
   );
-  return { url, title, episodes };
+  return { url, title, imageUrl, episodes };
 }
 
 export async function fetchPodcastFeed(value: string): Promise<PodcastFeed> {
@@ -159,6 +159,7 @@ const searchSchema = z.object({
       collectionName: z.string().optional(),
       feedUrl: z.string().optional(),
       artistName: z.string().optional(),
+      artworkUrl100: z.string().optional(),
     }),
   ),
 });
@@ -209,6 +210,7 @@ export async function discoverPodcastFeeds(value: string) {
             title: item.collectionName,
             url: feedUrl,
             author: item.artistName || "",
+            imageUrl: httpUrl(item.artworkUrl100 || "", feedUrl),
           },
         ]
       : [];

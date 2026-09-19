@@ -19,6 +19,7 @@ describe("podcast feed parsing", () => {
     const feed = parsePodcastFeed(xml, url);
 
     expect(feed.title).toBe("Science & Society");
+    expect(feed.imageUrl).toBe("https://example.com/cover.jpg");
     expect(feed.episodes).toHaveLength(2);
     expect(feed.episodes[0]?.episode).toMatchObject({
       title: "A <thoughtful> conversation",
@@ -26,6 +27,29 @@ describe("podcast feed parsing", () => {
       sourceUrl: "https://example.com/new.mp3",
       imageUrl: "https://example.com/cover.jpg",
     });
+  });
+  it.each([
+    "javascript:alert(1)",
+    "file:///cover.jpg",
+    "https://user:pass@example.com/cover.jpg",
+  ])("ignores unsafe series artwork: %s", (image) => {
+    const feed = parsePodcastFeed(
+      xml.replace("https://example.com/cover.jpg", image),
+      url,
+    );
+
+    expect(feed.imageUrl).toBeUndefined();
+  });
+  it("reads standard RSS artwork relative to the feed", () => {
+    const feed = parsePodcastFeed(
+      xml.replace(
+        '<itunes:image href="https://example.com/cover.jpg"/>',
+        "<image><url>/art.jpg</url></image>",
+      ),
+      url,
+    );
+
+    expect(feed.imageUrl).toBe("https://example.com/art.jpg");
   });
   it("keeps GUID identity when an enclosure changes, and isolates different feeds", () => {
     const original = parsePodcastFeed(xml, url).episodes[0]?.key;
@@ -89,11 +113,13 @@ describe("Spotify series discovery", () => {
               collectionName: "Science",
               feedUrl: url,
               artistName: "Publisher",
+              artworkUrl100: "https://example.com/cover.jpg",
             },
             {
               collectionName: "Science",
               feedUrl: url,
               artistName: "Publisher",
+              artworkUrl100: "https://example.com/cover.jpg",
             },
             {
               collectionName: "Science Weekly",
@@ -112,6 +138,7 @@ describe("Spotify series discovery", () => {
     expect(candidates[0]).toMatchObject({
       title: "Science",
       author: "Publisher",
+      imageUrl: "https://example.com/cover.jpg",
       url,
     });
   });

@@ -57,6 +57,25 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 describe("podcast subscriptions", () => {
+  it("persists series artwork and refreshes legacy subscriptions on a feed check", async () => {
+    const original = { ...feed(1), imageUrl: "https://example.com/cover.jpg" };
+    await store.follow("alice", original, "none", options);
+    await store.follow("bob", feed(1), "none", options);
+    const restarted = createStore();
+    await restarted.load(["alice", "bob"]);
+
+    expect(restarted.list("alice")[0]?.imageUrl).toBe(original.imageUrl);
+    fetchFeed.mockResolvedValue({
+      ...feed(1),
+      imageUrl: "https://example.com/new.jpg",
+    });
+    await restarted.check("bob");
+
+    expect(restarted.list("bob")[0]?.imageUrl).toBe(
+      "https://example.com/new.jpg",
+    );
+    await restarted.stop();
+  });
   it.each([
     ["none", 0],
     ["latest", 1],

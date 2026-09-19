@@ -228,3 +228,88 @@ test("series: mobile navigation shares the wordmark baseline", async ({
   expect(baselines).toHaveLength(4);
   expect(Math.max(...baselines) - Math.min(...baselines)).toBeLessThan(0.5);
 });
+
+test("series: covers and fallbacks render in discovery, preview and followed series", async ({
+  page,
+}, testInfo) => {
+  const coverUrl = "http://127.0.0.1:4317/test-series-cover.svg";
+  await page.route("**/test-series-cover.svg", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#254b48"/><circle cx="330" cy="80" r="140" fill="#dfba7b"/><text x="30" y="225" fill="#fff4dc" font-family="Georgia" font-size="46">Wetenschap</text><text x="30" y="280" fill="#fff4dc" font-family="Georgia" font-size="46">van alledag</text><path d="M30 320h220" stroke="#dfba7b" stroke-width="4"/></svg>',
+    }),
+  );
+  await page.route("**/missing-series-cover.jpg", (route) =>
+    route.fulfill({ status: 404, body: "" }),
+  );
+  const series = [
+    { title: preview.title, imageUrl: coverUrl },
+    { title: "Geschiedenis voor onderweg" },
+    {
+      title: "Een andere kijk op de wereld",
+      imageUrl: "http://127.0.0.1:4317/missing-series-cover.jpg",
+    },
+  ];
+  await page.route("**/api/subscriptions**", (route) => {
+    if (route.request().url().endsWith("/discover")) {
+      return route.fulfill({
+        json: series.map((item) => ({ ...item, url: preview.url })),
+      });
+    }
+    if (route.request().url().endsWith("/preview")) {
+      return route.fulfill({ json: { ...preview, imageUrl: coverUrl } });
+    }
+    return route.fulfill({
+      json: series.map((item, index) => ({
+        ...item,
+        id: String(index),
+        paused: false,
+        complete: 4,
+        processing: 0,
+        pendingCount: 0,
+        outstanding: 0,
+        failed: [],
+      })),
+    });
+  });
+  await page.goto("/series");
+  await expect(page.locator(".series-item")).toHaveCount(3);
+  await expect(page.locator(".series-item img")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page.locator(".series-item img").evaluate((image) => image.naturalWidth),
+    )
+    .toBe(400);
+  await expect(page.locator(".series-cover").first()).toHaveAttribute(
+    "aria-hidden",
+    "true",
+  );
+  await page.locator("#series-url").fill(preview.url);
+  await page.getByRole("button", { name: "Zoek serie" }).click();
+  await expect(page.locator(".series-candidate")).toHaveCount(3);
+  await expect(page.locator(".series-candidate img")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: preview.title, exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: `/tmp/p2a-series-${testInfo.project.name}-discovery.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: preview.title, exact: true }).click();
+  await expect(page.locator("#series-preview-title")).toBeFocused();
+  await expect(page.locator("#series-preview-cover img")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: `/tmp/p2a-series-${testInfo.project.name}-preview.png`,
+    fullPage: true,
+  });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.screenshot({
+    path: `/tmp/p2a-series-${testInfo.project.name}-dark.png`,
+    fullPage: true,
+  });
+});
