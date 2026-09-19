@@ -1,291 +1,289 @@
 # Podcast2Article
 
-Podcast2Article is een open-source Node.js-app die een **publieke
-Spotify-podcastaflevering, YouTube-video, Fathom- of Google Meet-opname** omzet in:
+Podcast2Article is an open-source Node.js app that turns a **public Spotify
+podcast episode, YouTube video, Fathom recording, or Google Meet recording** into:
 
-1. een transcript met sprekers en tijdcodes;
-2. een helder blogartikel in de herkenbare stijl van de opname;
-3. controleerbare bronlinks van iedere artikelalinea naar het juiste transcript- en audiomoment.
+1. a transcript with speaker labels and timestamps;
+2. a clear blog article that retains the recording's distinctive style;
+3. verifiable source links from each article paragraph to the relevant transcript
+   passage and audio timestamp.
 
-Afgeronde artikelen verschijnen automatisch op de overzichtspagina
-[`/articles`](http://localhost:3000/articles), met de nieuwste bovenaan. Daar kun
-je artikelen markeren als gelezen; die status wordt lokaal bij de opdracht
-opgeslagen en kan ook weer worden teruggedraaid. Opdrachten die nog in de
-wachtrij staan of worden verwerkt verschijnen bovenaan met hun actuele stap en
-voortgang; dit deel van het overzicht wordt automatisch ververst.
+Completed articles appear automatically on the
+[`/articles`](http://localhost:3000/articles) page, newest first. You can mark
+articles as read and undo that choice; the status is stored locally with the job.
+Queued and processing jobs appear at the top with their current stage and
+progress. This part of the overview refreshes automatically.
 
-Bronverwijzingen openen een venster bij het artikel, met het betreffende
-transcriptfragment en audio vanaf de gekozen tijdcode. Sluiten of Escape pauzeert
-de audio en brengt je terug naar dezelfde verwijzing. Gedeelde artikelen tonen
-alleen de afspeelbediening; het privétranscript blijft afgeschermd. Links in de
-inhoudsopgave bewaren zowel het artikel als de sectie, ook na vernieuwen.
+Source references open a dialog alongside the article, showing the relevant
+transcript passage and audio from the selected timestamp. Closing the dialog or
+pressing Escape pauses the audio and returns you to the same reference. Shared
+articles expose only playback controls; the private transcript remains protected.
+Table-of-contents links preserve both the article and section, including after a
+refresh.
 
-De audio wordt niet uit Spotify gedownload. De app gebruikt de Spotify-link alleen om de aflevering te herkennen en zoekt vervolgens dezelfde aflevering via de openbare Apple Podcasts-index en de oorspronkelijke publieke audiobron.
-Van een publieke YouTube-video wordt alleen de beste beschikbare audiostream
-opgehaald; afspeellijsten, actieve livestreams en video's waarvoor aanmelding
-nodig is worden niet verwerkt.
-Google Meet-opnames worden opgehaald via de publieke Google Drive-link. De app
-maakt daarvan een compacte lokale audioversie voor betrouwbare weergave en
-tijdcodelinks; het oorspronkelijke videobestand wordt na verwerking verwijderd.
+Audio is not downloaded from Spotify. The app uses the Spotify link to identify
+the episode, then finds the same episode through the public Apple Podcasts index
+and the original public audio source.
+For public YouTube videos, it downloads only the best available audio stream.
+Playlists, active livestreams, and videos requiring sign-in are not processed.
+Google Meet recordings are retrieved through a public Google Drive link. The app
+creates a compact local audio version for reliable playback and timestamp links;
+the original video file is deleted after processing.
 
-Voor een Meet-opname plak je de Drive-link van het opnamebestand, bijvoorbeeld
-`https://drive.google.com/file/d/.../view`. Zet in Drive de algemene toegang op
-**Iedereen met de link** en zorg dat kijkers het bestand mogen downloaden. Een
-`meet.google.com/...`-link naar een vergaderruimte bevat geen opnamebestand en
-wordt daarom niet geaccepteerd.
+For a Meet recording, paste the recording file's Drive link, such as
+`https://drive.google.com/file/d/.../view`. Set general access in Drive to
+**Anyone with the link** and allow viewers to download the file. A
+`meet.google.com/...` meeting-room link does not contain a recording file and is
+therefore rejected.
 
-Voor Fathom gebruik je de publieke deellink `https://fathom.video/share/...`.
-Kopieer deze via **Share** en kies **Anyone with the link**. Interne
-`fathom.video/calls/...`-links vereisen aanmelding en worden niet geaccepteerd.
-De app gebruikt yt-dlp om de opname op te halen en maakt daarna hetzelfde lokale
-audio- en transcriptbestand als bij Drive. De bestaande Fathom-samenvatting en
-transcriptie worden niet geïmporteerd. Er is geen Fathom API-key nodig; cookies,
-privé-opnames en teamgebonden toegang worden niet ondersteund. De download valt
-onder `MAX_RECORDING_MB` en `MEDIA_DOWNLOAD_TIMEOUT_MS`.
+For Fathom, use the public share link `https://fathom.video/share/...`.
+Copy it through **Share** and choose **Anyone with the link**. Internal
+`fathom.video/calls/...` links require sign-in and are rejected.
+The app uses yt-dlp to retrieve the recording, then creates the same local audio
+and transcript files as it does for Drive. Existing Fathom summaries and
+transcripts are not imported. No Fathom API key is needed; cookies, private
+recordings, and team-restricted access are not supported. Downloads are subject
+to `MAX_RECORDING_MB` and `MEDIA_DOWNLOAD_TIMEOUT_MS`.
 
-## Ontwerp
+## Design
 
-De [merkrichtlijnen](docs/BRAND.md) beschrijven de visuele identiteit, typografie,
-kleuren, interacties en het bedoelde gebruik van afgeronde hoeken. Gebruik deze
-samen met [AGENTS.md](AGENTS.md) bij wijzigingen aan de interface.
+The [brand guidelines](docs/BRAND.md) describe the visual identity, typography,
+colors, interactions, and intended use of rounded corners. Use them alongside
+[AGENTS.md](AGENTS.md) when changing the interface.
 
-De [gebruikersreizen](docs/USER-JOURNEYS.md) leggen vast wat iemand wil bereiken,
-welke functies daarbij helpen en hoe we hun waarde kunnen toetsen. De
-[toegankelijkheidsreview](docs/ACCESSIBILITY-AUDIT.md) beschrijft de gecontroleerde
-schermen, gevonden problemen en resterende beperkingen.
+The [user journeys](docs/USER-JOURNEYS.md) describe what people want to achieve,
+which features support those outcomes, and how we can test their value. The
+[accessibility review](docs/ACCESSIBILITY-AUDIT.md) records the screens checked,
+issues found, and remaining limitations.
 
-## Snel starten
+## Quick start
 
-Vereisten: Node.js 24+, Python 3.11+ en een OpenAI API-key.
-FFmpeg en yt-dlp worden als Node-dependencies meegeleverd. Python wordt door
-yt-dlp gebruikt op macOS en Linux. PDF's worden rechtstreeks in Node.js
-opgebouwd; daarvoor is geen browser op de server nodig.
+Requirements: Node.js 24+, Python 3.11+, and an OpenAI API key.
+FFmpeg and yt-dlp are bundled as Node dependencies. yt-dlp uses Python on macOS
+and Linux. PDFs are generated directly in Node.js; no server-side browser is
+required.
 
-Met `FFMPEG_BIN` kun je een absoluut pad naar een apart geïnstalleerde FFmpeg
-instellen; zonder die variabele gebruikt de app de meegeleverde binary. De
-productie-installer installeert op Linux x64 een vastgelegde FFmpeg/ffprobe-build
-met SHA-256-controle. Een bestaande `90-ffmpeg-override.conf` blijft behouden;
-een andere versie activeren is een expliciete, terug te draaien beheeractie.
-Iedere nieuwe release doorloopt vóór activering een echte mediatest. Zie het
-[beheer- en rollback-draaiboek](docs/FFMPEG.md) en het
-[incidentverslag](docs/incidents/2026-08-28-fathom-ffmpeg.md).
+Set `FFMPEG_BIN` to the absolute path of a separately installed FFmpeg executable
+to override the bundled binary. The production installer installs a pinned
+FFmpeg/ffprobe build on Linux x64 with SHA-256 verification. An existing
+`90-ffmpeg-override.conf` is preserved; activating a different version is an
+explicit, reversible administrative action. Every new release runs a real media
+test before activation. See the [management and rollback runbook](docs/FFMPEG.md)
+and the [incident report](docs/incidents/2026-08-28-fathom-ffmpeg.md).
 
 ```bash
 npm install
-OPENAI_API_KEY='jouw-sleutel' npm run dev
+OPENAI_API_KEY='your-key' npm run dev
 ```
 
-Open daarna [http://localhost:3000](http://localhost:3000). De sleutel blijft in het proces en wordt niet door de app opgeslagen.
+Then open [http://localhost:3000](http://localhost:3000). The key stays in the
+process and is not persisted by the app.
 
-Voor productie:
+For production:
 
 ```bash
 cp .env.example .env
-# Vul OPENAI_API_KEY in binnen .env.
+# Set OPENAI_API_KEY in .env.
 yarn build
 yarn start
 ```
 
-Zet voor een publieke installatie de gebruikersaccounts als JSON in `.env`.
-Ieder wachtwoord moet minimaal 16 tekens lang zijn. De login gebruikt een
-ondertekende, 30 dagen geldige `HttpOnly`-cookie die automatisch ongeldig wordt
-als de accountconfiguratie verandert:
+For a public installation, configure user accounts as JSON in `.env`.
+Each password must contain at least 16 characters. Sign-in uses a signed
+`HttpOnly` cookie valid for 30 days, which is automatically invalidated when the
+account configuration changes:
 
 ```bash
-APP_USERS='{"rogier":"een-lang-uniek-wachtwoord","melvin":"nog-een-uniek-wachtwoord"}'
+APP_USERS='{"rogier":"a-long-unique-password","melvin":"another-unique-password"}'
 ```
 
-Als `APP_USERS` leeg blijft, is authenticatie uitgeschakeld voor lokaal
-ontwikkelen. Zet de productie-installatie altijd achter HTTPS; bijvoorbeeld via
-Caddy of Nginx. Na vijf mislukte pogingen vanaf hetzelfde IP-adres blokkeert de
-login nieuwe pogingen gedurende vijftien minuten.
+Leaving `APP_USERS` empty disables authentication for local development.
+Always put production installations behind HTTPS, for example through Caddy or
+Nginx. After five failed attempts from the same IP address, sign-in blocks new
+attempts for fifteen minutes.
 
-Gebruik voor regionale OpenAI-verwerking in de EU of de VS respectievelijk
-`OPENAI_REGION=eu` of `OPENAI_REGION=us` in `.env`. `yarn start` leest de
-variabelen uit dat bestand:
+For regional OpenAI processing in the EU or US, set `OPENAI_REGION=eu` or
+`OPENAI_REGION=us` respectively in `.env`. `yarn start` reads the variables from
+that file:
 
 ```bash
 OPENAI_REGION=eu
 ```
 
-## Hoe het werkt
+## How it works
 
 ```text
-Spotify-afleveringslink       YouTube-videolink        publieke Drive-opnamelink
-  → Spotify + Apple/RSS         → yt-dlp-metadata        → Drive-bestandsmetadata
-  └─────────────────────────────┴────────────────────────┘
-Fathom-deellink → yt-dlp-metadata → audio of video downloaden
-  → compacte afspeelaudio maken en tijdelijk videobeeld verwijderen
-  → comprimeren en opdelen met FFmpeg
-  → gpt-4o-transcribe-diarize (sprekers + tijdcodes)
-  → brongebonden artikel via de Responses API
-  → artikel met aanklikbare transcriptbronnen
+Spotify episode link         YouTube video link      Public Drive recording link
+  → Spotify + Apple/RSS        → yt-dlp metadata        → Drive file metadata
+  └────────────────────────────┴───────────────────────┘
+Fathom share link → yt-dlp metadata → download audio or video
+  → create compact playback audio and delete temporary video
+  → compress and split with FFmpeg
+  → gpt-4o-transcribe-diarize (speakers + timestamps)
+  → source-grounded article through the Responses API
+  → article with clickable transcript references
 ```
 
-Jobs worden per gebruiker als JSON opgeslagen in
-`data/users/<gebruikersnaam>/jobs/`. Compacte afspeelaudio wordt opgeslagen in
-`data/users/<gebruikersnaam>/media/`; gedownloade bronbestanden en
-transcriptiechunks worden verwijderd. Gebruikers kunnen uitsluitend hun eigen
-jobs, artikelen, transcripties en audio benaderen.
-Onvoltooide jobs worden na een serverherstart automatisch opnieuw gestart met
-hetzelfde job-ID. Maximaal drie jobs worden tegelijk verwerkt. Downloads en
-FFmpeg blijven één voor één draaien; transcriptie en artikelgeneratie kunnen
-overlappen met andere jobs. Broninformatie wordt apart opgehaald (maximaal drie
-verzoeken tegelijk), zodat titels en afbeeldingen al in de wachtrij verschijnen.
-De actieve verwerkingsstap begint na een herstart opnieuw,
-zodat er nooit stilzwijgend een job in een oude status blijft hangen.
+Jobs are stored per user as JSON in `data/users/<username>/jobs/`.
+Compact playback audio is stored in `data/users/<username>/media/`; downloaded
+source files and transcription chunks are deleted. Users can access only their
+own jobs, articles, transcripts, and audio.
+Unfinished jobs restart automatically after a server restart with the same job ID.
+Up to three jobs are processed concurrently. Downloads and FFmpeg run one at a
+time; transcription and article generation can overlap with other jobs. Source
+metadata is fetched separately, with up to three concurrent requests, so titles
+and images already appear in the queue. The active processing stage starts over
+after a restart, preventing jobs from silently remaining stuck in an old state.
 
-Elke nieuwe job bewaart API-gebruik in `apiUsage` in hetzelfde JSON-bestand.
-Per transcriptiechunk en artikelverzoek worden model, aangevraagde en gemelde
-service tier, request-ID, tijdsduur, gebruikscijfers en pogingen opgeslagen.
-Automatische retries krijgen elk een eigen record. Ook bij afgekeurde
-artikelinhoud blijft het gebruik van het geslaagde API-verzoek bewaard.
+Each new job stores API usage in `apiUsage` in the same JSON file. For each
+transcription chunk and article request, it records the model, requested and
+reported service tier, request ID, duration, usage figures, and attempts.
+Automatic retries each get their own record. Usage from a successful API request
+is retained even when the resulting article content is rejected.
 
-`knownEstimatedCostUsd` telt de bekende USD-schattingen op en wordt samen met
-het artikel in het job-JSON opgeslagen. Bij het laden worden deze bedragen
-niet opnieuw berekend met de actuele prijstabel;
-`unknownCostRequests` telt pogingen waarvan de kosten onbekend zijn.
-Een ontbrekend bedrag is `null`, geen nul. De schattingen gebruiken opgeslagen
-prijzen van 19 september 2026: voor `gpt-4o-transcribe-diarize` de gemelde
-audioduur, voor `gpt-5.6-terra` en `gpt-5.6-sol` de tokens, cacheverdeling, contextlengte, gemelde
-service tier en eventuele regionale toeslag. Andere modellen en aangepaste
-API-endpoints bewaren wel gebruik, maar krijgen geen geschatte prijs.
-Prijzen staan in `src/services/api-usage.ts`; elke schatting bewaart de gebruikte
-prijzen en bron zodat oude bedragen niet veranderen bij een prijsupdate.
-De promotieprijzen voor `gpt-5.6-sol` gelden volgens OpenAI ten minste tot
-21 november 2026. Bestaande jobs worden niet automatisch opnieuw geprijsd.
+`knownEstimatedCostUsd` sums known USD estimates and is stored with the article
+in the job JSON. These amounts are not recalculated against the current price
+table when loaded. `unknownCostRequests` counts attempts with unknown costs.
+A missing amount is `null`, not zero. Estimates use stored prices dated
+19 September 2026: reported audio duration for `gpt-4o-transcribe-diarize`, and
+tokens, cache breakdown, context length, reported service tier, and any regional
+surcharge for `gpt-5.6-terra` and `gpt-5.6-sol`. Other models and custom API endpoints
+still record usage but receive no cost estimate. Prices are in
+`src/services/api-usage.ts`; each estimate stores the prices and source used, so
+historical amounts do not change when prices are updated. According to OpenAI,
+promotional pricing for `gpt-5.6-sol` applies until at least 21 November 2026.
+Existing jobs are not automatically repriced.
 
-Dit zijn API-kostenschattingen, geen factuurbedragen. Hosting, downloads en
-FFmpeg-kosten zijn niet inbegrepen. Oude jobs worden niet achteraf als gratis
-beschouwd: ontbrekende `apiUsage` betekent onbekend; bij een nieuwe poging op
-zo'n job staat `coverage` op `partial`. Na een harde stop kan een poging
-`pending` blijven, met onbekende kosten. Gebruiksgegevens zijn uitsluitend
-beschikbaar bij de eigen job, niet via publieke links of opgeslagen kopieën.
+These are API cost estimates, not invoice amounts. Hosting, downloads, and FFmpeg
+costs are excluded. Older jobs are not retrospectively treated as free: missing
+`apiUsage` means unknown, and a new attempt on such a job sets `coverage` to
+`partial`. After a hard stop, an attempt may remain `pending` with unknown costs.
+Usage data is available only through the owner's job, never through public links
+or saved copies.
 
-Bij `SIGINT` of `SIGTERM` stopt de server met het aannemen van verzoeken en
-annuleert hij alle actieve OpenAI HTTP-requests via `AbortSignal`. Onderbroken
-jobs worden als hervatbaar opgeslagen, tijdelijke audio wordt opgeruimd en het
-proces wacht maximaal 15 seconden op een nette afsluiting. Let op: het sluiten
-van het HTTP-request is de beschikbare client-side annulering; de API biedt
-voor transcriptieverzoeken geen afzonderlijk server-side cancel-endpoint.
+On `SIGINT` or `SIGTERM`, the server stops accepting requests and cancels all
+active OpenAI HTTP requests through `AbortSignal`. Interrupted jobs are saved as
+resumable, temporary audio is cleaned up, and the process waits up to 15 seconds
+for graceful shutdown. Closing the HTTP request is the available client-side
+cancellation mechanism; the API provides no separate server-side cancellation
+endpoint for transcription requests.
 
-## Configuratie
+## Configuration
 
-### Taal van de interface
+### Interface language
 
-De interface volgt de primaire browsertaal: Nederlands (`nl`, `nl-NL`, `nl-BE`,
-enzovoort) gebruikt Nederlandse tekst; alle andere talen vallen terug op Engels.
-Dit geldt ook voor foutmeldingen, datums en de vaste labels in PDF-exports.
-De taalkeuze voor het genereren van artikelen blijft hiervan onafhankelijk.
-Artikelen en transcripties worden niet opnieuw vertaald wanneer de interfacetaal verandert.
+The interface follows the primary browser language: Dutch (`nl`, `nl-NL`,
+`nl-BE`, and related variants) uses Dutch text; all other languages fall back to
+English. This also applies to error messages, dates, and fixed labels in PDF
+exports. The language setting for article generation is independent.
+Articles and transcripts are not translated again when the interface language
+changes.
 
-De gedeelde vertalingen staan in `public/i18n.js`, met semantische sleutels zoals
-`article.delete` en `nav.articles` in plaats van Nederlandse tekst als sleutel.
-De tests controleren automatisch alle HTML-templates en browsermodules op ontbrekende
-vertalingen, inclusief toegankelijkheidslabels en enkelvoud/meervoud.
-De server gebruikt
-`Accept-Language` voor de eerste HTML-weergave; browserverzoeken sturen de gekozen
-interfacetaal mee. Vernieuw de pagina na een wijziging van de browsertaal.
+Shared translations live in `public/i18n.js`, using semantic keys such as
+`article.delete` and `nav.articles` rather than Dutch text as keys. Tests
+automatically check all HTML templates and browser modules for missing
+translations, including accessibility labels and singular/plural forms.
+The server uses `Accept-Language` for the initial HTML response; browser requests
+include the selected interface language. Refresh the page after changing the
+browser language.
 
-| Variabele                         | Standaard                   | Betekenis                                                                                                |
-| --------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`                  | vereist                     | Via de CLI meegegeven OpenAI API-key                                                                     |
-| `APP_USERS`                       | leeg                        | JSON-object met gebruikersnaam/wachtwoord-paren; leeg schakelt authenticatie uit                         |
-| `OPENAI_REGION`                   | `global`                    | OpenAI API-regio: `global`, `eu` (EER + Zwitserland) of `us`                                             |
-| `HOST`                            | `127.0.0.1`                 | Netwerkinterface; gebruik alleen in een container eventueel `0.0.0.0`                                    |
-| `PORT`                            | `3000`                      | HTTP-poort                                                                                               |
-| `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Model voor het artikel                                                                                   |
-| `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcriptiemodel                                                                                        |
-| `MAX_AUDIO_MB`                    | `500`                       | Maximale Spotify-audiodownload                                                                           |
-| `MAX_YOUTUBE_MB`                  | `500`                       | Maximale YouTube-audiodownload                                                                           |
-| `MAX_RECORDING_MB`                | `1500`                      | Maximale Google Drive- of Fathom-opnamedownload                                                          |
-| `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | Timeout voor het lezen van YouTube-metadata (1 minuut)                                                   |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | `900000`                    | Timeout voor het downloaden van media (15 minuten)                                                       |
-| `FFMPEG_BIN`                      | meegeleverde binary         | Absoluut pad naar een alternatief FFmpeg-executable voor normalisatie, splitsen en Fathom-postprocessing |
-| `AUDIO_CHUNK_SECONDS`             | `300`                       | Lengte van ieder audiofragment (5 minuten; toegestaan: 60–1200)                                          |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcriptiefragment (10 minuten)                                                            |
-| `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Timeout voor artikelgeneratie (10 minuten)                                                               |
-| `LOG_STACKS`                      | `false`                     | Toon volledige foutstacks in de CLI                                                                      |
+| Variable                          | Default                     | Meaning                                                                                                   |
+| --------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | required                    | OpenAI API key supplied through the CLI                                                                   |
+| `APP_USERS`                       | empty                       | JSON object of username/password pairs; empty disables authentication                                     |
+| `OPENAI_REGION`                   | `global`                    | OpenAI API region: `global`, `eu` (EEA + Switzerland), or `us`                                            |
+| `HOST`                            | `127.0.0.1`                 | Network interface; consider `0.0.0.0` only inside a container                                             |
+| `PORT`                            | `3000`                      | HTTP port                                                                                                 |
+| `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Article generation model                                                                                  |
+| `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcription model                                                                                       |
+| `MAX_AUDIO_MB`                    | `500`                       | Maximum Spotify audio download size                                                                       |
+| `MAX_YOUTUBE_MB`                  | `500`                       | Maximum YouTube audio download size                                                                       |
+| `MAX_RECORDING_MB`                | `1500`                      | Maximum Google Drive or Fathom recording download size                                                    |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | YouTube metadata timeout (1 minute)                                                                       |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | `900000`                    | Media download timeout (15 minutes)                                                                       |
+| `FFMPEG_BIN`                      | bundled binary              | Absolute path to an alternative FFmpeg executable for normalization, splitting, and Fathom postprocessing |
+| `AUDIO_CHUNK_SECONDS`             | `300`                       | Audio chunk length (5 minutes; allowed range: 60–1200)                                                    |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcription chunk (10 minutes)                                                              |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Article generation timeout (10 minutes)                                                                   |
+| `LOG_STACKS`                      | `false`                     | Show full error stacks in the CLI                                                                         |
 
-De CLI toont per job de bronresolutie, download- en FFmpeg-duur, chunkgroottes,
-OpenAI-start- en eindmomenten en iedere 30 seconden een heartbeat zolang een
-OpenAI-request nog loopt. API-keys en transcriptinhoud worden niet gelogd.
+For each job, the CLI reports source resolution, download and FFmpeg duration,
+chunk sizes, OpenAI start and completion times, and a heartbeat every 30 seconds
+while an OpenAI request is running. API keys and transcript content are not logged.
 
-`OPENAI_REGION` selecteert het OpenAI API-endpoint voor zowel transcriptie als
-artikelgeneratie. Regionale dataresidentie moet daarnaast voor het gebruikte
-OpenAI-project zijn ingericht en is afhankelijk van de gekozen modellen en
-features.
+`OPENAI_REGION` selects the OpenAI API endpoint for both transcription and article
+generation. Regional data residency must also be configured for the OpenAI project
+in use and depends on the selected models and features.
 
-Als alleen de artikelgeneratie faalt terwijl het transcript al compleet is, kan
-de bestaande transcriptie zonder nieuwe audio- of transcriptiekosten worden
-hergebruikt:
+If only article generation fails and the transcript is already complete, the
+existing transcript can be reused without new audio or transcription costs:
 
 ```bash
 curl -X POST http://localhost:3000/api/jobs/<job-id>/retry-article
 ```
 
-Dit kan alleen voor mislukte opdrachten, maximaal twee keer per opdracht naast
-de oorspronkelijke generatie. Elke geaccepteerde poging telt mee, ook als deze
-mislukt. De teller wordt opgeslagen voordat het betaalde werk begint en blijft
-behouden na een herstart. Voltooide artikelen en opdrachten die de limiet hebben
-bereikt geven `409`; hun inhoud en leesstatus blijven intact.
+This is available only for failed jobs, with at most two attempts per job in
+addition to the original generation. Every accepted attempt counts, including
+failed attempts. The counter is saved before paid work starts and survives
+restarts. Completed articles and jobs that have reached the limit return `409`;
+their content and read status remain intact.
 
-Voor oudere opdrachten zonder teller tellen geregistreerde artikeloperaties mee
-als eerdere pogingen. Alleen bij complete gebruikshistorie trekken we de eerste
-generatie af; bij gedeeltelijke historie tellen alle bekende operaties mee.
-Automatische API-retries binnen dezelfde operatie tellen samen als één poging.
-Zonder geregistreerde historie begint de
-teller bij nul; onbekende eerdere pogingen kunnen niet worden gereconstrueerd.
-Deze limiet geldt voor artikelregeneratie, niet voor nieuwe opdrachten of de
-nog openstaande hervattingslogica na een serverherstart.
+For older jobs without a counter, recorded article operations count as previous
+attempts. The initial generation is subtracted only when usage history is complete;
+partial histories count all known operations. Automatic API retries within the
+same operation count together as one attempt. Without recorded history, the
+counter starts at zero; unknown earlier attempts cannot be reconstructed.
+This limit applies to article regeneration, not to new jobs or the remaining
+restart-recovery work.
 
-De lengtekeuze toont de beoogde woordenaantallen: compact (700–1.000),
-standaard (1.100–1.700) en uitgebreid (1.800–2.600). Dit zijn richtlijnen voor
-de generatie, geen gegarandeerde aantallen. Dezelfde bron kan in een andere
-taal of lengte opnieuw worden verwerkt. Alleen een bestaande of lopende
-opdracht met dezelfde bron, taalkeuze en lengte geldt als duplicaat.
-Automatische taalherkenning blijft een aparte keuze naast een expliciete taal.
+The length selector shows target word counts: compact (700–1,000), standard
+(1,100–1,700), and extended (1,800–2,600). These are generation guidelines, not
+guaranteed counts. The same source can be processed again in a different language
+or length. Only an existing or active job with the same source, language setting,
+and length counts as a duplicate. Automatic language detection remains a separate
+choice from an explicit language.
 
-## Beperkingen
+## Limitations
 
-- Publieke `open.spotify.com/episode/...`-links, YouTube-video-, Shorts- en
-  afgeronde livestreamlinks, publieke Fathom-deellinks, en Google Drive-links naar één publiek audio- of
-  videobestand worden geaccepteerd.
-- De aflevering moet ook in een openbare podcastindex/RSS-bron staan. Spotify-exclusives werken niet.
-- Titels die sterk afwijken tussen Spotify en de RSS-bron kunnen niet automatisch worden gekoppeld; de app kiest bij twijfel bewust geen bron.
-- YouTube-afspeellijsten, actieve of geplande livestreams, privévideo's en
-  video's waarvoor aanmelding nodig is worden niet ondersteund.
-- Een Drive-opname moet toegankelijk zijn voor iedereen met de link en
-  downloadrechten hebben. Door Workspace-beleid afgeschermde opnames werken
-  zonder Google-authenticatie bewust niet.
-- Meet-ruimte-, Drive-map- en Google Calendar-links bevatten niet rechtstreeks
-  het opnamebestand en werken daarom niet.
-- Sprekerlabels kunnen tussen lange audiochunks wisselen. De tekst en tijdcodes blijven wel gekoppeld.
-- Transcriptie en herschrijven kunnen fouten bevatten. De tijdcodelinks zijn bedoeld om publicaties eenvoudig te controleren.
+- Public `open.spotify.com/episode/...` links, YouTube video, Shorts, and completed
+  livestream links, public Fathom share links, and Google Drive links to a single
+  public audio or video file are accepted.
+- The episode must also appear in a public podcast index or RSS source. Spotify
+  exclusives do not work.
+- Titles that differ substantially between Spotify and the RSS source cannot be
+  matched automatically; the app deliberately selects no source when uncertain.
+- YouTube playlists, active or scheduled livestreams, private videos, and videos
+  requiring sign-in are not supported.
+- A Drive recording must be accessible to anyone with the link and allow
+  downloads. Recordings restricted by Workspace policy deliberately do not work
+  without Google authentication.
+- Meet room, Drive folder, and Google Calendar links do not point directly to a
+  recording file and therefore do not work.
+- Speaker labels may change between long audio chunks. Text and timestamps remain
+  linked.
+- Transcription and rewriting can introduce errors. Timestamp links make it easier
+  to check articles before publication.
 
-## Verantwoord gebruik
+## Responsible use
 
-Gebruik alleen opnames die je rechtmatig mag verwerken. Een publieke link
-betekent niet automatisch dat je een volledige transcriptie of afgeleid artikel
-commercieel mag herpubliceren. Respecteer auteursrecht, portretrecht, privacy,
-licenties en de voorwaarden van de bron. Vermeld en link de oorspronkelijke
-opname.
+Use only recordings you are legally permitted to process. A public link does not
+automatically grant permission to commercially republish a full transcript or
+derived article. Respect copyright, image rights, privacy, licenses, and the
+source's terms. Credit and link to the original recording.
 
-## Ontwikkelen
+## Development
 
-GitHub Actions voert bij iedere pull request en push naar `main` automatisch
-de formatteringscontrole, ESLint, de TypeScript-build en alle tests uit. Deze
-controles draaien als zes onafhankelijke jobs, zodat een fout in één controle
-de andere resultaten niet tegenhoudt. De buildjob controleert ook de syntaxis
-van de browsercode. De workflow kan handmatig worden
-gestart via **Actions → Tests → Run workflow**. Hij gebruikt de Node.js-versie
-uit `.nvmrc` en installeert dependencies met het bestaande `yarn.lock`.
+GitHub Actions automatically runs formatting checks, ESLint, the TypeScript build,
+and all tests on every pull request and push to `main`. These checks run as six
+independent jobs, so a failure in one check does not prevent the others from
+reporting results. The build job also checks browser-code syntax. The workflow can
+be started manually through **Actions → Tests → Run workflow**. It uses the Node.js
+version from `.nvmrc` and installs dependencies with the existing `yarn.lock`.
 
-De workflow gebruikt een standaard Linux-runner. Dat is
-[gratis voor publieke repositories](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
-Er zijn geen repository secrets of betaalde API-aanroepen nodig voor deze checks.
-Een run stopt na maximaal 15 minuten; een nieuwe run op dezelfde branch of pull
-request annuleert de vorige run.
+The workflow uses a standard Linux runner, which is
+[free for public repositories](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+These checks require no repository secrets or paid API calls. Runs time out after
+15 minutes; a new run on the same branch or pull request cancels the previous run.
 
 ```bash
 npm test
@@ -295,74 +293,73 @@ npm run test:browser
 npm run check:media
 ```
 
-De browserjob test desktop-Chromium en mobiele WebKit. Hij bewaart het HTML-rapport,
-screenshots en fouttraces gedurende 14 dagen als Actions-artifact. De mediajob
-verwerkt een synthetische opname met Ubuntu’s FFmpeg via een expliciete
-`FFMPEG_BIN`-instelling. Browser- en mediatests staan apart van `npm run check`,
-zodat bestaande productiechecks geen browsers hoeven te installeren.
+The browser job tests desktop Chromium and mobile WebKit. It retains the HTML
+report, screenshots, and failure traces as Actions artifacts for 14 days. The media
+job processes a synthetic recording with Ubuntu's FFmpeg through an explicit
+`FFMPEG_BIN` setting. Browser and media tests run separately from `npm run check`,
+so existing production checks do not need to install browsers.
 
-### Testbeperkingen
+### Test limitations
 
-- Bekende bugs draaien met Playwrights `test.fail` en worden apart vermeld in het
-  Actions-rapport. Een groene workflow betekent niet dat deze bugs zijn opgelost.
-  Zodra zo’n test slaagt, faalt de suite totdat de annotatie is verwijderd.
-- Mobiele WebKit vervangt geen fysieke iPhone. Native deelmenu’s, focuszoom,
-  statusbalktikken en Home Screen-modus vragen nog controle op een toestel.
-- Browsertests blokkeren externe verzoeken, gebruiken fallbackfonts en bootsen
-  sommige API-antwoorden na. Ze controleren geen pixels tegen eerdere screenshots.
-  Servertests controleren de echte API- en opslaggrenzen apart.
-- De mediajob controleert de conversieketen met Ubuntu’s FFmpeg, niet met het
-  exacte productie-executable of iedere codec. De download in
-  `deploy/ffmpeg-release.json` was bij controle onbereikbaar (HTTP 404); herstel
-  daarvan en verificatie van de productiebinary blijven apart nodig.
-- Offline tests verifiëren geen beschikbaarheid of kwaliteit van externe modellen.
-  Een groene workflow bevestigt ook geen productiedeployment; zie
-  [de operationele controles](docs/OPERATIONS.md).
+- Known bugs use Playwright's `test.fail` and are listed separately in the Actions
+  report. A green workflow does not mean these bugs are fixed. Once such a test
+  passes, the suite fails until the annotation is removed.
+- Mobile WebKit does not replace a physical iPhone. Native share sheets, focus
+  zoom, status-bar taps, and Home Screen mode still require device checks.
+- Browser tests block external requests, use fallback fonts, and mock some API
+  responses. They do not compare pixels against previous screenshots. Server tests
+  check the real API and storage boundaries separately.
+- The media job checks the conversion pipeline with Ubuntu's FFmpeg, not the exact
+  production executable or every codec. The download in
+  `deploy/ffmpeg-release.json` was unavailable during verification (HTTP 404);
+  repairing it and verifying the production binary remain separate work.
+- Offline tests do not verify external model availability or quality. A green
+  workflow does not confirm a production deployment either; see the
+  [operational checks](docs/OPERATIONS.md).
 
-Bijdragen zijn welkom. Zie [LICENSE](./LICENSE) voor de MIT-licentie.
+Contributions are welcome. See [LICENSE](./LICENSE) for the MIT license.
+Repository documentation is maintained in English. The app supports both Dutch
+and English interfaces, with a separate choice for generated-article language.
 
-### Podcastseries volgen
+### Following podcast series
 
-Via **Series** kun je een Spotify-serielink of openbare RSS-feed toevoegen.
-Controleer de gevonden serie en kies de laatste aflevering, de laatste tien,
-of alleen nieuwe afleveringen. Het scherm toont
-voor bevestiging hoeveel afleveringen je inhaalt. Elke nieuwe verwerking gebruikt
-de ingestelde betaalde transcriptie- en artikelmodellen.
+On **Series**, add a Spotify show link or public RSS feed. Review the discovered
+series and choose the latest episode, the latest ten, or new episodes only. Before
+confirmation, the screen shows how many episodes will be fetched for catch-up.
+Each new processing job uses the configured paid transcription and article models.
 
-De server controleert actieve series bij het starten en daarna elk uur. Hij moet
-hiervoor blijven draaien; dit vereist geen externe cronjob. De bestaande wachtrij
-verwerkt maximaal drie opnames tegelijk; het voorbereiden van media blijft serieel.
-Via **Pauzeer** stop je nieuwe controles; opdrachten
-die al in de verwerkingswachtrij staan worden nog afgerond. **Hervat** haalt ook
-sinds de pauze gemiste afleveringen op, voor zover die nog in de feed staan.
+The server checks active series at startup and every hour after that. It must keep
+running; no external cron job is required. The existing queue processes up to three
+recordings concurrently, while media preparation remains serial.
+**Pause** stops new checks; jobs already in the processing queue still complete.
+**Resume** also retrieves episodes missed during the pause, provided they are still
+in the feed.
 
-Series, overgeslagen afleveringen en nog in te plannen afleveringen staan per
-gebruiker in `data/users/<username>/subscriptions.json`. Deze status wordt atomair
-opgeslagen en overleeft een herstart. Afleveringen worden herkend aan feed-URL en
-RSS-GUID (of audiolink als de GUID ontbreekt). Een reeds bekende audiolink wordt
-ook overgeslagen. Mislukte opdrachten worden getoond bij de serie en niet elk uur
-opnieuw gestart. Een mislukte feedcontrole wordt wel automatisch opnieuw geprobeerd.
-Zonder `OPENAI_API_KEY` wordt niets nieuws ingepland.
+Series, skipped episodes, and episodes awaiting scheduling are stored per user in
+`data/users/<username>/subscriptions.json`. This state is saved atomically and
+survives restarts. Episodes are identified by feed URL and RSS GUID, falling back
+to the audio link when no GUID exists. An already known audio link is also skipped.
+Failed jobs appear with the series and are not restarted every hour. Failed feed
+checks are retried automatically. Nothing new is scheduled without
+`OPENAI_API_KEY`.
 
-Vanuit een podcastartikel kun je bovenaan en onderaan **Volg deze podcast** kiezen.
-De bestaande bevestigingspagina opent met standaard alleen nieuwe afleveringen;
-eerdere afleveringen ophalen blijft een eigen keuze. Als je de serie al volgt,
-zie je dat direct, inclusief een eventuele pauze, met een link naar seriebeheer.
-Voor oudere Spotify-artikelen wordt de feed teruggezocht via de opgeslagen
-audiolink. Als die niet meer in de openbare index staat, kan de volgstatus niet
-worden bepaald.
+From a podcast article, choose **Follow this podcast** at the top or bottom. The
+existing confirmation page opens with new episodes only selected by default;
+fetching earlier episodes remains an explicit choice. If you already follow the
+series, its status appears immediately, including any pause, with a link to series
+management. For older Spotify articles, the feed is looked up through the stored
+audio link. If it is no longer in the public index, the follow status cannot be
+determined.
 
-Spotify wordt gebruikt om de serie te vinden. Bij meerdere zoekresultaten kies
-je zelf de juiste openbare feed. Alleen audioafleveringen in RSS 2.0 worden
-ondersteund; Spotify-exclusives, betaalde feeds en verdwenen archiefafleveringen
-zonder openbare audiobron kunnen niet worden opgehaald. Feeds worden met dezelfde
-publieke-netwerkcontrole als andere bronnen opgehaald, met een limiet van 10 MB;
-DTD's en externe XML-entiteiten worden geweigerd.
+Spotify is used to find the series. When several search results exist, you choose
+the correct public feed. Only audio episodes in RSS 2.0 are supported; Spotify
+exclusives, paid feeds, and missing archive episodes without a public audio source
+cannot be retrieved. Feeds use the same public-network checks as other sources,
+with a 10 MB limit; DTDs and external XML entities are rejected.
 
-Per inhaalactie worden maximaal tien afleveringen ingepland. Bij tien ongelezen
-of nog te verwerken afleveringen pauzeert de serie automatisch. Gelezen,
-verwijderde en mislukte opdrachten tellen niet mee. Na lezen hervat je zelf;
-ook hervatten respecteert de grens. Reeds ingeplande opdrachten worden niet
-geannuleerd. Overgeslagen eerdere afleveringen kun je later per maximaal tien
-inhalen, voor zover de openbare feed ze nog aanbiedt en er ruimte is. Deze actie
-verandert een handmatige pauze niet.
+Each catch-up action schedules at most ten episodes. A series pauses automatically
+when it has ten unread or pending episodes. Read, deleted, and failed jobs do not
+count. After reading, you resume explicitly; resuming also respects the limit.
+Already scheduled jobs are not cancelled. Previously skipped episodes can be
+fetched later in batches of at most ten, provided the public feed still offers
+them and capacity is available. This action does not change a manual pause.

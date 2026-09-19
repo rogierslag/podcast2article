@@ -221,9 +221,11 @@ checking an unavailable status from starting paid work. Explain when an existing
 transcript can be reused and when regenerating the article incurs additional cost.
 Returning to the source form should preserve its link, language, and length.
 
-Dutch is the default user-facing language. Where the interface offers English,
-preserve the same meaning and tone across translations. Keep source attribution
-clear and respect the anonymous nature of public article pages.
+Write repository documentation in English. The interface follows the primary
+browser language: Dutch for Dutch locales, English otherwise. Preserve the same
+meaning and tone across translations. Generated-article language remains a
+separate choice. Keep source attribution clear and respect the anonymous nature
+of public article pages.
 
 ## Applying the guide
 
