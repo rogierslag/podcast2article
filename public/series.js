@@ -104,10 +104,7 @@ function updatePlan() {
     return;
   }
   const choice = backfillSelect.value;
-  const count =
-    choice === "none"
-      ? 0
-      : Math.min(preview.count, choice === "latest" ? 1 : 10);
+  const count = choice === "none" ? 0 : Math.min(preview.count, 3);
   document.querySelector("#series-plan").textContent = t(
     count === 1 ? "series.planOne" : "series.plan",
     { count },
@@ -281,7 +278,7 @@ async function refresh() {
       );
       button.type = "button";
       button.dataset.limitDisabled = String(
-        subscription.paused && subscription.outstanding >= 10,
+        subscription.paused && subscription.outstanding >= 5,
       );
       button.disabled = button.dataset.limitDisabled === "true";
       button.setAttribute(
@@ -315,9 +312,9 @@ async function refresh() {
         const count = Math.max(
           0,
           Math.min(
-            10,
+            3,
             subscription.archiveCount,
-            10 - (subscription.outstanding || 0) - subscription.pendingCount,
+            5 - (subscription.outstanding || 0) - subscription.pendingCount,
           ),
         );
         const more = element(

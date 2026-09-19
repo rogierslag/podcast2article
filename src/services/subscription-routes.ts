@@ -18,7 +18,7 @@ export function subscriptionRouter(store: SubscriptionStore) {
   const urlSchema = z.object({ url: z.string().url().max(2000) });
   const followSchema = z.object({
     previewId: z.string().uuid(),
-    backfill: z.enum(["none", "latest", "ten"]),
+    backfill: z.enum(["none", "three"]),
     language: z.enum(["auto", "nl", "en", "de", "fr", "es"]).default("auto"),
     articleLength: z.enum(["compact", "standard", "long"]).default("standard"),
   });

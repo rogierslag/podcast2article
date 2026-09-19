@@ -324,7 +324,8 @@ and English interfaces, with a separate choice for generated-article language.
 ### Following podcast series
 
 On **Series**, add a Spotify show link or public RSS feed. Review the discovered
-series and choose the latest episode, the latest ten, or new episodes only. Before
+series. New episodes only is selected by default; optionally include the latest
+three episodes. Before
 confirmation, the screen shows how many episodes will be fetched for catch-up.
 Each new processing job uses the configured paid transcription and article models.
 
@@ -345,7 +346,7 @@ checks are retried automatically. Nothing new is scheduled without
 
 From a podcast article, choose **Follow this podcast** at the top or bottom. The
 existing confirmation page opens with new episodes only selected by default;
-fetching earlier episodes remains an explicit choice. If you already follow the
+fetching the latest three remains an explicit choice. If you already follow the
 series, its status appears immediately, including any pause, with a link to series
 management. For older Spotify articles, the feed is looked up through the stored
 audio link. If it is no longer in the public index, the follow status cannot be
@@ -357,9 +358,14 @@ exclusives, paid feeds, and missing archive episodes without a public audio sour
 cannot be retrieved. Feeds use the same public-network checks as other sources,
 with a 10 MB limit; DTDs and external XML entities are rejected.
 
-Each catch-up action schedules at most ten episodes. A series pauses automatically
-when it has ten unread or pending episodes. Read, deleted, and failed jobs do not
-count. After reading, you resume explicitly; resuming also respects the limit.
-Already scheduled jobs are not cancelled. Previously skipped episodes can be
-fetched later in batches of at most ten, provided the public feed still offers
-them and capacity is available. This action does not change a manual pause.
+Catch-up only offers episodes still in the feed's latest three, within the remaining
+capacity. It never walks backward through the archive. New feed entries published
+before you followed are excluded from automatic processing. For undated entries,
+only entries before a previously seen episode in feed order are treated as new;
+when there is no known episode to compare against, they are not scheduled automatically.
+
+A series pauses automatically at five unread, queued, or processing episodes.
+Read, deleted, and failed jobs do not count. After reading, you resume explicitly;
+resuming respects the same limit. Already scheduled jobs are not cancelled, including
+previously confirmed catch-up still awaiting scheduling. The latest-three action
+preserves a manual pause.

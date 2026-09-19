@@ -151,7 +151,7 @@ export interface PodcastFeed {
   episodes: PodcastEpisode[];
 }
 
-export type Backfill = "none" | "latest" | "ten";
+export type Backfill = "none" | "three";
 
 export interface PodcastSubscription {
   id: string;
