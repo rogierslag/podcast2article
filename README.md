@@ -155,11 +155,24 @@ promotional pricing for `gpt-5.6-sol` applies until at least 21 November 2026.
 Existing jobs are not automatically repriced.
 
 These are API cost estimates, not invoice amounts. Hosting, downloads, and FFmpeg
-costs are excluded. Older jobs are not retrospectively treated as free: missing
+costs are excluded. Historical costs remain unchanged in the ledger: missing
 `apiUsage` means unknown, and a new attempt on such a job sets `coverage` to
 `partial`. After a hard stop, an attempt may remain `pending` with unknown costs.
-Usage data is available only through the owner's job, never through public links
-or saved copies.
+Usage data is available through the owner's job and account summary, never through
+public links or saved copies.
+
+Each account has a USD 5 processing limit over the preceding 30 days. Historical
+requests made before budget enforcement are excluded from this allowance, including
+known historical costs. New requests reserve budget before sending; confirmed costs
+replace reservations, while uncertain outcomes retain them. Reservations can block
+work before actual estimates reach USD 5. Article output is capped at 16,384 tokens.
+
+Open **Usage** in the account footer to see estimated 30-day spend, excluded
+historical costs, reserved budget and the remaining allowance. Operators can set
+`SPENDING_LIMIT_EXEMPT_USERS=rogier` (comma-separated exact usernames) to exempt
+accounts while continuing to track their costs. Limited accounts cannot use models
+or endpoints without verified reservation pricing. See the [budget runbook](docs/OPERATIONS.md#account-processing-budget)
+for configuration, restart and revocation behavior.
 
 On `SIGINT` or `SIGTERM`, the server stops accepting requests and cancels all
 active OpenAI HTTP requests through `AbortSignal`. Interrupted jobs are saved as
@@ -191,6 +204,7 @@ browser language.
 | --------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`                  | required                    | OpenAI API key supplied through the CLI                                                                   |
 | `APP_USERS`                       | empty                       | JSON object of username/password pairs; empty disables authentication                                     |
+| `SPENDING_LIMIT_EXEMPT_USERS`     | empty                       | Comma-separated usernames exempt from spending limits; usage stays tracked                                |
 | `OPENAI_REGION`                   | `global`                    | OpenAI API region: `global`, `eu` (EEA + Switzerland), or `us`                                            |
 | `HOST`                            | `127.0.0.1`                 | Network interface; consider `0.0.0.0` only inside a container                                             |
 | `PORT`                            | `3000`                      | HTTP port                                                                                                 |

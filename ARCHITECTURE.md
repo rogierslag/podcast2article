@@ -71,6 +71,7 @@ The interface provides:
 - job submission;
 - live processing status;
 - completed article overview;
+- private 30-day spending and budget summary in the account footer;
 - read/unread state;
 - transcript and audio playback;
 - timestamp seeking through URL fragments;
@@ -320,6 +321,32 @@ adjustments. Unsupported models, custom endpoints, and missing usage remain unkn
 Legacy jobs have unknown history; tracking initiated later is marked partial.
 Public payloads and saved shared copies never include the source owner's ledger.
 
+### Account budgets
+
+`src/services/account-budget.ts` aggregates the existing request ledger across all
+of an account's jobs, including failed and deleted jobs, over the preceding 30 days.
+It reports confirmed estimates separately from reservations. Historical requests
+without `reservedCostUsd` remain visible but do not consume the USD 5 allowance.
+New paid attempts persist a conservative reservation before sending; automatic
+retries reserve separately. Article output is capped at 16,384 tokens. Confirmed
+usage replaces reservations; unknown outcomes retain them until they age out.
+
+The synchronous check and reservation update prevent concurrent jobs in the same
+process from reusing budget. Startup loads all histories before resuming work and
+fails closed on unreadable job files. Multiple servers sharing data are unsupported.
+
+`GET /api/account-budget` requires authentication, uses only the session account,
+sets `Cache-Control: no-store`, and returns `windowDays`, `spentUsd`,
+`historicalSpendUsd`, `countedSpendUsd`, `reservedUsd`, `unknownCostRequests`,
+`limitUsd` and `remainingUsd`. It exposes no job IDs or provider request details.
+`public/account-budget.js` refreshes this summary every 30 seconds and on focus.
+
+`SPENDING_LIMIT_EXEMPT_USERS` is an operator-managed comma-separated list of exact
+account names. Exempt accounts have null limits and continue tracking costs;
+revocation includes their recent new spending. Unknown-price exempt requests retain
+USD 5 reservations for future revocation. Limited accounts cannot start requests
+with unverified reservation prices. Credentials and exemptions are separate settings.
+
 ## 4. Processing lifecycle
 
 ```text
@@ -398,6 +425,7 @@ document.
 | --------------------------------- | --------------------------------------------------------------- |
 | `OPENAI_API_KEY`                  | OpenAI API credential                                           |
 | `APP_USERS`                       | JSON object with fixed username/password pairs                  |
+| `SPENDING_LIMIT_EXEMPT_USERS`     | Comma-separated exact usernames exempt from spending limits     |
 | `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint                            |
 | `HOST`                            | Production bind address; currently loopback                     |
 | `PORT`                            | Production HTTP port; currently 3000                            |
