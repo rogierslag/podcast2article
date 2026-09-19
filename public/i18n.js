@@ -1034,8 +1034,8 @@ export const messages = {
     en: "About this project",
   },
   "maker.description": {
-    nl: "Ik ben Rogier Slag en heb dit project samen met Codex gebouwd om te onderzoeken wat je met AI kunt maken, van een eerste idee tot een werkend product.",
-    en: "I’m Rogier Slag. I built this project with Codex to explore what you can make with AI, from an initial idea to a working product.",
+    nl: "Ik ben Rogier Slag, CTO bij Magnet.me. Ik luister eigenlijk nooit podcasts. Lezend neem ik informatie beter op, en bij een uur luisteren raak ik afgeleid. Dus in plaats van mijn gewoontes te veranderen, bouwde ik met Codex deze tool. Die maakt van een podcast een volledig artikel, met structuur en een verhaal dat prettig leest.",
+    en: "I’m Rogier Slag, CTO at Magnet.me. I don’t really listen to podcasts. I absorb information better by reading, and an hour of listening leaves plenty of room for distractions. So instead of changing my habits, I built this tool with Codex. It turns a podcast into a full article, with structure, flow and a narrative that’s enjoyable to read.",
   },
   "maker.linksLabel": {
     nl: "Over de maker en broncode",
