@@ -374,7 +374,11 @@ test("shared resume uses device storage and never writes an owner reading positi
   const writes = [];
   page.on("request", (request) => {
     if (request.method() !== "GET") {
-      writes.push(request.url());
+      writes.push({
+        method: request.method(),
+        path: new URL(request.url()).pathname,
+        body: request.postDataJSON(),
+      });
     }
   });
   await page.evaluate(
@@ -394,7 +398,14 @@ test("shared resume uses device storage and never writes an owner reading positi
     .poll(async () => (await heading.boundingBox()).y)
     .toBeLessThan(100);
   await expect(resume).toBeHidden();
-  expect(writes).toEqual([]);
+  await expect.poll(() => writes.length).toBeGreaterThan(0);
+  for (const write of writes) {
+    expect(write).toEqual({
+      method: "POST",
+      path: `/api/shared/${token}/events`,
+      body: { visitId: expect.any(String), event: "load" },
+    });
+  }
 });
 
 test("composer selects have room for labels, arrows and keyboard focus (PR 13)", async ({

@@ -217,6 +217,14 @@ are preserved. FFmpeg activation and rollback are separate from application
 deployment; see the [runtime runbook](../docs/FFMPEG.md). No dependency update or
 automatic move to the latest upstream build is involved.
 
+### Shared permalink monitoring rollout
+
+The normal application deployment enables monitoring for existing and new shared
+articles. No infrastructure reinstall, migration, external analytics service, or
+new secret is needed. Counters start with post-deployment browser events and use
+the existing job JSON storage and backups. Follow the
+[operational checks](../docs/OPERATIONS.md#shared-article-usage) after rollout.
+
 ## 10. Do not commit
 
 - `.env` or `/etc/podcast2article*.env`;

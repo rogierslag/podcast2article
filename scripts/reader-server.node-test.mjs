@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
@@ -190,6 +191,19 @@ before(async () => {
     await mkdir(path.join(root, "media"), { recursive: true });
     const article = fixture(id, shareToken, title);
     if (shareToken === otherToken) {
+      article.shareAnalytics = {
+        loads: 1,
+        reads: 0,
+        recentVisits: [
+          {
+            digest: createHash("sha256")
+              .update("00000000-0000-4000-8000-000000000001")
+              .digest("hex"),
+            loadedAt: Date.now() - 31_000,
+            read: false,
+          },
+        ],
+      };
       article.episode.imageUrl = episodeImage;
       article.episode.title = escapedFixtureText;
       article.article.dek = escapedFixtureText;
@@ -844,4 +858,73 @@ test("account budget requires a session and exposes only that account's summary"
   ).json();
   assert.equal(other.limitUsd, null);
   assert.equal(other.remainingUsd, null);
+});
+
+test("shared usage is persisted, deduplicated and visible only to its owner", async () => {
+  const ownerCookie = await loginAs("owner");
+  const otherCookie = await loginAs("other");
+  const statsUrl = `${origin}/api/jobs/${articleId}/share-stats`;
+  assert.equal((await fetch(statsUrl)).status, 401);
+  assert.equal(
+    (await fetch(statsUrl, { headers: { cookie: otherCookie } })).status,
+    404,
+  );
+  const send = (
+    shareToken,
+    event,
+    visitId = "00000000-0000-4000-8000-000000000001",
+  ) =>
+    fetch(`${origin}/api/shared/${shareToken}/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event, visitId }),
+    });
+  assert.equal((await send("invalid", "load")).status, 404);
+  assert.equal((await send("z".repeat(43), "load")).status, 404);
+  assert.equal((await send(token, "invalid")).status, 400);
+  assert.equal((await send(token, "load", "invalid")).status, 400);
+  assert.equal((await send(token, "read")).status, 409);
+  assert.equal((await send(token, "load")).status, 204);
+  assert.equal((await send(token, "load")).status, 204);
+  assert.equal((await send(token, "read")).status, 409);
+  const stats = await (
+    await fetch(statsUrl, { headers: { cookie: ownerCookie } })
+  ).json();
+  assert.equal(stats.loads, 1);
+  assert.equal(stats.reads, 0);
+  assert.deepEqual(Object.keys(stats).sort(), [
+    "lastLoadedAt",
+    "loads",
+    "reads",
+  ]);
+  const stored = JSON.parse(
+    await readFile(
+      path.join(
+        directory,
+        "data",
+        "users",
+        "owner",
+        "jobs",
+        `${articleId}.json`,
+      ),
+      "utf8",
+    ),
+  );
+  assert.equal(stored.shareAnalytics.loads, 1);
+  const publicData = await (
+    await fetch(`${origin}/api/shared/${token}`)
+  ).json();
+  assert.equal(publicData.shareAnalytics, undefined);
+  assert.equal((await fetch(`${origin}/share-analytics.js`)).status, 200);
+  // A receipt loaded from disk still accepts its read once after a restart.
+  assert.equal((await send(otherToken, "read")).status, 204);
+  assert.equal((await send(otherToken, "read")).status, 204);
+  const otherStats = await (
+    await fetch(
+      `${origin}/api/jobs/00000000-0000-4000-8000-000000000918/share-stats`,
+      { headers: { cookie: otherCookie } },
+    )
+  ).json();
+  assert.equal(otherStats.loads, 1);
+  assert.equal(otherStats.reads, 1);
 });

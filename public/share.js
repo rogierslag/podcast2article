@@ -1,5 +1,7 @@
 import { t, countText, locale, localizedFetch } from "./localize.js";
 
+import { createShareTracker } from "./share-analytics.js";
+
 import { createSourcePreview } from "./source-preview.js";
 
 const $ = (selector) => document.querySelector(selector);
@@ -451,6 +453,7 @@ localizedFetch(`/api/shared/${encodeURIComponent(token)}`)
       throw new Error("not found");
     }
     renderSharedArticle(await response.json(), token);
+    startShareMonitoring();
     void loadSaveState();
   })
   .catch(() => {
@@ -541,3 +544,42 @@ async function saveArticleToOverview(event) {
 saveButtons.forEach((button) =>
   button.addEventListener("click", saveArticleToOverview),
 );
+
+function startShareMonitoring() {
+  if (!globalThis.crypto?.randomUUID) {
+    return;
+  }
+  const visitId = crypto.randomUUID();
+  const tracker = createShareTracker({
+    send: async (event) => {
+      const response = await fetch(
+        `/api/shared/${encodeURIComponent(token)}/events`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "omit",
+          body: JSON.stringify({ visitId, event }),
+        },
+      );
+      return response.ok;
+    },
+  });
+  for (const event of ["pointerdown", "keydown", "scroll"]) {
+    pageScroll.addEventListener(event, () => tracker.activity(), {
+      passive: true,
+    });
+  }
+  const tick = () =>
+    tracker.tick({
+      visible: document.visibilityState === "visible",
+      progress: Number(articleReadingProgress.getAttribute("aria-valuenow")),
+    });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      tracker.activity();
+    }
+    void tick();
+  });
+  setInterval(() => void tick(), 1000);
+  void tick();
+}

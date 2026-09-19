@@ -1,6 +1,6 @@
 # Podcast2Article Architecture
 
-Document version: 2026-08-23
+Document version: 2026-09-19
 
 This document describes the application architecture of Podcast2Article.
 Infrastructure, deployment, security operations, recovery, and server
@@ -9,7 +9,7 @@ administration are documented separately in `docs/OPERATIONS.md`.
 ## 1. Purpose
 
 Podcast2Article turns a public Spotify podcast episode, YouTube video, or public
-Google Drive recording into:
+Google Drive or Fathom recording into:
 
 1. a speaker-attributed transcript with timestamps;
 2. a source-grounded article;
@@ -19,7 +19,7 @@ Google Drive recording into:
 The application is designed for a small, fixed group of trusted users rather
 than for public self-service. Credentials are configured by the administrator,
 each user's data is isolated on disk and in the API, and the application
-deliberately processes only one job at a time across all users.
+uses three processing slots with one shared slot for downloads and FFmpeg.
 
 ## 2. System context
 
@@ -63,7 +63,8 @@ orchestration, persistence, HTML delivery, and PDF generation.
 ### 3.1 Browser interface
 
 The browser interface consists of static HTML, CSS, images, and vanilla
-JavaScript under `public/`. Express serves these assets after authentication.
+JavaScript under `public/`. Owner pages require authentication when configured;
+public reader assets and capability routes are registered before that boundary.
 
 The interface provides:
 
@@ -76,7 +77,10 @@ The interface provides:
 - transcript and audio playback;
 - timestamp seeking through URL fragments;
 - article-only retry;
-- PDF export.
+- PDF export;
+- anonymous permalinks and saving shared articles;
+- reading progress and continuation;
+- podcast series subscriptions.
 
 The article source links use fragments shaped like:
 
@@ -99,8 +103,9 @@ Important middleware decisions:
 - Form bodies are limited to 2 KiB.
 - `X-Powered-By` is disabled.
 - only loopback proxies are trusted;
-- API routes return JSON errors;
-- unauthenticated page requests are redirected to `/login`.
+- most API routes return JSON errors; monitoring validation uses HTTP status codes;
+- unauthenticated owner-page requests are redirected to `/login`;
+- public capability routes validate their token and return `404` when unavailable.
 
 The unauthenticated health endpoint is intentionally small:
 
@@ -120,7 +125,7 @@ Authentication is implemented in `src/services/auth.ts`.
 - Password comparison is timing-safe.
 - The complete credential configuration derives the session signing key using `scrypt`.
 - A successful login produces a signed, 30-day `HttpOnly` cookie containing the username.
-- The cookie uses `SameSite=Strict`.
+- The cookie uses `SameSite=Lax`.
 - Caddy supplies HTTPS, so production cookies include `Secure`.
 - Changing `APP_USERS` invalidates all existing sessions.
 - Five failed attempts from one IP block new attempts for 15 minutes.
@@ -128,7 +133,9 @@ Authentication is implemented in `src/services/auth.ts`.
 
 The application has no user database, self-service registration, account
 recovery, or roles. Every authenticated user has the same capabilities, but
-all job, article, transcript, PDF, and audio access is scoped to that user.
+owner job, article, transcript, PDF, and audio access is scoped to that user.
+Public capability URLs grant access only to their completed article and audio,
+and permit anonymous monitoring events for that article.
 
 ### 3.4 Job manager and queue
 
@@ -158,7 +165,10 @@ On startup:
 2. completed and failed jobs remain unchanged;
 3. incomplete jobs are reset to `queued`;
 4. resumable jobs enter the processing pipeline;
-5. the active processing step starts again from a safe boundary.
+5. the full pipeline runs again, including media preparation and transcription.
+
+A stored transcript does not yet provide durable stage recovery. Restarting
+incomplete jobs can therefore repeat paid work.
 
 On shutdown:
 
@@ -196,6 +206,12 @@ Public Google Drive file links are resolved without Google authentication. The
 file must be accessible to anyone with the link and permit download. Meet room
 links, Drive folders, and Calendar links do not point directly to media and are
 not accepted.
+
+#### Fathom
+
+Public `fathom.video/share/...` links are resolved through yt-dlp. Private calls,
+team-only access, cookies, and existing Fathom summaries or transcripts are not
+imported. Recordings follow the same local audio and transcription pipeline.
 
 ### 3.6 Media pipeline
 
@@ -251,7 +267,9 @@ The selected API region is controlled by `OPENAI_REGION`. Configuring `eu` or
 also depends on the OpenAI project, model, and feature configuration.
 
 If transcription succeeds but article generation fails, the article-only retry
-endpoint reuses the stored transcript and avoids retranscription costs.
+endpoint reuses the stored transcript and avoids retranscription costs. It is
+restricted to failed jobs and at most two accepted retries per job, including
+failed attempts. Completed jobs cannot be regenerated through this endpoint.
 
 ### 3.8 PDF generation
 
@@ -271,9 +289,10 @@ printing.
 The application deliberately does not use a database.
 
 ```text
-data/users/<username>/jobs/<uuid>.json   job, transcript, article, read state
+data/users/<username>/jobs/<uuid>.json   job, transcript, article, read state, share analytics
 data/users/<username>/media/<uuid>.mp3   normalized playback audio
 data/users/<username>/work/<uuid>/       temporary downloads and chunks
+data/users/<username>/subscriptions.json series configuration and scheduling state
 ```
 
 In production, `data` is a symlink to `/var/lib/podcast2article`. This keeps
@@ -312,9 +331,10 @@ progress updates from overwriting accounting records. Article retries and restar
 recovery preserve the ledger. A hard stop leaves pending attempts with unknown cost.
 
 Known USD estimates are summed separately from unknown-cost attempts. Price snapshots
-cover the two default models and are based on the [OpenAI pricing page](https://developers.openai.com/api/docs/pricing)
-(2026-09-15). Diarization uses the published per-minute estimate applied to reported
-seconds. Terra uses reported tokens, cache reads/writes, actual service tier, the
+are stored in `src/services/api-usage.ts` with their source and date
+(2026-09-19), covering diarization, Terra, and Sol. Diarization uses the published
+per-minute estimate applied to reported seconds. Article models use reported
+tokens, cache reads/writes, actual service tier, the
 [272K context boundary](https://developers.openai.com/api/docs/models/gpt-5.6-terra),
 and regional uplift. These are estimates, excluding infrastructure and invoice-level
 adjustments. Unsupported models, custom endpoints, and missing usage remain unknown.
@@ -346,6 +366,24 @@ account names. Exempt accounts have null limits and continue tracking costs;
 revocation includes their recent new spending. Unknown-price exempt requests retain
 USD 5 reservations for future revocation. Limited accounts cannot start requests
 with unverified reservation prices. Credentials and exemptions are separate settings.
+
+### Shared permalink monitoring
+
+`public/share-analytics.js` counts visible reading time, and `public/share.js`
+sends credential-free `load` and `read` events after rendering. Reads require
+30 seconds of active visible time and 90% scroll progress. The public POST endpoint
+validates the capability and event schema; the server also enforces 30 seconds
+between the load and read.
+
+`src/services/share-analytics.ts` updates aggregate counts and up to 256 recent
+visit receipts per job. Receipts store a random visit ID's digest, load time, and
+read flag, with a 24-hour deduplication window. Job persistence keeps the totals
+and receipts across restarts. An owner-only endpoint returns the aggregate fields;
+public article payloads and saved copies omit the original analytics.
+
+See [shared article monitoring](docs/SHARED-ARTICLE-MONITORING.md) for request and
+response contracts, pruning, and limits. These are approximate visit counts;
+client events cannot establish unique readers or comprehension.
 
 ## 4. Processing lifecycle
 
@@ -380,22 +418,37 @@ Detailed flow:
 
 ## 5. API surface
 
-| Method  | Path                          | Purpose                      | Authentication |
-| ------- | ----------------------------- | ---------------------------- | -------------- |
-| `GET`   | `/api/health`                 | Deployment health            | No             |
-| `GET`   | `/login`                      | Login form                   | No             |
-| `POST`  | `/login`                      | Create session               | No             |
-| `POST`  | `/logout`                     | Expire session               | Yes            |
-| `GET`   | `/api/deployment-status`      | Deployment failure flag      | Yes            |
-| `GET`   | `/api/auth`                   | Report auth state            | Yes            |
-| `GET`   | `/api/articles`               | List completed articles      | Yes            |
-| `PATCH` | `/api/articles/:id`           | Set read/unread state        | Yes            |
-| `GET`   | `/api/jobs`                   | List active jobs             | Yes            |
-| `POST`  | `/api/jobs`                   | Create a job                 | Yes            |
-| `GET`   | `/api/jobs/:id`               | Read one job                 | Yes            |
-| `GET`   | `/api/jobs/:id/audio`         | Stream normalized MP3        | Yes            |
-| `GET`   | `/api/jobs/:id/pdf`           | Generate article PDF         | Yes            |
-| `POST`  | `/api/jobs/:id/retry-article` | Reuse transcript and rewrite | Yes            |
+| Method   | Path                             | Purpose                                    | Authentication |
+| -------- | -------------------------------- | ------------------------------------------ | -------------- |
+| `GET`    | `/s/:token`                      | Anonymous article page and social metadata | Capability     |
+| `GET`    | `/api/shared/:token`             | Shaped public article payload              | Capability     |
+| `GET`    | `/api/shared/:token/audio`       | That article's source audio                | Capability     |
+| `POST`   | `/api/shared/:token/events`      | Record anonymous load/read                 | Capability     |
+| `GET`    | `/share-target`                  | Prefill an incoming source                 | No             |
+| `GET`    | `/api/health`                    | Deployment health                          | No             |
+| `GET`    | `/login`                         | Login form                                 | No             |
+| `POST`   | `/login`                         | Create session                             | No             |
+| `POST`   | `/logout`                        | Expire session                             | Yes            |
+| `GET`    | `/api/deployment-status`         | Deployment failure flag                    | Yes            |
+| `GET`    | `/api/auth`                      | Report auth state                          | Yes            |
+| `GET`    | `/api/articles`                  | List completed articles                    | Yes            |
+| `PATCH`  | `/api/articles/:id`              | Set read/unread state                      | Yes            |
+| `DELETE` | `/api/articles/:id`              | Soft-delete article and disable sharing    | Yes            |
+| `PATCH`  | `/api/jobs/:id/reading-position` | Save continuation section                  | Yes            |
+| `POST`   | `/api/jobs/:id/share`            | Create or reuse permalink                  | Yes            |
+| `GET`    | `/api/jobs/:id/share-stats`      | Owner's shared load/read totals            | Yes            |
+| `GET`    | `/api/saved-shares/:token`       | Find a previously saved copy               | Yes            |
+| `POST`   | `/api/saved-shares/:token`       | Save an independent copy once              | Yes            |
+| `GET`    | `/api/jobs`                      | List active jobs                           | Yes            |
+| `POST`   | `/api/jobs`                      | Create a job                               | Yes            |
+| `GET`    | `/api/jobs/:id`                  | Read one job                               | Yes            |
+| `GET`    | `/api/jobs/:id/audio`            | Stream normalized MP3                      | Yes            |
+| `GET`    | `/api/jobs/:id/pdf`              | Generate article PDF                       | Yes            |
+| `POST`   | `/api/jobs/:id/retry-article`    | Reuse transcript and rewrite               | Yes            |
+
+“Yes” means the configured owner session is required; without account
+configuration, local development uses the `local` account. “Capability” means a
+valid high-entropy token, independent of account authentication.
 
 Series routes are authenticated and scoped to the current user:
 
@@ -413,7 +466,7 @@ The former `latest` and `ten` backfill request values are rejected. Existing
 subscription files remain readable without a migration.
 
 `POST /hooks/github` is not handled by the application. Caddy routes it to a
-separate, restricted webhook receiver. See `INFRASTRUCTURE.md`.
+separate, restricted webhook receiver. See [operations](docs/OPERATIONS.md).
 
 ## 6. Configuration contract
 
@@ -421,27 +474,28 @@ Production application configuration is stored in
 `/etc/podcast2article.env`. Values must never be committed or copied into this
 document.
 
-| Variable                          | Role                                                            |
-| --------------------------------- | --------------------------------------------------------------- |
-| `OPENAI_API_KEY`                  | OpenAI API credential                                           |
-| `APP_USERS`                       | JSON object with fixed username/password pairs                  |
-| `SPENDING_LIMIT_EXEMPT_USERS`     | Comma-separated exact usernames exempt from spending limits     |
-| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint                            |
-| `HOST`                            | Production bind address; currently loopback                     |
-| `PORT`                            | Production HTTP port; currently 3000                            |
-| `NODE_ENV`                        | Production runtime mode                                         |
-| `ARTICLE_MODEL`                   | Article-generation model                                        |
-| `TRANSCRIPTION_MODEL`             | Diarized transcription model                                    |
-| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                                        |
-| `MAX_YOUTUBE_MB`                  | YouTube source limit                                            |
-| `MAX_RECORDING_MB`                | Google Drive recording limit                                    |
-| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                                                |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                                                |
-| `FFMPEG_BIN`                      | Optional absolute path overriding the bundled FFmpeg executable |
-| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                       |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                           |
-| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                             |
-| `LOG_STACKS`                      | Enable full stack traces in logs                                |
+| Variable                          | Role                                                             |
+| --------------------------------- | ---------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | OpenAI API credential                                            |
+| `APP_USERS`                       | JSON object with fixed username/password pairs                   |
+| `SPENDING_LIMIT_EXEMPT_USERS`     | Comma-separated exact usernames exempt from spending limits      |
+| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint                             |
+| `HOST`                            | Production bind address; currently loopback                      |
+| `PUBLIC_BASE_URL`                 | Canonical external origin for permalink and social metadata URLs |
+| `PORT`                            | Production HTTP port; currently 3000                             |
+| `NODE_ENV`                        | Production runtime mode                                          |
+| `ARTICLE_MODEL`                   | Article-generation model                                         |
+| `TRANSCRIPTION_MODEL`             | Diarized transcription model                                     |
+| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                                         |
+| `MAX_YOUTUBE_MB`                  | YouTube source limit                                             |
+| `MAX_RECORDING_MB`                | Google Drive or Fathom recording limit                           |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                                                 |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                                                 |
+| `FFMPEG_BIN`                      | Optional absolute path overriding the bundled FFmpeg executable  |
+| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                        |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                            |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                              |
+| `LOG_STACKS`                      | Enable full stack traces in logs                                 |
 
 ## 7. Dependency model
 
@@ -478,6 +532,8 @@ src/services/audio.ts      FFmpeg normalization and splitting
 src/services/openai.ts     transcription and article generation
 src/services/jobs.ts       queue, persistence, lifecycle, recovery
 src/services/pdf.ts        PDFKit export
+src/services/share-analytics.ts anonymous visit deduplication and counters
+src/services/subscriptions.ts per-user series scheduling and persistence
 scripts/                   production updater and webhook receiver
 deploy/                    systemd, Caddy, cron, and logrotate definitions
 ```
@@ -492,9 +548,16 @@ yarn run check
 
 It performs:
 
-1. TypeScript compilation;
-2. the Vitest application suite;
-3. Node tests for GitHub webhook signature and routing validation.
+1. Prettier formatting verification;
+2. ESLint validation;
+3. TypeScript compilation;
+4. the Vitest application suite;
+5. Node tests, including authenticated/public HTTP boundaries, monitoring,
+   browser helpers, deployment, and webhook validation.
+
+Frontend changes also require `node --check public/app.js`,
+`node --check public/share.js`, and `git diff --check`. Browser and media tests
+run separately; see [development](README.md#development).
 
 The production updater refuses to activate a release when dependency install,
 build, or tests fail. After activation it also requires the service and local
@@ -502,7 +565,7 @@ health endpoint to become healthy, otherwise it restores the previous release.
 
 ## 10. Architectural constraints and known limitations
 
-- Designed for a small fixed user group and one globally active processing job.
+- Designed for a small fixed user group and three globally active processing jobs with serial media preparation.
 - Accounts are administrator-managed environment configuration, not a user database.
 - Job files are local JSON rather than transactional database records.
 - Horizontal scaling is not supported.

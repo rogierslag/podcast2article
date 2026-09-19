@@ -32,6 +32,7 @@ import {
 import {
   getAccountBudget,
   createArticleShare,
+  recordSharedArticleEvent,
   createJob,
   createPodcastJob,
   podcastOutstandingCount,
@@ -261,6 +262,30 @@ app.get("/api/shared/:token", (request, response) => {
   });
 });
 
+const shareEventSchema = z
+  .object({
+    visitId: z.string().uuid(),
+    event: z.enum(["load", "read"]),
+  })
+  .strict();
+
+app.post("/api/shared/:token/events", async (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  if (!getSharedArticle(request.params.token)) {
+    return response.sendStatus(404);
+  }
+  const parsed = shareEventSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return response.sendStatus(400);
+  }
+  const accepted = await recordSharedArticleEvent(
+    request.params.token,
+    parsed.data.visitId,
+    parsed.data.event,
+  );
+  return response.sendStatus(accepted ? 204 : 409);
+});
+
 app.get("/api/shared/:token/audio", async (request, response) => {
   const shared = getSharedArticle(request.params.token);
   if (!shared) {
@@ -288,6 +313,7 @@ app.get("/api/shared/:token/audio", async (request, response) => {
 app.get(
   [
     "/share.js",
+    "/share-analytics.js",
     "/source-preview.js",
     "/i18n.js",
     "/article-length.js",
@@ -548,6 +574,20 @@ const readingPositionSchema = z.object({
 app.get("/api/articles", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.json(listReadyArticles(response.locals.username));
+});
+
+app.get("/api/jobs/:id/share-stats", async (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  const job = await getJob(response.locals.username, request.params.id);
+  if (!job || job.stage !== "complete") {
+    return response.sendStatus(404);
+  }
+  response.json({
+    loads: job.shareAnalytics?.loads ?? 0,
+    reads: job.shareAnalytics?.reads ?? 0,
+    lastLoadedAt: job.shareAnalytics?.lastLoadedAt,
+    lastReadAt: job.shareAnalytics?.lastReadAt,
+  });
 });
 
 app.get("/api/jobs", (_request, response) => {

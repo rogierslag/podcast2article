@@ -127,13 +127,15 @@ Fathom share link → yt-dlp metadata → download audio or video
 Jobs are stored per user as JSON in `data/users/<username>/jobs/`.
 Compact playback audio is stored in `data/users/<username>/media/`; downloaded
 source files and transcription chunks are deleted. Users can access only their
-own jobs, articles, transcripts, and audio.
+own jobs, articles, transcripts, and audio through owner routes. Public permalinks
+separately grant access to one completed article and its audio.
 Unfinished jobs restart automatically after a server restart with the same job ID.
 Up to three jobs are processed concurrently. Downloads and FFmpeg run one at a
 time; transcription and article generation can overlap with other jobs. Source
 metadata is fetched separately, with up to three concurrent requests, so titles
-and images already appear in the queue. The active processing stage starts over
-after a restart, preventing jobs from silently remaining stuck in an old state.
+and images already appear in the queue. Incomplete jobs restart through the full
+pipeline, even when a transcript already exists. This avoids stuck jobs but can repeat downloads, transcription, and paid
+API work; durable stage recovery remains unfinished.
 
 Each new job stores API usage in `apiUsage` in the same JSON file. For each
 transcription chunk and article request, it records the model, requested and
@@ -181,6 +183,25 @@ for graceful shutdown. Closing the HTTP request is the available client-side
 cancellation mechanism; the API provides no separate server-side cancellation
 endpoint for transcription requests.
 
+## Sharing and monitoring
+
+Article actions create a stable anonymous permalink. Recipients can read and play
+source audio without an account; signed-in recipients can save an independent
+copy in their own library. Deleting the original disables its permalink while
+preserving previously saved copies. Public pages never expose the owner's
+identity, private transcript, read state, API costs, or usage statistics.
+
+Shared pages record a load after rendering in a visible tab. An estimated read
+requires 30 seconds of visible, active reading and at least 90% scroll progress.
+Counts survive restarts and are available to the owner through
+`GET /api/jobs/:id/share-stats`; there is no statistics dashboard. These count
+page visits, not unique people or confirmed comprehension. They do not change
+**Mark as read** in the owner's library.
+
+See [shared article monitoring](docs/SHARED-ARTICLE-MONITORING.md) for API examples,
+privacy, deduplication, and measurement limits. Set `PUBLIC_BASE_URL` to the
+canonical external origin for permalink and social-preview URLs in production.
+
 ## Configuration
 
 ### Interface language
@@ -207,6 +228,7 @@ browser language.
 | `SPENDING_LIMIT_EXEMPT_USERS`     | empty                       | Comma-separated usernames exempt from spending limits; usage stays tracked                                |
 | `OPENAI_REGION`                   | `global`                    | OpenAI API region: `global`, `eu` (EEA + Switzerland), or `us`                                            |
 | `HOST`                            | `127.0.0.1`                 | Network interface; consider `0.0.0.0` only inside a container                                             |
+| `PUBLIC_BASE_URL`                 | request origin              | Canonical external origin for permalinks and social previews                                              |
 | `PORT`                            | `3000`                      | HTTP port                                                                                                 |
 | `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Article generation model                                                                                  |
 | `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcription model                                                                                       |

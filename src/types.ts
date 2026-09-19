@@ -109,6 +109,14 @@ export interface JobApiUsage {
   unknownCostRequests: number;
 }
 
+export interface ShareAnalytics {
+  loads: number;
+  reads: number;
+  lastLoadedAt?: string;
+  lastReadAt?: string;
+  recentVisits: Array<{ digest: string; loadedAt: number; read: boolean }>;
+}
+
 export interface Job {
   id: string;
   sourceUrl: string;
@@ -128,6 +136,7 @@ export interface Job {
   deletedAt?: string;
   /** High-entropy capability token for the article's anonymous public permalink. */
   shareToken?: string;
+  shareAnalytics?: ShareAnalytics;
   /** Digest used to deduplicate personal copies of shared articles. */
   savedShareKey?: string;
   /** Stable feed + episode identity, independent of changing enclosure URLs. */
