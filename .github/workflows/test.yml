@@ -35,8 +35,14 @@ jobs:
             command: yarn test
           - name: Media regression
             command: yarn run build && FFMPEG_BIN=/usr/bin/ffmpeg node scripts/media-smoke.mjs . /usr/bin/ffmpeg
-          - name: Browser regressions
-            command: yarn run test:browser
+          - name: Browser regressions (Chromium)
+            project: desktop-chromium
+            browser: chromium
+            command: yarn run test:browser --project=desktop-chromium
+          - name: Browser regressions (WebKit)
+            project: mobile-webkit
+            browser: webkit
+            command: yarn run test:browser --project=mobile-webkit
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -47,6 +53,8 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: yarn.lock
 
       - name: Install Yarn
         run: npm install --global yarn@1.22.22
@@ -57,29 +65,38 @@ jobs:
           YOUTUBE_DL_SKIP_DOWNLOAD: "1"
         run: yarn install --frozen-lockfile --non-interactive
 
+      - name: Cache test browser binaries
+        if: matrix.browser
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-ubuntu-24.04-${{ matrix.browser }}-${{ hashFiles('node_modules/playwright-core/browsers.json') }}
+
       - name: Install test browsers and system libraries
-        if: matrix.name == 'Browser regressions'
-        run: yarn playwright install --with-deps chromium webkit
+        if: matrix.browser
+        run: yarn playwright install --with-deps --only-shell ${{ matrix.browser }}
 
       - name: Install the Linux media test runtime
         if: matrix.name == 'Media regression'
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends ffmpeg
+          if [ ! -x /usr/bin/ffmpeg ]; then
+            sudo apt-get update
+            sudo apt-get install --yes --no-install-recommends ffmpeg
+          fi
           /usr/bin/ffmpeg -version
 
       - name: ${{ matrix.name }}
         run: ${{ matrix.command }}
 
       - name: Summarize regressions and known bugs
-        if: ${{ !cancelled() && matrix.name == 'Browser regressions' && hashFiles('test-results/browser-results.json') != '' }}
+        if: ${{ !cancelled() && matrix.browser && hashFiles('test-results/browser-results.json') != '' }}
         run: node scripts/browser/report.mjs
 
       - name: Upload browser report and failure traces
-        if: ${{ !cancelled() && matrix.name == 'Browser regressions' }}
+        if: ${{ !cancelled() && matrix.browser }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: browser-regressions
+          name: browser-regressions-${{ matrix.project }}
           path: |
             playwright-report/
             test-results/
