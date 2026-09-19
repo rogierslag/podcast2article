@@ -177,7 +177,7 @@ function loginBuildMarkup(response: express.Response): string {
   }
   const shortSha = gitSha.slice(0, 7);
   const language = responseLanguage(response);
-  return `<p class="build-sha" data-build-sha="${gitSha}" aria-label="${translate(language, "build.label", { sha: gitSha })}">${translate(language, "build", { sha: shortSha })}</p>`;
+  return `<p class="build-sha" data-build-sha="${gitSha}" title="${translate(language, "build.label", { sha: gitSha })}">${translate(language, "build", { sha: shortSha })}</p>`;
 }
 
 app.get("/api/health", (_request, response) => {

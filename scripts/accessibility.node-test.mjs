@@ -53,6 +53,11 @@ for (const [name, palette] of Object.entries(palettes)) {
       contrast(palette["accent-text"], palette["transcript-flash"]) >= 4.5,
       "Playback timestamps must remain readable during the transcript highlight",
     );
+    assert.ok(
+      contrast(palette["placeholder-text"], palette["placeholder-surface"]) >=
+        4.5,
+      "Artwork fallback numbers must remain readable",
+    );
   });
 }
 test("playback labels explain the action and retain the visible timestamp in both languages", () => {

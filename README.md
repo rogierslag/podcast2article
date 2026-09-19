@@ -49,6 +49,11 @@ De [merkrichtlijnen](docs/BRAND.md) beschrijven de visuele identiteit, typografi
 kleuren, interacties en het bedoelde gebruik van afgeronde hoeken. Gebruik deze
 samen met [AGENTS.md](AGENTS.md) bij wijzigingen aan de interface.
 
+De [gebruikersreizen](docs/USER-JOURNEYS.md) leggen vast wat iemand wil bereiken,
+welke functies daarbij helpen en hoe we hun waarde kunnen toetsen. De
+[toegankelijkheidsreview](docs/ACCESSIBILITY-AUDIT.md) beschrijft de gecontroleerde
+schermen, gevonden problemen en resterende beperkingen.
+
 ## Snel starten
 
 Vereisten: Node.js 24+, Python 3.11+ en een OpenAI API-key.
@@ -307,7 +312,8 @@ de ingestelde betaalde transcriptie- en artikelmodellen.
 
 De server controleert actieve series bij het starten en daarna elk uur. Hij moet
 hiervoor blijven draaien; dit vereist geen externe cronjob. De bestaande wachtrij
-verwerkt één opname tegelijk. Via **Pauzeer** stop je nieuwe controles; opdrachten
+verwerkt maximaal drie opnames tegelijk; het voorbereiden van media blijft serieel.
+Via **Pauzeer** stop je nieuwe controles; opdrachten
 die al in de verwerkingswachtrij staan worden nog afgerond. **Hervat** haalt ook
 sinds de pauze gemiste afleveringen op, voor zover die nog in de feed staan.
 

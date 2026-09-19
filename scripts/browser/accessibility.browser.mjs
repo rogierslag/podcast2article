@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { articleFixture, articleId, password } from "./fixture.mjs";
+import { articleFixture, articleId, password, token } from "./fixture.mjs";
 import { translate } from "../../public/i18n.js";
 
 for (const language of ["nl", "en"]) {
@@ -101,6 +101,13 @@ for (const language of ["nl", "en"]) {
       await expect(page.locator("[data-read-toggle]")).toHaveAccessibleName(
         t("article.markUnreadLabel"),
       );
+      await expect(
+        page.locator(".article-card-placeholder"),
+      ).toHaveAccessibleName(
+        translate(language, "article.read", {
+          title: `01: ${job.article.title}`,
+        }),
+      );
     });
     test(`${language} ${colorScheme}: login version text keeps full contrast`, async ({
       page,
@@ -116,6 +123,127 @@ for (const language of ["nl", "en"]) {
       await page.goto("/login");
       await expect(page.locator(".build-sha")).toBeVisible();
       await expect(page.locator(".build-sha")).toHaveCSS("opacity", "1");
+      await expect(page.locator(".build-sha")).not.toHaveAttribute(
+        "aria-label",
+      );
+      await expect(page.locator(".build-sha")).toHaveAttribute(
+        "title",
+        translate(language, "build.label", {
+          sha: "1234567890123456789012345678901234567890",
+        }),
+      );
+    });
+    test(`${language} ${colorScheme}: owner and shared resume actions name their visible label and destination`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.route(/^https?:\/\/(?!127\.0\.0\.1:4317)/, (route) =>
+        route.abort(),
+      );
+      await page.context().addCookies([
+        {
+          name: "p2a_ui_language",
+          value: language,
+          url: "http://127.0.0.1:4317",
+        },
+      ]);
+      await page.request.post("/login", {
+        form: { username: "regression", password },
+      });
+      const job = articleFixture();
+      job.readingPosition = {
+        sectionIndex: 1,
+        updatedAt: "2026-09-19T10:00:00Z",
+      };
+      await page.route(`**/api/jobs/${articleId}`, (route) =>
+        route.fulfill({ json: job }),
+      );
+      await page.goto(`/#job=${articleId}`);
+      const resume = page.locator("#continue-reading");
+      const heading = job.article.sections[1].heading;
+
+      await expect(resume).toHaveAccessibleName(
+        `${translate(language, "readingPosition.resume")} ${heading}`,
+      );
+      await resume.focus();
+      await page.keyboard.press("Enter");
+
+      await expect(
+        page.getByRole("heading", { name: heading, exact: true }),
+      ).toBeFocused();
+
+      await page.evaluate(
+        (token) =>
+          localStorage.setItem(
+            `podcast2article:reading-position:${token}`,
+            JSON.stringify({ sectionIndex: 1 }),
+          ),
+        token,
+      );
+      await page.goto(`/s/${token}`);
+
+      await expect(resume).toHaveAccessibleName(
+        `${translate(language, "readingPosition.resume")} ${heading}`,
+      );
+      await resume.focus();
+      await page.keyboard.press("Enter");
+
+      await expect(
+        page.getByRole("heading", { name: heading, exact: true }),
+      ).toBeFocused();
+    });
+    test(`${language} ${colorScheme}: enlarged text spacing fits a 320px viewport`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 844 });
+      await page.emulateMedia({ colorScheme });
+      await page.context().addCookies([
+        {
+          name: "p2a_ui_language",
+          value: language,
+          url: "http://127.0.0.1:4317",
+        },
+      ]);
+      await page.route(/^https?:\/\/(?!127\.0\.0\.1:4317)/, (route) =>
+        route.abort(),
+      );
+      await page.route(`**/api/jobs/${articleId}`, (route) =>
+        route.fulfill({ json: articleFixture() }),
+      );
+
+      for (const [url, selector] of [
+        ["/login", "#username"],
+        ["/", "#source-url"],
+        ["/articles", "#articles-view"],
+        [`/#job=${articleId}`, "#article > h1"],
+      ]) {
+        await page.goto(url);
+        await expect(page.locator(selector)).toBeVisible();
+        await page.addStyleTag({
+          content: `
+            * {
+              line-height: 1.5 !important;
+              letter-spacing: 0.12em !important;
+              word-spacing: 0.16em !important;
+            }
+            p { margin-bottom: 2em !important; }
+          `,
+        });
+
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+          )
+          .toBe(true);
+
+        if (url === "/login") {
+          await page.request.post("/login", {
+            form: { username: "regression", password },
+          });
+        }
+      }
     });
   }
 }

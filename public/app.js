@@ -373,6 +373,8 @@ localizedFetch("/api/auth")
 const sourcePreview = createSourcePreview($("#source-preview"), $("#audio"));
 let routeVersion = 0;
 let jobPollTimer;
+let processingJob;
+const pendingArticleRetryIds = new Set();
 
 const sourceLabels = {
   spotify: "Spotify",
@@ -466,26 +468,145 @@ form.addEventListener("submit", async (event) => {
 });
 
 function showProgress(job) {
+  processingJob = job;
   landing.classList.add("hidden");
   articlesView.classList.add("hidden");
   resultView.classList.add("hidden");
   articleReadingProgress.classList.add("hidden");
   progressView.classList.remove("hidden");
+  $("#progress-kicker").textContent = t("processing.kicker");
+  $("#progress-title").textContent =
+    job.episode?.title || t("processing.title");
   $("#progress-message").textContent = job.message;
   $("#progress-bar").style.width = `${job.progress}%`;
+  $("#job-progress").setAttribute("aria-valuenow", String(job.progress));
+  $("#job-progress").classList.remove("hidden");
   $("#progress-percent").textContent = `${job.progress}%`;
-  if (job.episode) {
-    $("#progress-title").textContent = job.episode.title;
-  }
+  $("#progress-percent").classList.remove("hidden");
+  $("#progress-error").textContent = "";
+  $("#progress-hint").textContent = t("processing.leaveHint");
+  $("#job-status-retry").classList.add("hidden");
+  $("#job-article-retry").classList.add("hidden");
+  $("#job-article-retry").disabled = pendingArticleRetryIds.has(job.id);
+  $("#job-edit-source").classList.add("hidden");
   finishInitialLoad();
 }
 
+function showProcessingError(
+  message,
+  { failedJob = false, missingJob = false } = {},
+) {
+  const canReuseTranscript =
+    failedJob &&
+    !processingJob.savedShareKey &&
+    processingJob.transcript?.length > 0 &&
+    Boolean(processingJob.episode);
+  $("#progress-kicker").textContent = t(
+    failedJob ? "processing.failed" : "processing.statusUnavailable",
+  );
+  if (!processingJob.episode) {
+    $("#progress-title").textContent = t(
+      failedJob ? "processing.failed" : "processing.statusUnavailable",
+    );
+  }
+  $("#progress-message").textContent = "";
+  $("#job-progress").classList.add("hidden");
+  $("#progress-percent").classList.add("hidden");
+  $("#progress-error").textContent = message;
+  $("#progress-hint").textContent = missingJob
+    ? ""
+    : t(
+        failedJob
+          ? canReuseTranscript
+            ? "processing.reuseHint"
+            : "processing.restartHint"
+          : "processing.statusHint",
+      );
+  $("#job-status-retry").classList.toggle("hidden", failedJob || missingJob);
+  $("#job-article-retry").classList.toggle("hidden", !canReuseTranscript);
+  $("#job-edit-source").classList.toggle(
+    "hidden",
+    !failedJob || !processingJob.sourceUrl,
+  );
+}
+
+$("#job-status-retry").addEventListener("click", () => {
+  poll(processingJob.id);
+});
+
+$("#job-edit-source").addEventListener("click", () => {
+  $("#source-url").value = processingJob.sourceUrl;
+  form.elements.language.value = processingJob.language;
+  form.elements.articleLength.value = processingJob.articleLength;
+  history.pushState(null, "", "/");
+  showArticleRoute();
+  $("#form-error").textContent = "";
+  $("#source-url").focus();
+});
+
+$("#job-article-retry").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const version = routeVersion;
+  const jobId = processingJob.id;
+  if (pendingArticleRetryIds.has(jobId)) {
+    return;
+  }
+  pendingArticleRetryIds.add(jobId);
+  button.disabled = true;
+  $("#progress-error").textContent = "";
+  try {
+    const response = await localizedFetch(`/api/jobs/${jobId}/retry-article`, {
+      method: "POST",
+    });
+    const job = await response.json();
+    if (!response.ok) {
+      throw new LocalizedError(job.error || t("error.jobStart"));
+    }
+    if (version === routeVersion) {
+      showProgress(job);
+      poll(jobId);
+    }
+  } catch (error) {
+    if (version === routeVersion) {
+      // The server may have accepted paid work before the response was lost.
+      // Reconcile its status before offering another regeneration.
+      showProcessingError(errorText(error));
+    }
+  } finally {
+    pendingArticleRetryIds.delete(jobId);
+    button.disabled = pendingArticleRetryIds.has(processingJob.id);
+  }
+});
+
 async function poll(id, version = ++routeVersion) {
   clearTimeout(jobPollTimer);
+  if (processingJob?.id !== id) {
+    // Drop the previous job's recovery controls while preserving the initial
+    // loading shell until the requested job's state is known.
+    processingJob = { id, progress: 0, message: t("job.checkingSource") };
+    $("#progress-title").textContent = t("job.checkingSource");
+    $("#progress-kicker").textContent = "";
+    $("#progress-message").textContent = "";
+    $("#progress-error").textContent = "";
+    $("#progress-hint").textContent = "";
+    for (const selector of [
+      "#job-status-retry",
+      "#job-article-retry",
+      "#job-edit-source",
+      "#job-progress",
+      "#progress-percent",
+    ]) {
+      $(selector).classList.add("hidden");
+    }
+  }
+  let missingJob = false;
   try {
     const response = await localizedFetch(`/api/jobs/${id}`);
     if (!response.ok) {
-      throw new LocalizedError(t("error.jobNotFound"));
+      missingJob = response.status === 404;
+      throw new LocalizedError(
+        t(missingJob ? "error.jobNotFound" : "processing.statusUnavailable"),
+      );
     }
     const job = await response.json();
     if (version !== routeVersion) {
@@ -496,17 +617,26 @@ async function poll(id, version = ++routeVersion) {
       return renderResult(job);
     }
     if (job.stage === "failed") {
-      throw new LocalizedError(job.error || t("error.processingFailed"));
+      showProcessingError(job.error || t("error.processingFailed"), {
+        failedJob: true,
+      });
+      return;
     }
     jobPollTimer = setTimeout(() => poll(id, version), 1800);
   } catch (error) {
     if (version !== routeVersion) {
       return;
     }
-    progressView.classList.add("hidden");
-    landing.classList.remove("hidden");
-    $("#form-error").textContent = errorText(error);
-    finishInitialLoad();
+    showProgress(
+      processingJob?.id === id
+        ? processingJob
+        : {
+            id,
+            progress: 0,
+            message: "",
+          },
+    );
+    showProcessingError(errorText(error), { missingJob });
   }
 }
 
@@ -1047,7 +1177,13 @@ function articleCard(article) {
           article.imageUrl ? "" : "article-card-placeholder"
         }"
         href="${articleUrl}"
-        aria-label="${escapeHtml(t("article.read", { title: article.title }))}"
+        aria-label="${escapeHtml(
+          t("article.read", {
+            title: article.imageUrl
+              ? article.title
+              : `${number}: ${article.title}`,
+          }),
+        )}"
       >
         ${
           article.imageUrl
@@ -1186,23 +1322,18 @@ function processingCard(job) {
 }
 
 function processingShelf() {
+  if (processingState.length === 0) {
+    return "";
+  }
   return html`
     <section class="article-shelf processing-shelf">
       <div class="article-shelf-heading">
         <h2>${t("overview.processing")}</h2>
         <span class="article-shelf-count">${processingState.length}</span>
       </div>
-      ${
-        processingState.length
-          ? html`
-              <div class="processing-grid">
-                ${processingState.map(processingCard).join("")}
-              </div>
-            `
-          : html`
-              <p class="article-shelf-empty">${t("overview.noProcessing")}</p>
-            `
-      }
+      <div class="processing-grid">
+        ${processingState.map(processingCard).join("")}
+      </div>
     </section>
   `;
 }

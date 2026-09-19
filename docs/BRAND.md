@@ -65,6 +65,9 @@ stroke uses orange. That orange stroke marks the transition from sound to text.
 - Reuse the same contours, proportions, line weights, rounded ends, and color
   roles in the owner header, public reader header, login, and landing illustration.
   Scale the complete artwork rather than drawing a different mark for each role.
+- Use that same static mark on the processing screen. Let the episode title,
+  stage, and actual progress explain what is happening; a spinning record adds
+  a competing audio metaphor without useful progress information.
 - Preserve the uneven waveform heights and staggered line lengths. The curved
   strokes must visibly become text lines; keep the transition continuous.
 - Keep the mark open, without a surrounding badge, divider, or extra icon.
@@ -123,6 +126,9 @@ account data or owner-only routes.
 - Use Newsreader for editorial headings and article typography, Manrope for
   interface text, and DM Mono for compact metadata and utility labels. Reuse the
   existing `--serif`, `--sans`, and `--mono` properties.
+- The login screen uses Georgia and system interface fonts so signing in does
+  not depend on external font loading. Its shared mark, paper palette, and
+  heading hierarchy maintain the connection to the reader.
 - Keep long text comfortable to read through line length, line height, and space
   between sections. Preserve the distinction between headlines, introductions,
   body text, and metadata.
@@ -209,6 +215,11 @@ Use direct, concrete language that explains what an action does or what happened
 Keep labels short enough to scan without making their meaning ambiguous. Errors
 should explain the problem and the available next step. Avoid promotional claims
 and unnecessary technical details in the reading flow.
+
+Keep processing failures beside the source title and recovery actions. Distinguish
+checking an unavailable status from starting paid work. Explain when an existing
+transcript can be reused and when regenerating the article incurs additional cost.
+Returning to the source form should preserve its link, language, and length.
 
 Dutch is the default user-facing language. Where the interface offers English,
 preserve the same meaning and tone across translations. Keep source attribution

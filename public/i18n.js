@@ -885,6 +885,50 @@ export const messages = {
     nl: "We maken je artikel…",
     en: "We’re working on your article…",
   },
+  "processing.leaveHint": {
+    nl: "Je kunt dit scherm verlaten. De voortgang en het resultaat vind je bij Artikelen.",
+    en: "You can leave this screen. Find the progress and result in Articles.",
+  },
+  "processing.failed": {
+    nl: "Verwerking gestopt",
+    en: "Processing stopped",
+  },
+  "processing.statusUnavailable": {
+    nl: "Status niet beschikbaar",
+    en: "Status unavailable",
+  },
+  "processing.statusHint": {
+    nl: "De verwerking kan nog doorgaan. Controleer de status opnieuw; dit start geen nieuwe opdracht.",
+    en: "Processing may still be running. Check the status again; this does not start a new job.",
+  },
+  "processing.reuseHint": {
+    nl: "Je transcript is bewaard. Opnieuw proberen maakt alleen het artikel opnieuw en brengt extra API-kosten met zich mee.",
+    en: "Your transcript is saved. Retrying only regenerates the article and incurs additional API costs.",
+  },
+  "processing.restartHint": {
+    nl: "Bekijk de bron en instellingen voordat je opnieuw begint. Een nieuwe opdracht brengt opnieuw verwerkingskosten met zich mee.",
+    en: "Review the source and settings before starting again. A new job incurs processing costs again.",
+  },
+  "processing.checkStatus": {
+    nl: "Controleer status opnieuw",
+    en: "Check status again",
+  },
+  "processing.retryArticle": {
+    nl: "Maak artikel opnieuw",
+    en: "Regenerate article",
+  },
+  "processing.editSource": {
+    nl: "Bekijk bron en instellingen",
+    en: "Review source and settings",
+  },
+  "processing.library": {
+    nl: "Naar artikelen",
+    en: "Go to articles",
+  },
+  "processing.progress": {
+    nl: "Voortgang van de verwerking",
+    en: "Processing progress",
+  },
   "progress.label": {
     nl: "Leesvoortgang van het artikel",
     en: "Article reading progress",

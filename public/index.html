@@ -353,24 +353,83 @@
           <p id="articles-error" class="error" role="alert"></p>
         </section>
 
-        <section
-          id="progress-view"
-          class="progress-view hidden"
-          aria-live="polite"
-        >
-          <div class="record"><div class="record-center"></div></div>
+        <section id="progress-view" class="progress-view hidden">
+          <svg
+            class="processing-mark"
+            width="192"
+            height="96"
+            viewBox="0 0 240 120"
+            fill="none"
+            stroke-width="9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <g stroke="var(--green)">
+              <path d="M14 52v16" />
+              <path d="M34 34v52" />
+              <path d="M54 14v92" />
+              <path d="M74 28v64" />
+            </g>
+            <path stroke="var(--ink)" d="M98 96V54Q98 26 126 26h100" />
+            <path stroke="var(--orange)" d="M124 96V64Q124 50 138 50h72" />
+            <path stroke="var(--ink)" d="M150 96v-8q0-14 14-14h62" />
+          </svg>
           <p class="eyebrow">
-            <span></span>
-            <span data-i18n="processing.kicker">{{processing.kicker}}</span>
+            <span id="progress-kicker">{{processing.kicker}}</span>
           </p>
           <h1 id="progress-title" data-i18n="processing.title">
             {{processing.title}}
           </h1>
-          <p id="progress-message" data-i18n="job.checkingSource">
+          <p id="progress-message" role="status" data-i18n="job.checkingSource">
             {{job.checkingSource}}
           </p>
-          <div class="progress-track"><div id="progress-bar"></div></div>
-          <span id="progress-percent" class="mono">0%</span>
+          <div
+            id="job-progress"
+            class="progress-track"
+            role="progressbar"
+            aria-label="{{processing.progress}}"
+            data-i18n-aria-label="processing.progress"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <div id="progress-bar"></div>
+          </div>
+          <span id="progress-percent" class="mono" aria-hidden="true">0%</span>
+          <p id="progress-error" class="error" role="alert"></p>
+          <p id="progress-hint" class="progress-hint"></p>
+          <div class="progress-actions">
+            <button
+              id="job-status-retry"
+              type="button"
+              class="hidden"
+              data-i18n="processing.checkStatus"
+            >
+              {{processing.checkStatus}}
+            </button>
+            <button
+              id="job-article-retry"
+              type="button"
+              class="hidden"
+              data-i18n="processing.retryArticle"
+              aria-describedby="progress-hint"
+            >
+              {{processing.retryArticle}}
+            </button>
+            <button
+              id="job-edit-source"
+              type="button"
+              class="hidden"
+              data-i18n="processing.editSource"
+            >
+              {{processing.editSource}}
+            </button>
+            <a href="/articles" data-i18n="processing.library"
+              >{{processing.library}}</a
+            >
+          </div>
         </section>
 
         <section id="result-view" class="result-view hidden">
@@ -378,8 +437,6 @@
             id="continue-reading"
             class="continue-reading hidden"
             type="button"
-            aria-label="{{readingPosition.resumeLabel}}"
-            data-i18n-aria-label="readingPosition.resumeLabel"
           >
             <span data-i18n="readingPosition.resume"
               >{{readingPosition.resume}}</span
