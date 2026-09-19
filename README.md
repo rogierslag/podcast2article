@@ -141,15 +141,18 @@ reported service tier, request ID, duration, usage figures, and attempts.
 Automatic retries each get their own record. Usage from a successful API request
 is retained even when the resulting article content is rejected.
 
-`knownEstimatedCostUsd` sums known USD estimates;
-`unknownCostRequests` counts attempts with unknown costs.
+`knownEstimatedCostUsd` sums known USD estimates and is stored with the article
+in the job JSON. These amounts are not recalculated against the current price
+table when loaded. `unknownCostRequests` counts attempts with unknown costs.
 A missing amount is `null`, not zero. Estimates use stored prices dated
-15 September 2026: reported audio duration for `gpt-4o-transcribe-diarize`, and
+19 September 2026: reported audio duration for `gpt-4o-transcribe-diarize`, and
 tokens, cache breakdown, context length, reported service tier, and any regional
-surcharge for `gpt-5.6-terra`. Other models and custom API endpoints still record
-usage but receive no cost estimate. Prices are in `src/services/api-usage.ts`;
-each estimate stores the prices and source used, so historical amounts do not
-change when prices are updated.
+surcharge for `gpt-5.6-terra` and `gpt-5.6-sol`. Other models and custom API endpoints
+still record usage but receive no cost estimate. Prices are in
+`src/services/api-usage.ts`; each estimate stores the prices and source used, so
+historical amounts do not change when prices are updated. According to OpenAI,
+promotional pricing for `gpt-5.6-sol` applies until at least 21 November 2026.
+Existing jobs are not automatically repriced.
 
 These are API cost estimates, not invoice amounts. Hosting, downloads, and FFmpeg
 costs are excluded. Older jobs are not retrospectively treated as free: missing
