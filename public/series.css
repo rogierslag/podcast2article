@@ -1,0 +1,172 @@
+.series-page {
+  max-width: 1040px;
+  margin: 64px auto 96px;
+  padding: 0 32px;
+}
+.series-heading h1 {
+  font: 500 clamp(42px, 6vw, 72px) / 1.05 var(--serif);
+  letter-spacing: -0.035em;
+  margin: 16px 0;
+}
+.series-heading .intro {
+  max-width: 660px;
+  margin-bottom: 32px;
+}
+.series-page h2 {
+  font: 500 32px / 1.2 var(--serif);
+  margin: 0 0 16px;
+}
+.series-page .composer {
+  padding: 24px 28px;
+}
+.series-page .url-row {
+  gap: 16px;
+}
+.series-page input {
+  min-width: 0;
+}
+.series-hint {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.series-preview {
+  border-top: 1px solid var(--line);
+  padding: 28px 0;
+  margin-top: 24px;
+}
+.series-page a {
+  color: inherit;
+  text-underline-offset: 4px;
+}
+.series-page ol {
+  padding-left: 20px;
+  line-height: 1.8;
+  font-size: 14px;
+}
+.series-page .options {
+  flex-wrap: wrap;
+  margin: 24px 0;
+  gap: 20px;
+}
+.series-page .options select {
+  width: auto;
+  max-width: 100%;
+}
+.series-plan {
+  font-weight: 600;
+  line-height: 1.7;
+}
+.series-primary,
+.series-control,
+.series-candidate {
+  font: 600 13px var(--sans);
+  color: var(--ink);
+  background: var(--paper);
+  padding: 12px 16px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  cursor: pointer;
+}
+.series-primary {
+  color: var(--paper);
+  background: var(--ink);
+}
+.series-page button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.series-page :focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 4px;
+}
+.series-candidate {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  text-align: left;
+}
+.series-following {
+  margin-top: 48px;
+  border-top: 1px solid var(--line);
+  padding-top: 32px;
+}
+.series-item {
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 24px;
+}
+.series-item h3 {
+  font: 500 26px / 1.2 var(--serif);
+  margin: 0 0 12px;
+}
+.series-item p {
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+.series-item .series-state {
+  font: 12px var(--mono);
+  color: var(--accent-text);
+}
+.series-item .series-control {
+  flex-shrink: 0;
+}
+.series-overview {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  .series-page {
+    margin: 36px auto 60px;
+    padding: 0 22px;
+  }
+  .series-page .composer {
+    padding: 20px 16px;
+  }
+  .series-page .url-row {
+    flex-wrap: wrap;
+  }
+  .series-page .url-row input {
+    flex: 1 1 100%;
+  }
+  .series-page .url-row button {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+  .series-page .options {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .series-page .options label {
+    display: grid;
+    gap: 8px;
+  }
+  .series-item {
+    flex-wrap: wrap;
+  }
+}
+@media print {
+  .series-page form,
+  .series-control {
+    display: none;
+  }
+}
+
+.series-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: start;
+}
+.series-item .series-limit-note {
+  max-width: 560px;
+  font-weight: 600;
+}
+.series-page button[data-limit-disabled="true"] {
+  cursor: default;
+}

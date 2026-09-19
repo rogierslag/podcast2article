@@ -28,6 +28,7 @@ import type {
   ArticleSummary,
   Job,
   ProcessingJobSummary,
+  PodcastEpisode,
 } from "../types.js";
 
 const root = path.resolve("data");
@@ -61,7 +62,7 @@ export class DuplicateJobError extends Error {
   }
 }
 
-function userDirectory(username: string): string {
+export function userDirectory(username: string): string {
   if (!/^[a-z][a-z0-9_-]{1,31}$/.test(username)) {
     throw new Error("Ongeldige gebruikersnaam.");
   }
@@ -281,6 +282,97 @@ export async function createJob(
   });
   enqueueJob(username, job, "full");
   return job;
+}
+
+/** Called only with feed metadata resolved on the server, never with a client episode payload. */
+export async function createPodcastJob(
+  username: string,
+  item: PodcastEpisode,
+  options: Pick<Job, "language" | "articleLength">,
+): Promise<Job> {
+  userDirectory(username);
+  const existing = [...memory.entries()].find(
+    ([key, job]) =>
+      key.startsWith(`${username}/`) &&
+      (job.podcastEpisodeKey === item.key ||
+        (job.episode?.mediaUrl === item.episode.mediaUrl &&
+          job.stage !== "failed")),
+  )?.[1];
+  if (existing) {
+    return existing;
+  }
+  const now = new Date().toISOString();
+  const job: Job = {
+    language: options.language,
+    articleLength: options.articleLength,
+    id: randomUUID(),
+    sourceUrl: item.episode.sourceUrl,
+    podcastEpisodeKey: item.key,
+    apiUsage: {
+      trackingStartedAt: now,
+      coverage: "complete",
+      requests: [],
+      knownEstimatedCostUsd: 0,
+      unknownCostRequests: 0,
+    },
+    episode: structuredClone(item.episode),
+    stage: "queued",
+    progress: 2,
+    message: "Opdracht staat klaar",
+    createdAt: now,
+    updatedAt: now,
+  };
+  // Reserve before the first await, so simultaneous checks cannot enqueue duplicates.
+  const key = jobKey(username, job.id);
+  memory.set(key, job);
+  try {
+    await persist(username, job);
+  } catch (error) {
+    memory.delete(key);
+    throw error;
+  }
+  enqueueJob(username, job, "full");
+  return job;
+}
+
+export function podcastOutstandingCount(
+  username: string,
+  ids: string[],
+  keys: string[] = [],
+): number {
+  const jobIds = new Set(ids);
+  const episodeKeys = new Set(keys);
+  return [...memory.entries()].filter(
+    ([key, job]) =>
+      key.startsWith(`${username}/`) &&
+      (jobIds.has(job.id) ||
+        (job.podcastEpisodeKey && episodeKeys.has(job.podcastEpisodeKey))) &&
+      !job.deletedAt &&
+      job.stage !== "failed" &&
+      (job.stage !== "complete" || !job.readAt),
+  ).length;
+}
+
+export function podcastJobStatus(username: string, ids: string[]) {
+  const identities = new Set(ids);
+  const jobs = [...memory.entries()]
+    .filter(
+      ([key, job]) => key.startsWith(`${username}/`) && identities.has(job.id),
+    )
+    .map(([, job]) => job);
+  return {
+    complete: jobs.filter((job) => job.stage === "complete").length,
+    processing: jobs.filter(
+      (job) => job.stage !== "complete" && job.stage !== "failed",
+    ).length,
+    failed: jobs
+      .filter((job) => job.stage === "failed")
+      .map((job) => ({
+        id: job.id,
+        title: job.episode?.title || "",
+        error: job.error,
+      })),
+  };
 }
 
 async function getStoredJob(
@@ -841,12 +933,16 @@ async function processJob(
       progress: 8,
       message: "Openbare opnamebron controleren",
     });
-    const releaseMetadata = await metadataSlots.acquire(signal);
     let episode: NonNullable<Job["episode"]>;
-    try {
-      episode = await resolveSource(job.sourceUrl, signal);
-    } finally {
-      releaseMetadata();
+    if (job.podcastEpisodeKey && job.episode) {
+      episode = structuredClone(job.episode);
+    } else {
+      const releaseMetadata = await metadataSlots.acquire(signal);
+      try {
+        episode = await resolveSource(job.sourceUrl, signal);
+      } finally {
+        releaseMetadata();
+      }
     }
     episode.playbackUrl = `/api/jobs/${job.id}/audio`;
     jobLog(job.id, "resolving", "Opname gekoppeld", {

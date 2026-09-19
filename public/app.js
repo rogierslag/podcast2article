@@ -376,6 +376,7 @@ let jobPollTimer;
 
 const sourceLabels = {
   spotify: "Spotify",
+  rss: "Podcast",
   youtube: "YouTube",
   fathom: "Fathom",
   "google-drive": "Google Drive",
@@ -431,6 +432,18 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   $("#form-error").textContent = "";
   const data = Object.fromEntries(new FormData(form));
+  const source = new URL(data.sourceUrl);
+  if (
+    ["open.spotify.com", "spotify.com", "www.spotify.com"].includes(
+      source.hostname,
+    ) &&
+    /^\/show\//.test(source.pathname)
+  ) {
+    location.assign(
+      `/series?${new URLSearchParams({ url: source.toString() })}`,
+    );
+    return;
+  }
   try {
     const response = await localizedFetch("/api/jobs", {
       method: "POST",
@@ -568,7 +581,9 @@ function renderResult(job) {
         ? t("source.viewYoutube")
         : episode.sourceType === "fathom"
           ? t("source.viewFathom")
-          : t("source.viewSpotify");
+          : episode.sourceType === "rss"
+            ? t("source.viewPodcast")
+            : t("source.viewSpotify");
   const details = [
     episode.publishedAt
       ? new Date(episode.publishedAt).toLocaleDateString(locale, {

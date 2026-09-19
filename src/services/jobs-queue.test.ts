@@ -390,3 +390,124 @@ it("keeps earlier charges when retrying article generation", async () => {
   );
   expect(state.transcribe).toHaveBeenCalledTimes(1);
 });
+
+describe("podcast jobs", () => {
+  const episode = {
+    key: "stable-feed-guid",
+    episode: {
+      sourceType: "rss" as const,
+      sourceUrl: "https://example.com/episodes/one",
+      sourceName: "A public podcast",
+      title: "Episode one",
+      mediaUrl: "https://example.com/one.mp3",
+    },
+  };
+  it("reserves a feed episode once, preserves resolved metadata and isolates accounts", async () => {
+    const jobs = await import("./jobs.js");
+    await jobs.createJob("owner", input);
+
+    const subscriptionOptions = { ...input, pending: [episode] };
+    const [first, repeated] = await Promise.all([
+      jobs.createPodcastJob("owner", episode, subscriptionOptions),
+      jobs.createPodcastJob(
+        "owner",
+        {
+          ...episode,
+          episode: {
+            ...episode.episode,
+            mediaUrl: "https://example.com/changed.mp3",
+          },
+        },
+        input,
+      ),
+    ]);
+    const other = await jobs.createPodcastJob("other", episode, input);
+
+    expect(repeated.id).toBe(first.id);
+    expect(other.id).not.toBe(first.id);
+    await vi.waitFor(() => {
+      expect(first.stage).toBe("transcribing");
+      expect(other.stage).toBe("transcribing");
+    });
+    expect(state.resolveSource).toHaveBeenCalledTimes(1);
+    expect(state.download).toHaveBeenCalledWith(
+      episode.episode.mediaUrl,
+      expect.any(String),
+      expect.any(AbortSignal),
+      expect.any(Object),
+    );
+    expect(first.episode).toMatchObject(episode.episode);
+    expect(first.podcastEpisodeKey).toBe(episode.key);
+    expect(first.apiUsage).toMatchObject({
+      coverage: "complete",
+      requests: [],
+      knownEstimatedCostUsd: 0,
+      unknownCostRequests: 0,
+    });
+    expect(first).not.toHaveProperty("pending");
+    expect(jobs.podcastJobStatus("owner", [first.id]).processing).toBe(1);
+  });
+  it("does not recreate a completed podcast job after loading persisted state", async () => {
+    const jobs = await import("./jobs.js");
+    const completed = {
+      ...input,
+      id: "00000000-0000-4000-8000-000000000772",
+      sourceUrl: episode.episode.sourceUrl,
+      podcastEpisodeKey: episode.key,
+      episode: episode.episode,
+      stage: "complete",
+      progress: 100,
+      message: "Klaar",
+      createdAt: "2026-09-01T10:00:00Z",
+      updatedAt: "2026-09-01T10:00:00Z",
+    } satisfies Job;
+    state.files.set(
+      path.resolve("data/users/owner/jobs", `${completed.id}.json`),
+      JSON.stringify(completed),
+    );
+    await jobs.resumeIncompleteJobs(["owner"]);
+
+    const repeated = await jobs.createPodcastJob("owner", episode, input);
+
+    expect(repeated.id).toBe(completed.id);
+    expect(repeated.stage).toBe("complete");
+    expect(state.resolveSource).not.toHaveBeenCalled();
+  });
+});
+
+it("counts unread and queued podcast jobs, excluding read, deleted, failed and other accounts", async () => {
+  const jobs = await import("./jobs.js");
+  const ids: string[] = [];
+  for (const [index, flags] of [
+    {},
+    { readAt: "2026-09-01T12:00:00Z" },
+    { deletedAt: "2026-09-01T12:00:00Z" },
+    { stage: "failed" as const },
+  ].entries()) {
+    const id = `00000000-0000-4000-8000-00000000078${index}`;
+    ids.push(id);
+    const job = {
+      ...input,
+      id,
+      stage: "complete",
+      progress: 100,
+      message: "Klaar",
+      createdAt: "2026-09-01T10:00:00Z",
+      updatedAt: "2026-09-01T10:00:00Z",
+      ...flags,
+    } satisfies Job;
+    state.files.set(
+      path.resolve("data/users/owner/jobs", `${id}.json`),
+      JSON.stringify(job),
+    );
+  }
+  await jobs.resumeIncompleteJobs(["owner"]);
+  const queued = await jobs.createJob("owner", {
+    ...input,
+    sourceUrl: "https://www.youtube.com/watch?v=abcdefghijk",
+  });
+  ids.push(queued.id);
+
+  expect(jobs.podcastOutstandingCount("owner", ids)).toBe(2);
+  expect(jobs.podcastOutstandingCount("other", ids)).toBe(0);
+});

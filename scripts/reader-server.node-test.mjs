@@ -242,11 +242,36 @@ test("shared reader assets are public while owner routes require authentication"
   for (const route of [
     "/api/deployment-status",
     "/api/articles",
+    "/api/subscriptions",
+    "/api/subscriptions/preview",
     "/api/jobs",
     `/api/jobs/${articleId}/audio`,
   ]) {
     assert.equal((await fetch(origin + route)).status, 401, route);
   }
+});
+
+test("series discovery, confirmation and mutations require an owner session", async () => {
+  for (const [route, method] of [
+    ["/api/subscriptions/discover", "POST"],
+    ["/api/subscriptions/preview", "POST"],
+    ["/api/subscriptions", "POST"],
+    [
+      "/api/subscriptions/00000000-0000-4000-8000-000000000771/backfill",
+      "POST",
+    ],
+    ["/api/subscriptions/00000000-0000-4000-8000-000000000771", "PATCH"],
+  ]) {
+    const response = await fetch(origin + route, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    assert.equal(response.status, 401, route);
+  }
+  const page = await fetch(`${origin}/series`, { redirect: "manual" });
+  assert.equal(page.status, 303);
+  assert.equal(page.headers.get("location"), "/login");
 });
 
 test("invalid tokens return public 404s rather than login redirects", async () => {

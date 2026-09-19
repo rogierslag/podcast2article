@@ -27,6 +27,9 @@ import {
 import {
   createArticleShare,
   createJob,
+  createPodcastJob,
+  podcastOutstandingCount,
+  userDirectory,
   DuplicateJobError,
   deleteArticle,
   getJob,
@@ -45,6 +48,17 @@ import {
 import { generateArticlePdf, pdfDownloadName } from "./services/pdf.js";
 import { validateSourceUrl } from "./services/resolver.js";
 
+import { fetchPodcastFeed } from "./services/podcast-feeds.js";
+import { SubscriptionStore } from "./services/subscriptions.js";
+import { subscriptionRouter } from "./services/subscription-routes.js";
+
+const subscriptions = new SubscriptionStore({
+  directory: userDirectory,
+  fetchFeed: fetchPodcastFeed,
+  enqueue: createPodcastJob,
+  outstanding: podcastOutstandingCount,
+  canProcess: () => Boolean(process.env.OPENAI_API_KEY),
+});
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST?.trim() || "127.0.0.1";
@@ -437,6 +451,14 @@ app.post("/api/saved-shares/:token", async (request, response) => {
   }
 });
 
+app.use("/api/subscriptions", subscriptionRouter(subscriptions));
+app.get("/series", async (_request, response) => {
+  const template = await readFile(
+    path.join(publicDirectory, "series.html"),
+    "utf8",
+  );
+  response.type("html").send(renderPage(response, template));
+});
 app.get(["/", "/index.html", "/articles"], sendIndex);
 app.get("/shortcuts/Add%20to%20Reads.shortcut", (_request, response) => {
   response.type("application/x-apple-shortcut");
@@ -751,6 +773,8 @@ app.use(
 );
 
 await resumeIncompleteJobs(auth.enabled ? auth.usernames : ["local"]);
+await subscriptions.load(auth.enabled ? auth.usernames : ["local"]);
+subscriptions.start();
 
 const server = app.listen(port, host, () => {
   console.log(
@@ -789,7 +813,7 @@ async function shutdown(signal: "SIGINT" | "SIGTERM"): Promise<void> {
     process.exit(1);
   }, 15_000);
   forcedExit.unref();
-  await shutdownJobs(signal);
+  await Promise.all([subscriptions.stop(), shutdownJobs(signal)]);
   clearTimeout(forcedExit);
   console.log(`${new Date().toISOString()} INFO  Graceful shutdown voltooid`);
   process.exit(0);

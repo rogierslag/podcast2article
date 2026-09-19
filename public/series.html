@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="{{language}}">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=contain"
+    />
+    <meta
+      name="description"
+      content="{{page.description}}"
+      data-i18n-content="page.description"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#e85e2a"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#1c1b19"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link rel="stylesheet" href="/theme.css?v=system-dark-v1" />
+    <title data-i18n="page.title">{{page.title}}</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css?v=sound-to-text-v2" />
+    <script src="/series.js" type="module"></script>
+    <link rel="stylesheet" href="/series.css" />
+  </head>
+  <body class="native-scroll">
+    <div>
+      <header class="nav">
+        <a
+          class="brand"
+          href="/"
+          aria-label="{{home}}"
+          data-i18n-aria-label="home"
+        >
+          <span class="brand-mark" aria-hidden="true"
+            ><i></i><i></i><i></i><i></i
+          ></span>
+          <span>Podcast<span>2</span>Article</span>
+        </a>
+        <nav
+          class="main-nav"
+          aria-label="{{nav.label}}"
+          data-i18n-aria-label="nav.label"
+        >
+          <a href="/" data-i18n="nav.newArticle">{{nav.newArticle}}</a>
+          <a href="/articles" data-i18n="nav.articles">{{nav.articles}}</a>
+          <a href="/series" data-i18n="nav.series">{{nav.series}}</a>
+          <form id="logout-form" class="hidden" method="post" action="/logout">
+            <button type="submit" data-i18n="nav.logout">{{nav.logout}}</button>
+          </form>
+        </nav>
+      </header>
+
+      <main class="series-page">
+        <div class="series-heading">
+          <p class="eyebrow" data-i18n="series.kicker">{{series.kicker}}</p>
+          <h1 data-i18n="series.title">{{series.title}}</h1>
+          <p class="intro" data-i18n="series.intro">{{series.intro}}</p>
+        </div>
+        <form id="series-search" class="composer">
+          <label for="series-url" data-i18n="series.url">{{series.url}}</label>
+          <div class="url-row">
+            <input
+              id="series-url"
+              type="url"
+              required
+              autocomplete="url"
+              placeholder="https://open.spotify.com/show/…"
+            />
+            <button type="submit" data-i18n="series.search">
+              {{series.search}}
+            </button>
+          </div>
+          <p class="series-hint" data-i18n="series.sources">
+            {{series.sources}}
+          </p>
+        </form>
+        <p id="series-error" class="error" role="alert"></p>
+        <section
+          id="series-candidates"
+          hidden
+          aria-labelledby="series-candidates-title"
+        >
+          <h2 id="series-candidates-title" data-i18n="series.choose">
+            {{series.choose}}
+          </h2>
+          <div id="series-candidate-list"></div>
+        </section>
+        <section
+          id="series-preview"
+          class="series-preview"
+          hidden
+          aria-labelledby="series-preview-title"
+        >
+          <p class="eyebrow" data-i18n="series.preview">{{series.preview}}</p>
+          <h2 id="series-preview-title" tabindex="-1"></h2>
+          <a
+            id="series-feed-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-i18n="series.feed"
+            >{{series.feed}}</a
+          >
+          <p id="series-available"></p>
+          <ol id="series-episodes"></ol>
+          <form id="series-follow">
+            <div class="options">
+              <label
+                ><span data-i18n="series.backfill">{{series.backfill}}</span>
+                <select name="backfill" id="series-backfill">
+                  <option value="latest" data-i18n="series.latest">
+                    {{series.latest}}
+                  </option>
+                  <option value="ten" data-i18n="series.ten">
+                    {{series.ten}}
+                  </option>
+                  <option value="none" data-i18n="series.none">
+                    {{series.none}}
+                  </option>
+                </select>
+              </label>
+              <label
+                ><span data-i18n="form.language">{{form.language}}</span>
+                <select name="language">
+                  <option value="auto" data-i18n="language.auto">
+                    {{language.auto}}
+                  </option>
+                  <option value="nl" data-i18n="language.dutch">
+                    {{language.dutch}}
+                  </option>
+                  <option value="en" data-i18n="language.english">
+                    {{language.english}}
+                  </option>
+                  <option value="de" data-i18n="language.german">
+                    {{language.german}}
+                  </option>
+                  <option value="fr" data-i18n="language.french">
+                    {{language.french}}
+                  </option>
+                  <option value="es" data-i18n="language.spanish">
+                    {{language.spanish}}
+                  </option>
+                </select>
+              </label>
+              <label
+                ><span data-i18n="form.length">{{form.length}}</span>
+                <select name="articleLength">
+                  <option value="compact" data-i18n="length.short">
+                    {{length.short}}
+                  </option>
+                  <option value="standard" selected data-i18n="length.standard">
+                    {{length.standard}}
+                  </option>
+                  <option value="long" data-i18n="length.long">
+                    {{length.long}}
+                  </option>
+                </select>
+              </label>
+            </div>
+            <p id="series-plan" class="series-plan" role="status"></p>
+            <p class="series-hint" data-i18n="series.cost">{{series.cost}}</p>
+            <button
+              type="submit"
+              class="series-primary"
+              data-i18n="series.follow"
+            >
+              {{series.follow}}
+            </button>
+          </form>
+        </section>
+        <section
+          class="series-following"
+          aria-labelledby="series-following-title"
+        >
+          <h2 id="series-following-title" data-i18n="series.following">
+            {{series.following}}
+          </h2>
+          <p class="series-hint" data-i18n="series.schedule">
+            {{series.schedule}}
+          </p>
+          <p id="series-status" role="status"></p>
+          <div id="series-list"></div>
+          <a
+            href="/articles"
+            class="series-overview"
+            data-i18n="series.articles"
+            >{{series.articles}}</a
+          >
+        </section>
+      </main>
+      <footer class="owner-footer">
+        <span>Podcast2Article</span><span data-i18n="footer">{{footer}}</span>
+        <div
+          class="language-switcher"
+          role="group"
+          aria-label="{{uiLanguage.label}}"
+          data-i18n-aria-label="uiLanguage.label"
+        >
+          <button
+            type="button"
+            data-ui-language="nl"
+            lang="nl"
+            aria-pressed="false"
+          >
+            <span class="language-flag" aria-hidden="true">🇳🇱</span>
+            Nederlands
+          </button>
+          <button
+            type="button"
+            data-ui-language="en"
+            lang="en"
+            aria-pressed="false"
+          >
+            <span class="language-flag" aria-hidden="true">🇬🇧</span>
+            English
+          </button>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -296,3 +296,40 @@ zodat bestaande productiechecks geen browsers hoeven te installeren.
   [de operationele controles](docs/OPERATIONS.md).
 
 Bijdragen zijn welkom. Zie [LICENSE](./LICENSE) voor de MIT-licentie.
+
+### Podcastseries volgen
+
+Via **Series** kun je een Spotify-serielink of openbare RSS-feed toevoegen.
+Controleer de gevonden serie en kies de laatste aflevering, de laatste tien,
+of alleen nieuwe afleveringen. Het scherm toont
+voor bevestiging hoeveel afleveringen je inhaalt. Elke nieuwe verwerking gebruikt
+de ingestelde betaalde transcriptie- en artikelmodellen.
+
+De server controleert actieve series bij het starten en daarna elk uur. Hij moet
+hiervoor blijven draaien; dit vereist geen externe cronjob. De bestaande wachtrij
+verwerkt één opname tegelijk. Via **Pauzeer** stop je nieuwe controles; opdrachten
+die al in de verwerkingswachtrij staan worden nog afgerond. **Hervat** haalt ook
+sinds de pauze gemiste afleveringen op, voor zover die nog in de feed staan.
+
+Series, overgeslagen afleveringen en nog in te plannen afleveringen staan per
+gebruiker in `data/users/<username>/subscriptions.json`. Deze status wordt atomair
+opgeslagen en overleeft een herstart. Afleveringen worden herkend aan feed-URL en
+RSS-GUID (of audiolink als de GUID ontbreekt). Een reeds bekende audiolink wordt
+ook overgeslagen. Mislukte opdrachten worden getoond bij de serie en niet elk uur
+opnieuw gestart. Een mislukte feedcontrole wordt wel automatisch opnieuw geprobeerd.
+Zonder `OPENAI_API_KEY` wordt niets nieuws ingepland.
+
+Spotify wordt gebruikt om de serie te vinden. Bij meerdere zoekresultaten kies
+je zelf de juiste openbare feed. Alleen audioafleveringen in RSS 2.0 worden
+ondersteund; Spotify-exclusives, betaalde feeds en verdwenen archiefafleveringen
+zonder openbare audiobron kunnen niet worden opgehaald. Feeds worden met dezelfde
+publieke-netwerkcontrole als andere bronnen opgehaald, met een limiet van 10 MB;
+DTD's en externe XML-entiteiten worden geweigerd.
+
+Per inhaalactie worden maximaal tien afleveringen ingepland. Bij tien ongelezen
+of nog te verwerken afleveringen pauzeert de serie automatisch. Gelezen,
+verwijderde en mislukte opdrachten tellen niet mee. Na lezen hervat je zelf;
+ook hervatten respecteert de grens. Reeds ingeplande opdrachten worden niet
+geannuleerd. Overgeslagen eerdere afleveringen kun je later per maximaal tien
+inhalen, voor zover de openbare feed ze nog aanbiedt en er ruimte is. Deze actie
+verandert een handmatige pauze niet.
