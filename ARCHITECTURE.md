@@ -6,6 +6,9 @@ This document describes the application architecture of Podcast2Article.
 Infrastructure, deployment, security operations, recovery, and server
 administration are documented separately in `docs/OPERATIONS.md`.
 
+The [service flow diagrams](docs/SERVICE-FLOWS.md) show request handling,
+processing, recovery, subscriptions, public sharing, and API budget enforcement.
+
 ## 1. Purpose
 
 Podcast2Article turns a public Spotify podcast episode, YouTube video, or public
@@ -39,6 +42,7 @@ Podcast2Article / Express
     |   +-- Apple Podcasts / public RSS                         |
     |   +-- YouTube via yt-dlp                                  |
     |   +-- public Google Drive metadata/download               |
+    |   +-- public Fathom recordings via yt-dlp                 |
     |                                                           |
     +-- media processing                                        |
     |   +-- bundled FFmpeg                                      |
@@ -121,7 +125,7 @@ data, model output, or secrets.
 Authentication is implemented in `src/services/auth.ts`.
 
 - `APP_USERS` is a JSON object containing fixed usernames and passwords.
-- An empty account configuration disables authentication and must never be used in production.
+- An empty `APP_USERS` disables authentication only when the legacy `APP_PASSWORD` is also absent. Without either, local development uses the `local` account; production must configure accounts.
 - Password comparison is timing-safe.
 - The complete credential configuration derives the session signing key using `scrypt`.
 - A successful login produces a signed, 30-day `HttpOnly` cookie containing the username.
@@ -155,14 +159,14 @@ retain temporary audio at once, so disk use can exceed the former serial queue.
 Slot waits are abortable and slots are released on both success and failure.
 
 The persisted job record is updated at important boundaries. Job files are
-written as formatted JSON under
-`data/users/<username>/subscriptions.json  followed feeds, seen episodes, pending selections
-data/users/<username>/jobs/<uuid>.json`.
+written as formatted JSON under `data/users/<username>/jobs/<uuid>.json`.
+Series configuration, seen episode keys, and pending selections are stored
+separately in `data/users/<username>/subscriptions.json`.
 
 On startup:
 
 1. every stored job is loaded into memory;
-2. completed and failed jobs remain unchanged;
+2. completed, failed, and deleted jobs are not scheduled;
 3. incomplete jobs are reset to `queued`;
 4. resumable jobs enter the processing pipeline;
 5. the full pipeline runs again, including media preparation and transcription.
@@ -176,7 +180,8 @@ On shutdown:
 2. active OpenAI requests receive an `AbortSignal`;
 3. interrupted work returns to a resumable queued state;
 4. temporary media is removed;
-5. shutdown waits up to the configured service timeout.
+5. the application forces exit after 15 seconds; systemd's 20-second stop timeout
+   is the outer limit.
 
 ### 3.5 Source resolution
 
@@ -185,9 +190,9 @@ On shutdown:
 #### Spotify
 
 Spotify is used for episode identity and metadata, not as the audio download
-source. The resolver searches the public Apple Podcasts index and the
-publisher's public RSS feed for the matching episode, then uses the original
-public media enclosure.
+source. The resolver searches the public Apple Podcasts episode index and
+matches the title, then uses the selected result's public episode audio URL.
+RSS feed fetching is a separate path used by podcast subscriptions.
 
 Spotify-exclusive episodes without a public RSS equivalent cannot be processed.
 
@@ -275,7 +280,8 @@ failed attempts. Completed jobs cannot be regenerated through this endpoint.
 
 `src/services/pdf.ts` creates A4 PDFs directly with PDFKit.
 
-- Chromium and Puppeteer are not installed or required.
+- No browser engine is required for production PDF generation. Playwright installs
+  browsers separately for development tests and brand-asset generation.
 - PDF generation is a short-lived in-process operation.
 - Page numbers and article styling are applied directly.
 - Source citations remain clickable.
@@ -394,8 +400,8 @@ client events cannot establish unique readers or comprehension.
 ```text
 queued
   -> resolving
-  -> downloading
-  -> normalizing and splitting
+  -> queued (metadata ready; waiting for processing and media slots)
+  -> downloading (download, normalization, and splitting)
   -> transcribing
   -> writing
   -> complete
@@ -435,6 +441,7 @@ Detailed flow:
 | `POST`   | `/logout`                        | Expire session                             | Yes            |
 | `GET`    | `/api/deployment-status`         | Deployment failure flag                    | Yes            |
 | `GET`    | `/api/auth`                      | Report auth state                          | Yes            |
+| `GET`    | `/api/account-budget`            | Account spending and reserved allowance    | Yes            |
 | `GET`    | `/api/articles`                  | List completed articles                    | Yes            |
 | `PATCH`  | `/api/articles/:id`              | Set read/unread state                      | Yes            |
 | `DELETE` | `/api/articles/:id`              | Soft-delete article and disable sharing    | Yes            |
@@ -478,28 +485,30 @@ Production application configuration is stored in
 `/etc/podcast2article.env`. Values must never be committed or copied into this
 document.
 
-| Variable                          | Role                                                             |
-| --------------------------------- | ---------------------------------------------------------------- |
-| `OPENAI_API_KEY`                  | OpenAI API credential                                            |
-| `APP_USERS`                       | JSON object with fixed username/password pairs                   |
-| `SPENDING_LIMIT_EXEMPT_USERS`     | Comma-separated exact usernames exempt from spending limits      |
-| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint                             |
-| `HOST`                            | Production bind address; currently loopback                      |
-| `PUBLIC_BASE_URL`                 | Canonical external origin for permalink and social metadata URLs |
-| `PORT`                            | Production HTTP port; currently 3000                             |
-| `NODE_ENV`                        | Production runtime mode                                          |
-| `ARTICLE_MODEL`                   | Article-generation model                                         |
-| `TRANSCRIPTION_MODEL`             | Diarized transcription model                                     |
-| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                                         |
-| `MAX_YOUTUBE_MB`                  | YouTube source limit                                             |
-| `MAX_RECORDING_MB`                | Google Drive or Fathom recording limit                           |
-| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                                                 |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                                                 |
-| `FFMPEG_BIN`                      | Optional absolute path overriding the bundled FFmpeg executable  |
-| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                        |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                            |
-| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                              |
-| `LOG_STACKS`                      | Enable full stack traces in logs                                 |
+| Variable                          | Role                                                                                                                    |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | OpenAI API credential                                                                                                   |
+| `APP_USERS`                       | JSON object with fixed username/password pairs                                                                          |
+| `APP_PASSWORD`                    | Legacy single-account password for `rogier`, used only without `APP_USERS`; configure `APP_USERS` for new installations |
+| `SPENDING_LIMIT_EXEMPT_USERS`     | Comma-separated exact usernames exempt from spending limits                                                             |
+| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint                                                                                    |
+| `OPENAI_BASE_URL`                 | Advanced endpoint override; custom endpoints have no verified cost estimate or budget reservation pricing               |
+| `HOST`                            | Production bind address; currently loopback                                                                             |
+| `PUBLIC_BASE_URL`                 | Canonical external origin for permalink and social metadata URLs                                                        |
+| `PORT`                            | Production HTTP port; currently 3000                                                                                    |
+| `NODE_ENV`                        | Production runtime mode                                                                                                 |
+| `ARTICLE_MODEL`                   | Article-generation model                                                                                                |
+| `TRANSCRIPTION_MODEL`             | Diarized transcription model                                                                                            |
+| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                                                                                                |
+| `MAX_YOUTUBE_MB`                  | YouTube source limit                                                                                                    |
+| `MAX_RECORDING_MB`                | Google Drive or Fathom recording limit                                                                                  |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                                                                                                        |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                                                                                                        |
+| `FFMPEG_BIN`                      | Optional absolute path overriding the bundled FFmpeg executable                                                         |
+| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                                                                               |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                                                                                   |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                                                                                     |
+| `LOG_STACKS`                      | Enable full stack traces in logs                                                                                        |
 
 ## 7. Dependency model
 
@@ -508,7 +517,7 @@ Production dependencies:
 - Express for HTTP;
 - Zod for input validation;
 - fast-xml-parser for podcast feeds;
-- youtube-dl-exec for YouTube acquisition;
+- youtube-dl-exec for YouTube and Fathom acquisition;
 - ffmpeg-static for media processing;
 - OpenAI SDK for transcription and article generation;
 - PDFKit for PDF export.
@@ -530,11 +539,15 @@ src/types.ts               shared application types
 src/lib/logger.ts          structured operational logging
 src/lib/network.ts         bounded network operations
 src/services/auth.ts       password and signed-cookie authentication
-src/services/resolver.ts   Spotify/RSS/Drive source resolution
+src/services/resolver.ts   Spotify/Drive resolution and source dispatch
 src/services/youtube.ts    YouTube metadata and download
+src/services/fathom.ts     public Fathom metadata and download
+src/services/podcast-feeds.ts RSS feed discovery and parsing
 src/services/audio.ts      FFmpeg normalization and splitting
 src/services/openai.ts     transcription and article generation
 src/services/jobs.ts       queue, persistence, lifecycle, recovery
+src/services/api-usage.ts  request ledger and stored cost estimates
+src/services/account-budget.ts rolling allowance and operator exemptions
 src/services/pdf.ts        PDFKit export
 src/services/share-analytics.ts anonymous visit deduplication and counters
 src/services/subscriptions.ts per-user series scheduling and persistence
@@ -563,9 +576,12 @@ Frontend changes also require `node --check public/app.js`,
 `node --check public/share.js`, and `git diff --check`. Browser and media tests
 run separately; see [development](README.md#development).
 
-The production updater refuses to activate a release when dependency install,
-build, or tests fail. After activation it also requires the service and local
-health endpoint to become healthy, otherwise it restores the previous release.
+The production updater installs locked dependencies and runs `yarn run check`,
+including formatting, lint, compilation, Vitest, and Node tests. It separately
+runs the synthetic media preflight before activation; it does not run Playwright
+or wait for GitHub Actions. After activation, it requires the service and local
+health endpoint to become healthy. On failure it restores the previous release
+when one exists; a first deployment has no earlier release to restore.
 
 ## 10. Architectural constraints and known limitations
 

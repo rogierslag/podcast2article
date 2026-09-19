@@ -13,9 +13,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint src public scripts eslint.config.js playwright.config.js",
-    "lint:fix": "npm run lint -- --fix",
-    "check": "npm run format:check && npm run lint && npm run build && npm test",
-    "test:browser": "npm run build && playwright test"
+    "lint:fix": "yarn run lint --fix",
+    "check": "yarn run format:check && yarn run lint && yarn run build && yarn test",
+    "test:browser": "yarn run build && playwright test"
   },
   "engines": {
     "node": ">=24"
@@ -45,5 +45,6 @@
   },
   "resolutions": {
     "qs": "^6.16.0"
-  }
+  },
+  "packageManager": "yarn@1.22.22"
 }

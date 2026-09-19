@@ -58,7 +58,7 @@ issues found, and remaining limitations.
 
 ## Quick start
 
-Requirements: Node.js 24+, Python 3.11+, and an OpenAI API key.
+Requirements: Node.js 24+, Yarn 1.22.22, Python 3.11+, and an OpenAI API key.
 FFmpeg and yt-dlp are bundled as Node dependencies. yt-dlp uses Python on macOS
 and Linux. PDFs are generated directly in Node.js; no server-side browser is
 required.
@@ -67,28 +67,37 @@ Set `FFMPEG_BIN` to the absolute path of a separately installed FFmpeg executabl
 to override the bundled binary. The production installer installs a pinned
 FFmpeg/ffprobe build on Linux x64 with SHA-256 verification. An existing
 `90-ffmpeg-override.conf` is preserved; activating a different version is an
-explicit, reversible administrative action. Every new release runs a real media
-test before activation. See the [management and rollback runbook](docs/FFMPEG.md)
+explicit, reversible administrative action. With the current infrastructure
+updater installed, every new release runs a real media test before activation.
+Application pushes do not update that host script. See the [management and rollback runbook](docs/FFMPEG.md)
 and the [incident report](docs/incidents/2026-08-28-fathom-ffmpeg.md).
 
+Use Yarn 1.22.22 for dependency installation and scripts. The version is pinned
+in `package.json`; `yarn.lock` is the dependency lockfile. If Yarn is missing,
+install it once with `npm install --global yarn@1.22.22`. npm is only used to
+bootstrap package-management tooling, including Corepack on the production host.
+Do not generate a `package-lock.json`.
+
 ```bash
-npm install
-OPENAI_API_KEY='your-key' npm run dev
+yarn install --frozen-lockfile
+OPENAI_API_KEY='your-key' yarn run dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000). The key stays in the
 process and is not persisted by the app.
 
-For production:
+To run the compiled application locally:
 
 ```bash
 cp .env.example .env
-# Set OPENAI_API_KEY in .env.
-yarn build
+# Set OPENAI_API_KEY in .env; configure APP_USERS before exposing the app.
+yarn run build
 yarn start
 ```
 
-For a public installation, configure user accounts as JSON in `.env`.
+For a managed production host, follow the [deployment guide](deploy/README.md),
+which uses systemd and `/etc/podcast2article.env` instead of a release-local `.env`.
+For a public installation, configure user accounts as JSON in the applicable environment file.
 Each password must contain at least 16 characters. Sign-in uses a signed
 `HttpOnly` cookie valid for 30 days, which is automatically invalidated when the
 account configuration changes:
@@ -97,7 +106,9 @@ account configuration changes:
 APP_USERS='{"rogier":"a-long-unique-password","melvin":"another-unique-password"}'
 ```
 
-Leaving `APP_USERS` empty disables authentication for local development.
+Leaving both `APP_USERS` and the legacy `APP_PASSWORD` unset disables
+authentication for local development. `APP_PASSWORD` alone enables the legacy
+`rogier` account; new installations should use `APP_USERS`.
 Always put production installations behind HTTPS, for example through Caddy or
 Nginx. After five failed attempts from the same IP address, sign-in blocks new
 attempts for fifteen minutes.
@@ -112,17 +123,20 @@ OPENAI_REGION=eu
 
 ## How it works
 
-```text
-Spotify episode link         YouTube video link      Public Drive recording link
-  → Spotify + Apple/RSS        → yt-dlp metadata        → Drive file metadata
-  └────────────────────────────┴───────────────────────┘
-Fathom share link → yt-dlp metadata → download audio or video
-  → create compact playback audio and delete temporary video
-  → compress and split with FFmpeg
-  → gpt-4o-transcribe-diarize (speakers + timestamps)
-  → source-grounded article through the Responses API
-  → article with clickable transcript references
+```mermaid
+flowchart LR
+    Sources["Public Spotify, YouTube,<br/>Drive or Fathom link"] --> Queue
+    RSS["Followed podcast RSS feed"] --> Queue["Per-user job"]
+    Queue --> Resolve["Resolve or reuse source metadata<br/>and public media location"]
+    Resolve --> Audio["Download and prepare<br/>audio with FFmpeg"]
+    Audio --> Transcript["Transcribe with speakers<br/>and timestamps"]
+    Transcript --> Article["Generate article<br/>with source references"]
+    Article --> Library["Read, verify, export<br/>or share"]
 ```
+
+See the [service flow diagrams](docs/SERVICE-FLOWS.md) for request validation,
+processing stages, failure recovery, podcast subscriptions, budget enforcement,
+and the boundary between owner access and public permalinks.
 
 Jobs are stored per user as JSON in `data/users/<username>/jobs/`.
 Compact playback audio is stored in `data/users/<username>/media/`; downloaded
@@ -226,16 +240,17 @@ browser language.
 
 | Variable                          | Default                     | Meaning                                                                                                   |
 | --------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`                  | required                    | OpenAI API key supplied through the CLI                                                                   |
-| `APP_USERS`                       | empty                       | JSON object of username/password pairs; empty disables authentication                                     |
+| `OPENAI_API_KEY`                  | required for processing     | OpenAI API key supplied through the process environment or environment file                               |
+| `APP_USERS`                       | empty                       | JSON account map; empty disables authentication only if legacy `APP_PASSWORD` is also absent              |
 | `SPENDING_LIMIT_EXEMPT_USERS`     | empty                       | Comma-separated usernames exempt from spending limits; usage stays tracked                                |
 | `OPENAI_REGION`                   | `global`                    | OpenAI API region: `global`, `eu` (EEA + Switzerland), or `us`                                            |
+| `OPENAI_BASE_URL`                 | region-selected endpoint    | Advanced endpoint override; custom endpoints have no verified cost estimate or reservation pricing        |
 | `HOST`                            | `127.0.0.1`                 | Network interface; consider `0.0.0.0` only inside a container                                             |
 | `PUBLIC_BASE_URL`                 | request origin              | Canonical external origin for permalinks and social previews                                              |
 | `PORT`                            | `3000`                      | HTTP port                                                                                                 |
 | `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Article generation model                                                                                  |
 | `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcription model                                                                                       |
-| `MAX_AUDIO_MB`                    | `500`                       | Maximum Spotify audio download size                                                                       |
+| `MAX_AUDIO_MB`                    | `500`                       | Maximum Spotify/RSS audio download size                                                                   |
 | `MAX_YOUTUBE_MB`                  | `500`                       | Maximum YouTube audio download size                                                                       |
 | `MAX_RECORDING_MB`                | `1500`                      | Maximum Google Drive or Fathom recording download size                                                    |
 | `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | YouTube metadata timeout (1 minute)                                                                       |
@@ -258,8 +273,12 @@ If only article generation fails and the transcript is already complete, the
 existing transcript can be reused without new audio or transcription costs:
 
 ```bash
-curl -X POST http://localhost:3000/api/jobs/<job-id>/retry-article
+curl -X POST 'http://localhost:3000/api/jobs/<job-id>/retry-article'
 ```
+
+Replace `<job-id>` with the failed job's ID. This example assumes local mode
+without authentication; authenticated installations also require the owner's
+session cookie. The interface sends that cookie when using its retry action.
 
 This is available only for failed jobs, with at most two attempts per job in
 addition to the original generation. Every accepted attempt counts, including
@@ -325,17 +344,17 @@ These checks require no repository secrets or paid API calls. Runs time out afte
 15 minutes; a new run on the same branch or pull request cancels the previous run.
 
 ```bash
-npm test
-npm run check
-npx playwright install chromium webkit
-npm run test:browser
-npm run check:media
+yarn test
+yarn run check
+yarn playwright install chromium webkit
+yarn run test:browser
+yarn run check:media
 ```
 
 The browser job tests desktop Chromium and mobile WebKit. It retains the HTML
 report, screenshots, and failure traces as Actions artifacts for 14 days. The media
 job processes a synthetic recording with Ubuntu's FFmpeg through an explicit
-`FFMPEG_BIN` setting. Browser and media tests run separately from `npm run check`,
+`FFMPEG_BIN` setting. Browser and media tests run separately from `yarn run check`,
 so existing production checks do not need to install browsers.
 
 ### Test limitations

@@ -31,8 +31,10 @@ Incident records: [2026-08-28 Fathom FFmpeg crash and reversible override](incid
 | Runtime           | Node.js 24+, Python 3.11+                                      |
 | Deployment source | `https://github.com/rogierslag/podcast2article`, branch `main` |
 
-At the time of verification, disk use was about 6.4 GiB of 96 GiB and the
-application, webhook receiver, Caddy, SSH, and system services were healthy.
+Earlier provisioning notes recorded about 6.4 GiB used on a 96 GiB disk and
+healthy application, webhook, Caddy, SSH, and system services. These are historical
+observations, not current host measurements; use the checks below to establish
+the live state.
 
 ## 2. Network topology
 
@@ -215,11 +217,13 @@ Before changing SSH configuration:
       .deployed-commit
 
 /var/lib/podcast2article/
+  deployment-status.json last guarded update result
   users/
     <username>/
       jobs/             persistent job JSON
       media/            persistent normalized MP3 files
       work/             temporary per-job workspace
+      subscriptions.json followed feeds and scheduling state
 
 /var/cache/podcast2article-yarn/
                         dependency cache used during release validation
@@ -387,8 +391,9 @@ Every valid push to `main` triggers an immediate update attempt.
 
 ### Daily reconciliation
 
-Cron starts the same systemd update service every day at 04:00 in the server's
-`Europe/Amsterdam` timezone:
+Cron starts the same systemd update service every day at 04:00 in the host's
+configured timezone. The intended production timezone is `Europe/Amsterdam`;
+verify it with `timedatectl`. The checked-in cron file does not set a timezone:
 
 ```text
 /etc/cron.d/podcast2article-update
@@ -402,11 +407,12 @@ The daily check recovers from a missed or delayed webhook.
 
 1. takes `/run/lock/podcast2article-update.lock` with `flock`;
 2. reads the current GitHub `main` commit;
-3. exits without restarting when already current;
+3. when already current, verifies service and HTTP health, clears the failure
+   marker only when healthy, and exits without restarting;
 4. creates an isolated build directory under `/var/tmp`;
 5. fetches the exact commit, detached;
 6. installs locked development dependencies;
-7. runs the TypeScript build and complete test suite;
+7. runs `yarn run check`: formatting, lint, TypeScript, Vitest, and Node tests;
 8. creates a new immutable release directory;
 9. installs locked production dependencies;
 10. links `data` to `/var/lib/podcast2article`;
@@ -416,14 +422,18 @@ The daily check recovers from a missed or delayed webhook.
 13. restarts the application;
 14. waits up to 30 seconds for systemd and `/api/health`;
 15. keeps the new release on success;
-16. restores the previous symlink and restarts on failure;
-17. retains the three newest successful release directories.
+16. restores the previous symlink and restarts on activation failure when a
+    previous release exists; first deployment has no earlier release to restore;
+17. after success, retains the three newest release directories by modification
+    time. This cleanup does not distinguish successful releases from failed candidates.
 
 The application continues serving from the old release while a new release is
 being downloaded, built, and tested. Downtime is limited to the final graceful
 restart. A media preflight failure leaves the existing symlink and process
 untouched. Applying this guard to an existing host requires explicitly
 reinstalling the infrastructure updater; application pushes do not replace it.
+The updater does not wait for GitHub Actions and does not run the Playwright
+browser suite. Those checks run independently in CI; verify them before merging.
 
 ### Logs
 
@@ -900,8 +910,10 @@ Reservations allow for the highest supported tier, long-context/cache-write
 pricing and regional pricing; they can reject work before confirmed spend reaches
 USD 5. Large transcripts may therefore need more headroom than their eventual cost.
 
-Unknown models or custom endpoints cannot start paid requests until verified
-reservation pricing is added. Historical spending is free: stored
+For limited accounts, unknown models or custom endpoints cannot start paid
+requests until verified reservation pricing is added. Exempt accounts can use
+them while continuing to record usage. Historical spending is excluded from the
+allowance, not refunded by the provider: stored
 requests without a budget reservation are excluded, even if their costs are known
 and fall within the last 30 days. Missing historical coverage also consumes no
 allowance. Every new paid attempt saves a reservation before sending, so retries

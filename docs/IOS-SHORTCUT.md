@@ -47,7 +47,7 @@ an untrusted shared link. No server configuration or database migration is neede
 
 ## Verification before release
 
-- Run `npm run check` and the `scripts/browser/shortcut.browser.mjs` tests.
+- Run `yarn run check` and the `scripts/browser/shortcut.browser.mjs` tests.
 - Import the signed file and inspect all five action inputs, including the
   encoded URL variable. A successful signature alone does not prove the actions
   are wired correctly.
