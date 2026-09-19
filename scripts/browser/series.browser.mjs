@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { password } from "./fixture.mjs";
+test.use({ video: "on" });
+
 const previewId = "00000000-0000-4000-8000-000000000771";
 const preview = {
   id: previewId,
@@ -26,7 +28,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
   let followed = false;
   let paused = false;
   let submitted;
-  let outstanding = 10;
+  let outstanding = 5;
   await page.route("**/api/subscriptions**", async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
@@ -39,9 +41,9 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
       return route.fulfill({ json: preview });
     }
     if (pathname.endsWith("/backfill")) {
-      outstanding = 10;
+      outstanding = 5;
       paused = true;
-      return route.fulfill({ status: 202, json: { count: 4 } });
+      return route.fulfill({ status: 202, json: { count: 3 } });
     }
     if (request.method() === "POST") {
       submitted = request.postDataJSON();
@@ -63,7 +65,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
               complete: 0,
               processing: outstanding,
               outstanding,
-              archiveCount: 32,
+              archiveCount: 3,
               pauseReason: paused ? "limit" : undefined,
               pendingCount: 0,
               checkedAt: "2026-09-15T12:00:00Z",
@@ -83,10 +85,12 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
   await page.getByRole("button", { name: "Zoek serie" }).click();
   await expect(page.locator("#series-preview-title")).toHaveText(preview.title);
   await expect(page.locator("#series-preview-title")).toBeFocused();
+  await expect(page.locator("#series-backfill")).toHaveValue("none");
+  await expect(page.locator("#series-backfill option")).toHaveCount(2);
   for (const [value, count] of [
-    ["ten", "10"],
+    ["three", "3"],
     ["none", "0"],
-    ["ten", "10"],
+    ["three", "3"],
   ]) {
     await page.locator("#series-backfill").selectOption(value);
     await expect(page.locator("#series-plan")).toContainText(
@@ -110,12 +114,12 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
   );
   expect(submitted).toEqual({
     previewId,
-    backfill: "ten",
+    backfill: "three",
     language: "auto",
     articleLength: "standard",
   });
   await expect(page.locator(".series-limit-note")).toContainText(
-    "Automatisch gepauzeerd bij 10",
+    "Automatisch gepauzeerd bij 5",
   );
   await expect(
     page.getByRole("button", { name: `Hervat: ${preview.title}`, exact: true }),
@@ -124,8 +128,8 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",
   });
-  // Simulate reading four articles through the existing reader, then refresh the list.
-  outstanding = 6;
+  // Simulate reading three articles through the existing reader, then refresh the list.
+  outstanding = 2;
   await page.reload();
   await page
     .getByRole("button", { name: `Hervat: ${preview.title}`, exact: true })
@@ -133,12 +137,12 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
   await expect(page.locator(".series-state")).toHaveText("Actief");
   await page
     .getByRole("button", {
-      name: `Haal tot 4 eerdere afleveringen in: ${preview.title}`,
+      name: `Haal tot 3 van de laatste 3 afleveringen op: ${preview.title}`,
       exact: true,
     })
     .click();
   await expect(page.locator("#series-status")).toContainText(
-    "4 eerdere afleveringen ingepland",
+    "3 eerdere afleveringen ingepland",
   );
   await expect(
     page.getByRole("button", { name: `Hervat: ${preview.title}`, exact: true }),
@@ -350,8 +354,8 @@ for (const language of ["nl", "en"]) {
             paused: false,
             complete: 8,
             processing: 2,
-            outstanding: 6,
-            archiveCount: 12,
+            outstanding: 2,
+            archiveCount: 3,
             pendingCount: 0,
             failed: [],
           },
@@ -362,8 +366,8 @@ for (const language of ["nl", "en"]) {
             pauseReason: "limit",
             complete: 7,
             processing: 3,
-            outstanding: 10,
-            archiveCount: 12,
+            outstanding: 5,
+            archiveCount: 3,
             pendingCount: 0,
             failed: [],
           },

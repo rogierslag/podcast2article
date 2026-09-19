@@ -106,12 +106,12 @@ describe("subscription API", () => {
     const other = await request(
       "/",
       "POST",
-      { previewId: preview.id, backfill: "ten" },
+      { previewId: preview.id, backfill: "three" },
       "bob",
     );
     const followed = await request("/", "POST", {
       previewId: preview.id,
-      backfill: "ten",
+      backfill: "three",
       episode: { mediaUrl: "http://localhost/private" },
     });
     await store.check("alice");
@@ -139,17 +139,15 @@ describe("subscription API", () => {
     const preview = await (
       await request("/preview", "POST", { url: feed.url })
     ).json();
-    expect(
-      (
-        await request("/", "POST", {
-          previewId: preview.id,
-          backfill: "all",
-        })
-      ).status,
-    ).toBe(400);
+    for (const backfill of ["all", "ten", "latest"]) {
+      expect(
+        (await request("/", "POST", { previewId: preview.id, backfill }))
+          .status,
+      ).toBe(400);
+    }
     vi.spyOn(Date, "now").mockReturnValue(Date.now() + 16 * 60 * 1000);
     expect(
-      (await request("/", "POST", { previewId: preview.id, backfill: "ten" }))
+      (await request("/", "POST", { previewId: preview.id, backfill: "three" }))
         .status,
     ).toBe(400);
     vi.restoreAllMocks();
@@ -157,7 +155,7 @@ describe("subscription API", () => {
       await request("/preview", "POST", { url: feed.url })
     ).json();
     expect(
-      (await request("/", "POST", { previewId: preview.id, backfill: "ten" }))
+      (await request("/", "POST", { previewId: preview.id, backfill: "three" }))
         .status,
     ).toBe(400);
     vi.stubEnv("OPENAI_API_KEY", "");
@@ -165,7 +163,7 @@ describe("subscription API", () => {
       (
         await request("/", "POST", {
           previewId: replacement.id,
-          backfill: "ten",
+          backfill: "three",
         })
       ).status,
     ).toBe(503);
@@ -235,7 +233,7 @@ describe("article follow status", () => {
     expect(findEpisodeFeed).not.toHaveBeenCalled();
   });
   it("recognizes older RSS articles through subscription membership", async () => {
-    const subscription = await store.follow("alice", feed, "latest", {
+    const subscription = await store.follow("alice", feed, "three", {
       language: "nl",
       articleLength: "standard",
     });

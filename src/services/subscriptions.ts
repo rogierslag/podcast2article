@@ -9,16 +9,13 @@ import type {
   PodcastSubscription,
 } from "../types.js";
 
-export const subscriptionLimit = 10;
+export const subscriptionLimit = 5;
 export const subscriptionIntervalMs = 60 * 60 * 1000;
 export function backfillEpisodes(
   feed: PodcastFeed,
   choice: Backfill,
 ): PodcastEpisode[] {
-  return feed.episodes.slice(
-    0,
-    choice === "none" ? 0 : choice === "latest" ? 1 : subscriptionLimit,
-  );
+  return feed.episodes.slice(0, choice === "none" ? 0 : 3);
 }
 
 interface Dependencies {
@@ -131,6 +128,7 @@ export class SubscriptionStore {
           .filter((item) => !selectedKeys.has(item.key))
           .map((item) => item.key),
         archiveKeys: feed.episodes
+          .slice(0, 3)
           .filter((item) => !selectedKeys.has(item.key))
           .map((item) => item.key),
         pending: selected,
@@ -179,10 +177,26 @@ export class SubscriptionStore {
           }
           const feed = await this.dependencies.fetchFeed(subscription.feedUrl);
           subscription.imageUrl = feed.imageUrl;
-          const seen = new Set(subscription.seen);
-          subscription.pending = feed.episodes.filter(
-            (episode) => !seen.has(episode.key),
+          const latestKeys = new Set(
+            feed.episodes.slice(0, 3).map((episode) => episode.key),
           );
+          subscription.archiveKeys = (subscription.archiveKeys || []).filter(
+            (key) => latestKeys.has(key),
+          );
+          const seen = new Set(subscription.seen);
+          // An expanded feed can expose old archive entries for the first time.
+          const firstKnown = feed.episodes.findIndex((episode) =>
+            seen.has(episode.key),
+          );
+          subscription.pending = feed.episodes.filter((episode, index) => {
+            if (seen.has(episode.key)) {
+              return false;
+            }
+            const published = Date.parse(episode.episode.publishedAt || "");
+            return Number.isFinite(published)
+              ? published > Date.parse(subscription.createdAt)
+              : firstKnown >= 0 && index < firstKnown;
+          });
           subscription.checkedAt = new Date().toISOString();
           subscription.error = undefined;
           await this.save(username, items);
@@ -282,6 +296,7 @@ export class SubscriptionStore {
       subscription.imageUrl = feed.imageUrl;
       const archive = new Set(subscription.archiveKeys || []);
       const selected = feed.episodes
+        .slice(0, 3)
         .filter((item) => archive.has(item.key))
         .slice(0, Math.min(subscriptionLimit, available));
       if (!selected.length) {

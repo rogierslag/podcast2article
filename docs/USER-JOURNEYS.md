@@ -211,9 +211,10 @@ report delivery.
 
 **Implemented.** Readers follow from a podcast article or discover a Spotify show
 or public RSS feed on Series. Feed identity and available episodes are previewed
-before confirmation. Following from an article defaults to future episodes only;
-catch-up is explicit and bounded to ten per action. Active feeds are checked at
-startup and hourly. Ten unread or processing episodes in that series trigger an
+before confirmation. Following defaults to future episodes only;
+catch-up is explicit and restricted to the latest three episodes. Older archive
+episodes are not downloaded automatically. Active feeds are checked at
+startup and hourly. Five unread or processing episodes in that series trigger an
 automatic pause. Reading frees capacity, but the reader must explicitly resume. Catch-up respects
 capacity and preserves a manual pause. See
 [PR 51](https://github.com/rogierslag/podcast2article/pull/51) and
@@ -223,7 +224,8 @@ capacity and preserves a manual pause. See
 ambiguous. Show the catch-up count, paid-processing implication, pause reason,
 capacity, and failed jobs. A pause stops future checks but does not cancel queued
 work. Failed jobs do not consume capacity and are not retried hourly; failed feed
-checks are retried. Archives contain only episodes still available publicly.
+checks are retried. Catch-up offers only skipped episodes still in the feed’s latest three, never
+successive older batches. Previously confirmed pending selections remain queued.
 Following is not a promise that unavailable or private content can be recovered.
 
 **Value test.** Follow only new episodes, request catch-up, reach the limit, read

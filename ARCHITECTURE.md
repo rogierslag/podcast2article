@@ -148,7 +148,8 @@ Slot waits are abortable and slots are released on both success and failure.
 
 The persisted job record is updated at important boundaries. Job files are
 written as formatted JSON under
-`data/users/<username>/jobs/<uuid>.json`.
+`data/users/<username>/subscriptions.json  followed feeds, seen episodes, pending selections
+data/users/<username>/jobs/<uuid>.json`.
 
 On startup:
 
@@ -281,6 +282,19 @@ JSON persistence is simple and inspectable, but it does not provide database
 transactions, multi-process coordination, querying, or horizontal scaling.
 The architecture assumes exactly one application process.
 
+### Podcast subscriptions
+
+`src/services/subscriptions.ts` persists subscription mutations atomically and
+serializes operations per user. Active feeds are checked at startup and hourly.
+Following defaults to future episodes only; explicit catch-up is limited to the
+feed's latest three. Polling excludes dated episodes published before following.
+Undated entries must precede a known episode in feed order to qualify as new.
+
+Five unread, queued, or processing jobs pause a series. Read, deleted, and failed
+jobs free capacity, but resuming requires an explicit action. Existing confirmed
+pending selections survive restarts; this policy change does not cancel jobs or
+previously confirmed selections. See [the series guide](README.md#following-podcast-series).
+
 ### API usage accounting
 
 Each new job has an `apiUsage` ledger. The OpenAI boundary persists a pending
@@ -355,6 +369,21 @@ Detailed flow:
 | `GET`   | `/api/jobs/:id/audio`         | Stream normalized MP3        | Yes            |
 | `GET`   | `/api/jobs/:id/pdf`           | Generate article PDF         | Yes            |
 | `POST`  | `/api/jobs/:id/retry-article` | Reuse transcript and rewrite | Yes            |
+
+Series routes are authenticated and scoped to the current user:
+
+| Method  | Path                              | Purpose                                         |
+| ------- | --------------------------------- | ----------------------------------------------- |
+| `GET`   | `/api/subscriptions`              | List followed series and capacity               |
+| `GET`   | `/api/subscriptions/article/:id`  | Resolve an article's follow status              |
+| `POST`  | `/api/subscriptions/discover`     | Find public podcast feeds                       |
+| `POST`  | `/api/subscriptions/preview`      | Review a feed before following                  |
+| `POST`  | `/api/subscriptions`              | Follow with `backfill: "none"` or `"three"`     |
+| `POST`  | `/api/subscriptions/:id/backfill` | Request eligible episodes from the latest three |
+| `PATCH` | `/api/subscriptions/:id`          | Pause or explicitly resume                      |
+
+The former `latest` and `ten` backfill request values are rejected. Existing
+subscription files remain readable without a migration.
 
 `POST /hooks/github` is not handled by the application. Caddy routes it to a
 separate, restricted webhook receiver. See `INFRASTRUCTURE.md`.

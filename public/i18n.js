@@ -30,28 +30,28 @@ export const messages = {
   },
   "article.seriesRetry": { nl: "Probeer opnieuw", en: "Try again" },
   "series.moreLater": {
-    nl: "Meer afleveringen inhalen",
-    en: "Catch up on more episodes",
+    nl: "Laatste 3 afleveringen ophalen",
+    en: "Get the latest 3 episodes",
   },
   "series.outstanding": {
-    nl: "{count} van maximaal 10 ongelezen of nog te verwerken afleveringen",
-    en: "{count} of at most 10 unread or processing episodes",
+    nl: "{count} van maximaal 5 ongelezen of nog te verwerken afleveringen",
+    en: "{count} of at most 5 unread or processing episodes",
   },
   "series.limitPaused": {
-    nl: "Automatisch gepauzeerd bij 10 afleveringen. Lees eerst artikelen of markeer ze als gelezen. Daarna kun je zelf hervatten.",
-    en: "Automatically paused at 10 episodes. Read articles or mark them as read, then resume when you are ready.",
+    nl: "Automatisch gepauzeerd bij 5 afleveringen. Lees eerst artikelen of markeer ze als gelezen. Daarna kun je zelf hervatten.",
+    en: "Automatically paused at 5 episodes. Read articles or mark them as read, then resume when you are ready.",
   },
   "series.errorLimit": {
-    nl: "De serie zit aan de grens van 10 ongelezen of nog te verwerken afleveringen. Lees eerst artikelen voordat je verdergaat.",
-    en: "This series has reached the limit of 10 unread or processing episodes. Read articles before continuing.",
+    nl: "De serie zit aan de grens van 5 ongelezen of nog te verwerken afleveringen. Lees eerst artikelen voordat je verdergaat.",
+    en: "This series has reached the limit of 5 unread or processing episodes. Read articles before continuing.",
   },
   "series.errorNoHistory": {
     nl: "Er zijn geen overgeslagen afleveringen meer beschikbaar in de openbare feed.",
     en: "No skipped episodes remain available in the public feed.",
   },
   "series.more": {
-    nl: "Haal tot {count} eerdere afleveringen in",
-    en: "Catch up on up to {count} earlier episodes",
+    nl: "Haal tot {count} van de laatste 3 afleveringen op",
+    en: "Get up to {count} of the latest 3 episodes",
   },
   "series.moreSaved": {
     nl: "{count} eerdere afleveringen ingepland.",
@@ -70,8 +70,8 @@ export const messages = {
     en: "All series.",
   },
   "series.intro": {
-    nl: "Volg een serie, haal eerdere afleveringen in en lees nieuwe afleveringen automatisch als artikel.",
-    en: "Follow a series, catch up on past episodes and automatically turn new episodes into articles.",
+    nl: "Volg een serie en lees nieuwe afleveringen automatisch als artikel. Je kunt ook de laatste 3 ophalen.",
+    en: "Follow a series and automatically turn new episodes into articles. You can also get the latest 3.",
   },
   "series.url": {
     nl: "Spotify-serielink of openbare RSS-feed",
@@ -96,15 +96,10 @@ export const messages = {
     en: "{count} episodes available in this feed. Most recent:",
   },
   "series.backfill": {
-    nl: "Eerdere afleveringen inhalen",
-    en: "Catch up on past episodes",
+    nl: "Afleveringen ophalen",
+    en: "Get episodes",
   },
-  "series.latest": { nl: "Laatste aflevering", en: "Latest episode" },
-  "series.ten": { nl: "Laatste 10 afleveringen", en: "Latest 10 episodes" },
-  "series.all": {
-    nl: "Alle beschikbare afleveringen",
-    en: "All available episodes",
-  },
+  "series.three": { nl: "Laatste 3 afleveringen", en: "Latest 3 episodes" },
   "series.none": { nl: "Alleen nieuwe afleveringen", en: "New episodes only" },
   "series.plan": {
     nl: "Je haalt {count} afleveringen in. Daarna worden nieuwe afleveringen automatisch verwerkt.",
@@ -115,8 +110,8 @@ export const messages = {
     en: "Catch up on 1 episode. New episodes will then be processed automatically.",
   },
   "series.cost": {
-    nl: "Je haalt maximaal 10 afleveringen per keer in. Elke nieuwe verwerking gebruikt betaalde transcriptie en artikelgeneratie. Later kun je zelf meer inhalen.",
-    en: "Catch up on at most 10 episodes at a time. Each new job uses paid transcription and article generation. You can choose to catch up on more later.",
+    nl: "Alleen de laatste 3 zijn beschikbaar om op te halen. Oudere afleveringen worden niet automatisch verwerkt. Elke nieuwe verwerking gebruikt betaalde transcriptie en artikelgeneratie.",
+    en: "Only the latest 3 are offered. Older episodes are not processed automatically. Each new job uses paid transcription and article generation.",
   },
   "series.follow": {
     nl: "Bevestig en volg serie",
@@ -124,8 +119,8 @@ export const messages = {
   },
   "series.following": { nl: "Gevolgde series", en: "Following" },
   "series.schedule": {
-    nl: "Nieuwe afleveringen worden elk uur gecontroleerd zolang de server draait. Bij 10 ongelezen of nog te verwerken afleveringen pauzeert de serie. Hervatten gaat nooit over die grens.",
-    en: "New episodes are checked hourly while the server is running. The series pauses at 10 unread or processing episodes. Resuming respects the same limit.",
+    nl: "Nieuwe afleveringen worden elk uur gecontroleerd zolang de server draait. Bij 5 ongelezen of nog te verwerken afleveringen pauzeert de serie. Hervatten gaat nooit over die grens.",
+    en: "New episodes are checked hourly while the server is running. The series pauses at 5 unread or processing episodes. Resuming respects the same limit.",
   },
   "series.articles": {
     nl: "Bekijk artikelen en voortgang →",
