@@ -894,8 +894,8 @@ export const messages = {
     en: "{count} percent complete",
   },
   "article.markReadLabel": {
-    nl: "Markeer dit artikel als gelezen",
-    en: "Mark this article as read",
+    nl: "Markeer als gelezen",
+    en: "Mark as read",
   },
   "article.markRead": {
     nl: "Markeer als gelezen",
@@ -906,24 +906,24 @@ export const messages = {
     en: "Read",
   },
   "article.markUnreadLabel": {
-    nl: "Markeer dit artikel als ongelezen",
-    en: "Mark this article as unread",
+    nl: "Gelezen: markeer als ongelezen",
+    en: "Read: mark as unread",
   },
   "article.markUnread": {
     nl: "Markeer als ongelezen",
     en: "Mark as unread",
   },
   "article.downloadPdfLabel": {
-    nl: "Download dit artikel als PDF",
-    en: "Download this article as a PDF",
+    nl: "Download PDF",
+    en: "Download PDF",
   },
   "article.downloadPdf": {
     nl: "Download PDF",
     en: "Download PDF",
   },
   "article.shareLabel": {
-    nl: "Deel dit artikel",
-    en: "Share this article",
+    nl: "Kopieer link",
+    en: "Copy link",
   },
   "article.copyLink": {
     nl: "Kopieer link",
