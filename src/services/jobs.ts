@@ -18,6 +18,7 @@ import {
   normalizeAudio,
   splitAudio,
 } from "./audio.js";
+import { assertAccountBudget, AccountBudgetError } from "./account-budget.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource, validateSourceUrl } from "./resolver.js";
 import { downloadFathomRecording } from "./fathom.js";
@@ -177,11 +178,25 @@ async function persist(username: string, job: Job): Promise<void> {
   }
 }
 
+function accountJobs(username: string): Job[] {
+  return [...memory.entries()]
+    .filter(([key]) => key.startsWith(`${username}/`))
+    .map(([, job]) => job);
+}
+
 async function recordApiUsage(
   username: string,
   job: Job,
   request: ApiRequestUsage,
 ): Promise<void> {
+  if (request.status === "pending") {
+    if (request.reservedCostUsd === undefined) {
+      throw new AccountBudgetError();
+    }
+    // No await between checking and updating the in-memory reservation: parallel
+    // jobs in this server cannot both consume the same remaining allowance.
+    assertAccountBudget(accountJobs(username), request.reservedCostUsd);
+  }
   const usage = job.apiUsage ?? {
     trackingStartedAt: new Date().toISOString(),
     coverage: "partial" as const,
@@ -267,6 +282,7 @@ export async function createJob(
   if (existingJob) {
     throw new DuplicateJobError(existingJob);
   }
+  assertAccountBudget(accountJobs(username));
   const now = new Date().toISOString();
   const sourceHost = new URL(sourceUrl).hostname.toLowerCase();
   const job: Job = {
@@ -327,6 +343,7 @@ export async function createPodcastJob(
   if (existing) {
     return existing;
   }
+  assertAccountBudget(accountJobs(username));
   const now = new Date().toISOString();
   const job: Job = {
     language: options.language,
@@ -771,6 +788,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
         "Deze opdracht heeft het maximum van twee artikelpogingen bereikt.",
       );
     }
+    assertAccountBudget(accountJobs(username));
     const retryJob: Job = {
       ...job,
       stage: "writing",
@@ -797,6 +815,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
 }
 
 export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
+  const recovered: Array<{ username: string; job: Job }> = [];
   for (const username of usernames) {
     const jobDirectory = path.join(userDirectory(username), "jobs");
     await mkdir(jobDirectory, { recursive: true });
@@ -828,14 +847,18 @@ export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
         jobLog(job.id, "queued", "Onvoltooide opdracht na serverstart hervat", {
           previousStage,
         });
-        enqueueJob(username, job, "full");
+        recovered.push({ username, job });
       } catch (error) {
         console.error(
           `${new Date().toISOString()} ERROR Kon opgeslagen jobbestand niet herstellen · file=${JSON.stringify(file)}`,
           error,
         );
+        throw error;
       }
     }
+  }
+  for (const { username, job } of recovered) {
+    enqueueJob(username, job, "full");
   }
 }
 

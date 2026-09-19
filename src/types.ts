@@ -95,6 +95,8 @@ export interface ApiRequestUsage {
   errorCode?: string;
   usage?: ApiUsageMetrics;
   audioSeconds?: number;
+  /** Persisted before sending; retained when the provider outcome is unknown. */
+  reservedCostUsd?: number;
   cost: ApiCostEstimate;
 }
 

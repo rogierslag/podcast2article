@@ -134,6 +134,13 @@ it("saves article usage before rejecting invalid generated JSON", async () => {
   ).rejects.toThrow();
 
   expect(records).toHaveLength(2);
+  expect(records[0]?.reservedCostUsd).toBeGreaterThan(0);
+  const calls = vi.mocked(fetch).mock.calls;
+  const body = calls[0]?.[1]?.body;
+  expect(typeof body).toBe("string");
+  if (typeof body === "string") {
+    expect(JSON.parse(body).max_output_tokens).toBe(16_384);
+  }
   expect(records[1]).toMatchObject({
     stage: "article",
     status: "succeeded",

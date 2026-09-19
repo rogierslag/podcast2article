@@ -274,3 +274,22 @@ describe("article follow status", () => {
     expect(findEpisodeFeed).not.toHaveBeenCalled();
   });
 });
+
+it("returns a localized budget error when catch-up cannot reserve paid work", async () => {
+  const preview = await (
+    await request("/preview", "POST", { url: feed.url })
+  ).json();
+  const followed = await request("/", "POST", {
+    previewId: preview.id,
+    backfill: "none",
+  });
+  const { id } = await followed.json();
+  enqueue.mockRejectedValue(new Error("error.accountBudget"));
+
+  const response = await request(`/${id}/backfill`, "POST");
+
+  expect(response.status).toBe(429);
+  expect((await response.json()).error).toContain("$5 account limit");
+  await store.check("alice");
+  expect(store.list("alice")[0]?.error).toBe("error.accountBudget");
+});

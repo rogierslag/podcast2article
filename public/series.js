@@ -258,7 +258,9 @@ async function refresh() {
             t(
               subscription.error === "error.creationUnavailable"
                 ? "error.creationUnavailable"
-                : "series.errorCheck",
+                : subscription.error === "error.accountBudget"
+                  ? "error.accountBudget"
+                  : "series.errorCheck",
             ),
             "error",
           ),

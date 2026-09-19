@@ -429,6 +429,10 @@ export const messages = {
     nl: "Je kunt het artikel alleen opnieuw maken als de verwerking is mislukt.",
     en: "You can only regenerate the article if processing has failed.",
   },
+  "error.accountBudget": {
+    nl: "Er is onvoldoende budget binnen de limiet van $5 per account over de afgelopen 30 dagen. Lopende verzoeken en kosten die nog niet bekend zijn tellen mee. Probeer het later opnieuw.",
+    en: "There is not enough budget within the $5 account limit over the last 30 days. Requests in progress and costs that are not yet known count towards this limit. Try again later.",
+  },
   "error.articleRetryLimit": {
     nl: "Het maximum van twee pogingen om dit artikel opnieuw te maken is bereikt.",
     en: "The limit of two attempts to regenerate this article has been reached.",

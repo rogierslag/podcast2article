@@ -845,3 +845,42 @@ echo | openssl s_client -connect production.example.nl:443 \
 4. Revisit VPS sizing after observing several long real-world jobs and update
    builds.
 5. Keep this document synchronized with material infrastructure changes.
+
+## Account processing budget
+
+Each account has a fixed USD 5 allowance over the preceding 30 × 24 hours.
+This covers tracked OpenAI transcription and article requests, including automatic
+API retries, article retries and subscription processing. Failed and soft-deleted
+jobs retain their costs. Saving another reader's shared article consumes no budget.
+Without authentication, all work belongs to the single `local` account.
+
+Before each paid request, the server persists a conservative cost reservation.
+Concurrent jobs share the remaining allowance. Confirmed usage replaces that
+reservation; failures, timeouts and unknown costs retain it because the provider
+may have processed the request. Reservations survive restarts and expire after
+30 days. Completed requests age out from their completion timestamp.
+Article requests are bounded to 16,384 output tokens (including reasoning).
+Reservations allow for the highest supported tier, long-context/cache-write
+pricing and regional pricing; they can reject work before confirmed spend reaches
+USD 5. Large transcripts may therefore need more headroom than their eventual cost.
+
+Unknown models or custom endpoints cannot start paid requests until verified
+reservation pricing is added. Historical spending is free: stored
+requests without a budget reservation are excluded, even if their costs are known
+and fall within the last 30 days. Missing historical coverage also consumes no
+allowance. Every new paid attempt saves a reservation before sending, so retries
+of old jobs count from deployment onward without charging their earlier work.
+The limit uses the
+application's saved price estimates, not an invoice or infrastructure charges.
+Keep the price table current when provider prices change.
+
+Budget exhaustion appears through the existing localized error flow. Existing
+articles remain readable. A job stopped between stages retains its transcript
+when available, so the existing article retry can be used once budget is available.
+Subscription episodes that fail during processing retain the existing failure and
+retry behavior; they are not automatically retried when the budget recovers.
+
+Run only one server against a data directory: reservations coordinate concurrent
+requests within that process, not across replicas. Startup loads all account
+histories before resuming work and fails if a stored job cannot be read, because
+ignoring that history could grant an incorrect allowance.

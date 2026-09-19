@@ -271,3 +271,39 @@ describe("API attempt accounting", () => {
     });
   });
 });
+
+it("checks budget again before an automatic provider retry", async () => {
+  const send = vi
+    .fn()
+    .mockRejectedValue(
+      new OpenAI.APIError(
+        500,
+        {},
+        "unknown outcome",
+        new Headers({ "retry-after": "0.001" }),
+      ),
+    );
+  const records: ApiRequestUsage[] = [];
+
+  await expect(
+    trackedRequest(
+      {
+        stage: "article",
+        model: "gpt-5.6-terra",
+        region: "global",
+        reservedCostUsd: 3,
+        record: async (entry) => {
+          if (entry.status === "pending" && entry.attempt === 2) {
+            throw new Error("error.accountBudget");
+          }
+          records.push(structuredClone(entry));
+        },
+      },
+      send,
+    ),
+  ).rejects.toThrow("error.accountBudget");
+
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(records.map((entry) => entry.status)).toEqual(["pending", "failed"]);
+  expect(records[1]?.reservedCostUsd).toBe(3);
+});

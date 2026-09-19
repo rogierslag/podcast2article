@@ -1,3 +1,4 @@
+import { AccountBudgetError } from "./services/account-budget.js";
 import express from "express";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
@@ -666,6 +667,11 @@ app.post("/api/jobs", async (request, response) => {
       .status(202)
       .json(localizeJob(job, responseLanguage(response)));
   } catch (error) {
+    if (error instanceof AccountBudgetError) {
+      return response
+        .status(429)
+        .json({ error: localizeError(response, error.message) });
+    }
     if (error instanceof DuplicateJobError) {
       return response.status(409).json({
         error: localizeError(
@@ -756,7 +762,13 @@ app.post("/api/jobs/:id/retry-article", async (request, response) => {
     const message =
       error instanceof Error ? error.message : "Artikelretry kon niet starten.";
     return response
-      .status(message === "Opdracht niet gevonden." ? 404 : 409)
+      .status(
+        error instanceof AccountBudgetError
+          ? 429
+          : message === "Opdracht niet gevonden."
+            ? 404
+            : 409,
+      )
       .json({ error: localizeError(response, message) });
   }
 });
