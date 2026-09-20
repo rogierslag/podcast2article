@@ -52,8 +52,12 @@ Sources: [request routes](../src/server.ts), [job processing](../src/services/jo
 When S3 backups are configured, successful local completion requests a background scan, including after an article-only retry.
 Startup and a one-minute timer also scan existing completed articles, including soft-deleted articles.
 Incomplete and failed jobs are skipped.
-Uploads contain only the final article and identifying metadata; destination/content receipts skip unchanged objects.
-Failed uploads leave local jobs complete and retry from persisted files after restart.
+Uploads use `.json.gz` keys and contain gzip-compressed JSON with only the final article and identifying metadata; destination/content receipts skip unchanged objects.
+The first failed upload stops the scan and pauses all uploads for 15 minutes, including requests from new completions.
+Each upload makes one SDK attempt with a SHA-256 checksum of the compressed bytes; a further failure starts another cooldown.
+Failed uploads leave local jobs complete and retry from persisted files after the cooldown or restart.
+The restore command verifies a returned SHA-256 checksum before decoding and falls back to legacy `.json` keys only when the `.json.gz` key is missing.
+An uncertain upload is retried even if that may create a duplicate S3 version; receipts are saved only after upload acknowledgement.
 
 See [article backups](ARTICLE-BACKUPS.md) for payload exclusions, access controls, backfill, retention, restore limitations and cost estimates.
 

@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { S3Client } from "@aws-sdk/client-s3";
 import {
@@ -8,6 +10,8 @@ import {
   backupConfiguration,
   backupKey,
   createArticleBackup,
+  decodeArticleBackup,
+  fetchArticleBackup,
   restoreArticleBackup,
   s3BackupUploader,
 } from "./article-backups.js";
@@ -69,6 +73,7 @@ beforeEach(async () => {
   root = await mkdtemp(path.join(os.tmpdir(), "article-backup-"));
 });
 afterEach(async () => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   await rm(root, { recursive: true, force: true });
 });
@@ -119,6 +124,12 @@ describe("article backup format", () => {
     expect(createArticleBackup("owner", { ...job, stage })).toBeUndefined();
   });
 
+  it("uses an explicit gzip extension for new backup keys", () => {
+    expect(backupKey(config, "owner", job.id)).toBe(
+      `articles/v1/users/owner/${job.id}.json.gz`,
+    );
+  });
+
   it("validates identities and normalizes legacy completion timestamps", () => {
     expect(() => createArticleBackup("../other", job)).toThrow();
     expect(() => backupKey(config, "owner", "../other")).toThrow();
@@ -156,7 +167,7 @@ describe("durable article backup worker", () => {
     ]);
   });
 
-  it("recovers failed uploads after restart without changing a completed job or blocking another owner", async () => {
+  it("recovers failed uploads after restart without changing a completed job", async () => {
     await store("owner");
     await store("other");
     const upload = vi
@@ -180,6 +191,158 @@ describe("durable article backup worker", () => {
         ),
       ),
     ).toEqual(job);
+  });
+
+  it("pauses all uploads for 15 minutes after each failure, including completion requests", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    await store("owner");
+    await store("other");
+    const upload = vi.fn().mockRejectedValue(new Error("S3 unavailable"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const worker = new ArticleBackupWorker(root, config, upload);
+    worker.start();
+    await worker.flush();
+
+    for (let minute = 0; minute < 14; minute++) {
+      await vi.advanceTimersByTimeAsync(60_000);
+      worker.request();
+      expect(await worker.flush()).toBe(1);
+    }
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(await worker.flush()).toBe(1);
+    expect(upload).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await worker.flush()).toBe(1);
+    expect(upload).toHaveBeenCalledTimes(2);
+    upload.mockResolvedValue(undefined);
+    worker.request();
+    expect(await worker.flush()).toBe(1);
+    expect(upload).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(15 * 60_000);
+    expect(await worker.flush()).toBe(0);
+    expect(upload).toHaveBeenCalledTimes(4);
+    await worker.stop();
+  });
+
+  it("backs off when an uploaded object's local receipt cannot be saved", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    await store("owner");
+    const temporary = path.join(
+      root,
+      "article-backups",
+      "owner",
+      `${job.id}.sha256.tmp`,
+    );
+    await mkdir(temporary, { recursive: true });
+    const upload = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const worker = new ArticleBackupWorker(root, config, upload);
+
+    expect(await worker.flush()).toBe(1);
+    await rm(temporary, { recursive: true });
+    expect(await worker.flush()).toBe(1);
+    expect(upload).toHaveBeenCalledTimes(1);
+    vi.setSystemTime(Date.now() + 15 * 60_000);
+    expect(await worker.flush()).toBe(0);
+    expect(upload).toHaveBeenCalledTimes(2);
+  });
+
+  it("serializes overlapping scans and follows a completion received during an upload", async () => {
+    await store("owner");
+    if (!job.article) {
+      throw new Error("Fixture requires an article");
+    }
+    const revised = {
+      ...job,
+      article: { ...job.article, title: "Revised during upload" },
+    };
+    let activeUploads = 0;
+    let maximumActiveUploads = 0;
+    const upload = vi.fn(async () => {
+      activeUploads++;
+      maximumActiveUploads = Math.max(maximumActiveUploads, activeUploads);
+      if (upload.mock.calls.length === 1) {
+        await store("owner", revised);
+        worker.request();
+      }
+      activeUploads--;
+    });
+    const worker = new ArticleBackupWorker(root, config, upload);
+
+    await Promise.all([worker.flush(), worker.flush()]);
+    await worker.flush();
+    await worker.stop();
+
+    expect(maximumActiveUploads).toBe(1);
+    expect(upload).toHaveBeenCalledTimes(2);
+    const receipt = await readFile(
+      path.join(root, "article-backups", "owner", `${job.id}.sha256`),
+      "utf8",
+    );
+    const expected = createHash("sha256")
+      .update(JSON.stringify(config))
+      .update(backupKey(config, "owner", job.id))
+      .update(JSON.stringify(createArticleBackup("owner", revised)))
+      .digest("hex");
+    expect(receipt).toBe(expected);
+    expect(await new ArticleBackupWorker(root, config, upload).flush()).toBe(0);
+    expect(upload).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps an uncertain upload pending and retries the latest local article after cooldown", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    await store("owner");
+    const upload = vi
+      .fn<(key: string, body: string) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("Connection lost after PUT"))
+      .mockResolvedValue(undefined);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const worker = new ArticleBackupWorker(root, config, upload);
+
+    expect(await worker.flush()).toBe(1);
+    await expect(
+      readFile(path.join(root, "article-backups", "owner", `${job.id}.sha256`)),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    if (!job.article) {
+      throw new Error("Fixture requires an article");
+    }
+    await store("owner", {
+      ...job,
+      article: { ...job.article, title: "Latest revision" },
+    });
+    vi.setSystemTime(Date.now() + 15 * 60_000);
+    expect(await worker.flush()).toBe(0);
+
+    expect(upload).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(upload.mock.calls[1]?.[1] ?? "{}").article.title).toBe(
+      "Latest revision",
+    );
+  });
+
+  it("uploads once to the gzip key when a legacy JSON receipt exists", async () => {
+    await store("owner");
+    const receiptDirectory = path.join(root, "article-backups", "owner");
+    await mkdir(receiptDirectory, { recursive: true });
+    const legacyDigest = createHash("sha256")
+      .update(JSON.stringify(config))
+      .update(`articles/v1/users/owner/${job.id}.json`)
+      .update(JSON.stringify(createArticleBackup("owner", job)))
+      .digest("hex");
+    await writeFile(
+      path.join(receiptDirectory, `${job.id}.sha256`),
+      legacyDigest,
+    );
+    const upload = vi.fn().mockResolvedValue(undefined);
+
+    await new ArticleBackupWorker(root, config, upload).flush();
+    await new ArticleBackupWorker(root, config, upload).flush();
+
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(upload.mock.calls[0]?.[0]).toBe(
+      `articles/v1/users/owner/${job.id}.json.gz`,
+    );
   });
 
   it("uploads changed final content to the same key and reuploads when the destination changes", async () => {
@@ -244,24 +407,162 @@ describe("durable article backup worker", () => {
     expect(upload).toHaveBeenCalledTimes(1);
   });
 
-  it("sends encrypted JSON with no public ACL", async () => {
+  it("sends gzip-compressed encrypted JSON with no public ACL", async () => {
     const send = vi
       .spyOn(S3Client.prototype, "send")
       .mockResolvedValue({} as never);
 
     await s3BackupUploader(config)("key", "{}");
 
-    expect(send.mock.calls[0]?.[0].input).toEqual({
+    const input = send.mock.calls[0]?.[0].input;
+    expect(input).toEqual({
       Bucket: config.bucket,
       Key: "key",
-      Body: "{}",
+      Body: expect.any(Buffer),
+      ChecksumSHA256: expect.any(String),
       ContentType: "application/json",
+      ContentEncoding: "gzip",
       ServerSideEncryption: "AES256",
     });
+    if (!input || !("Body" in input) || !Buffer.isBuffer(input.Body)) {
+      throw new Error("Expected compressed upload body");
+    }
+    expect(input.ChecksumSHA256).toBe(
+      createHash("sha256").update(input.Body).digest("base64"),
+    );
+    expect(
+      await decodeArticleBackup(input.Body, "gzip", input.ChecksumSHA256),
+    ).toEqual({});
   });
 });
 
 describe("article restoration", () => {
+  it("fetches the gzip key with checksum verification", async () => {
+    const body = gzipSync(JSON.stringify(createArticleBackup("owner", job)));
+    // The SDK send overload needs a mock result containing only the response fields consumed here.
+    const send = vi.spyOn(S3Client.prototype, "send").mockResolvedValue({
+      Body: { transformToByteArray: async () => body },
+      ContentEncoding: "gzip",
+      ChecksumSHA256: createHash("sha256").update(body).digest("base64"),
+    } as never);
+    const client = new S3Client({ region: config.region });
+    try {
+      expect(await fetchArticleBackup(client, config, "owner", job.id)).toEqual(
+        createArticleBackup("owner", job),
+      );
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(send.mock.calls[0]?.[0].input).toEqual({
+        Bucket: config.bucket,
+        Key: backupKey(config, "owner", job.id),
+        ChecksumMode: "ENABLED",
+      });
+    } finally {
+      client.destroy();
+    }
+  });
+
+  it("falls back to the legacy JSON key only when the gzip key does not exist", async () => {
+    const body = Buffer.from(JSON.stringify(createArticleBackup("owner", job)));
+    const send = vi
+      .spyOn(S3Client.prototype, "send")
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Missing"), { name: "NoSuchKey" }),
+      )
+      .mockResolvedValue({
+        Body: { transformToByteArray: async () => body },
+      } as never);
+    const client = new S3Client({ region: config.region });
+    try {
+      expect(await fetchArticleBackup(client, config, "owner", job.id)).toEqual(
+        createArticleBackup("owner", job),
+      );
+      expect(send).toHaveBeenCalledTimes(2);
+      expect(send.mock.calls[1]?.[0].input).toMatchObject({
+        Key: `articles/v1/users/owner/${job.id}.json`,
+      });
+    } finally {
+      client.destroy();
+    }
+  });
+
+  it.each(["AccessDenied", "NoSuchBucket", "TimeoutError"])(
+    "does not hide %s behind a legacy restore",
+    async (name) => {
+      const error = Object.assign(new Error(name), { name });
+      const send = vi
+        .spyOn(S3Client.prototype, "send")
+        .mockRejectedValue(error);
+      const client = new S3Client({ region: config.region });
+      try {
+        await expect(
+          fetchArticleBackup(client, config, "owner", job.id),
+        ).rejects.toBe(error);
+        expect(send).toHaveBeenCalledTimes(1);
+      } finally {
+        client.destroy();
+      }
+    },
+  );
+
+  it("does not restore a stale legacy copy when the gzip object is corrupt", async () => {
+    const send = vi.spyOn(S3Client.prototype, "send").mockResolvedValue({
+      Body: { transformToByteArray: async () => Buffer.from("corrupt") },
+      ContentEncoding: "gzip",
+    } as never);
+    const client = new S3Client({ region: config.region });
+    try {
+      await expect(
+        fetchArticleBackup(client, config, "owner", job.id),
+      ).rejects.toThrow();
+      expect(send).toHaveBeenCalledTimes(1);
+    } finally {
+      client.destroy();
+    }
+  });
+
+  it("decodes both legacy JSON and gzip objects, including downloaded gzip files", async () => {
+    const payload = createArticleBackup("owner", job);
+    const body = JSON.stringify(payload);
+
+    expect(await decodeArticleBackup(Buffer.from(body))).toEqual(payload);
+    expect(await decodeArticleBackup(gzipSync(body), "gzip")).toEqual(payload);
+    expect(await decodeArticleBackup(gzipSync(body))).toEqual(payload);
+    await expect(
+      decodeArticleBackup(Buffer.from(body), "gzip"),
+    ).rejects.toThrow();
+  });
+
+  it("checks stored bytes before decoding and rejects corruption even if JSON remains valid", async () => {
+    const body = Buffer.from(JSON.stringify(createArticleBackup("owner", job)));
+    const checksum = createHash("sha256").update(body).digest("base64");
+    const compressed = gzipSync(body);
+    const compressedChecksum = createHash("sha256")
+      .update(compressed)
+      .digest("base64");
+
+    expect(await decodeArticleBackup(body, undefined, checksum)).toEqual(
+      createArticleBackup("owner", job),
+    );
+    expect(
+      await decodeArticleBackup(compressed, "gzip", compressedChecksum),
+    ).toEqual(createArticleBackup("owner", job));
+    const changed = Buffer.from(
+      body.toString().replace("Final article", "Other article"),
+    );
+    await expect(
+      decodeArticleBackup(changed, undefined, checksum),
+    ).rejects.toThrow("checksum mismatch");
+    await expect(
+      decodeArticleBackup(compressed, "gzip", checksum),
+    ).rejects.toThrow("checksum mismatch");
+    await expect(
+      decodeArticleBackup(
+        compressed.subarray(0, compressed.length - 3),
+        "gzip",
+      ),
+    ).rejects.toThrow();
+  });
+
   it("restores a readable completed article without generation artifacts and refuses overwrites", async () => {
     const payload = createArticleBackup("owner", job);
 
