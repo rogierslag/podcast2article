@@ -388,6 +388,7 @@ it.each([
         sourceType: "youtube",
         sourceUrl: input.sourceUrl,
         title: "A saved recording",
+        sourceName: "Test channel",
         mediaUrl: "https://example.com/audio.mp3",
       },
       transcript: [
@@ -732,7 +733,7 @@ it("reserves account budget before concurrent paid requests and isolates other a
   const first = await jobs.createJob("owner", input);
   const second = await jobs.createJob("owner", {
     ...input,
-    articleLength: "short",
+    articleLength: "compact",
   });
   await jobs.createJob("other", input);
 

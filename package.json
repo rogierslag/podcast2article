@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node --env-file=.env dist/server.js",
     "test": "vitest run && node --test scripts/*.node-test.mjs",
     "check:media": "node scripts/media-smoke.mjs .",
@@ -14,7 +15,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint src public scripts eslint.config.js playwright.config.js",
     "lint:fix": "yarn run lint --fix",
-    "check": "yarn run format:check && yarn run lint && yarn run build && yarn test",
+    "check": "yarn run format:check && yarn run lint && yarn run typecheck && yarn run build && yarn test",
     "test:browser": "yarn run build && playwright test",
     "backup:articles": "node --env-file-if-exists=.env dist/commands/article-backups.js"
   },

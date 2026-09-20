@@ -275,6 +275,7 @@ describe("subscription limits", () => {
         sourceUrl: "https://example.com/old",
         mediaUrl: "https://example.com/old.mp3",
         title: "Old episode",
+        sourceName: "Wetenschap vandaag",
         publishedAt: "2020-01-01T00:00:00Z",
       },
     });
@@ -285,6 +286,7 @@ describe("subscription limits", () => {
         sourceUrl: "https://example.com/old",
         mediaUrl: "https://example.com/old.mp3",
         title: "Old episode",
+        sourceName: "Wetenschap vandaag",
       },
     });
     fetchFeed.mockResolvedValue(expanded);

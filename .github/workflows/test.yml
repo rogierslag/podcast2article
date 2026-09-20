@@ -28,6 +28,7 @@ jobs:
             command: yarn run lint
           - name: Build and browser syntax
             command: |
+              yarn run typecheck
               yarn run build
               node --check public/app.js
               node --check public/share.js
