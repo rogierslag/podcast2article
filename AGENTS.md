@@ -5,45 +5,66 @@ This file applies to the entire repository.
 ## Product and language
 
 - Podcast2Article turns public Spotify episodes, YouTube videos, Fathom recordings, and Google Drive recordings into source-linked articles; followed podcast series use public RSS feeds.
-- Write repository documentation in English, including headings, examples, and explanatory comments in documentation code blocks. Use English interface labels in guides; preserve exact identifiers and quoted diagnostic output when needed for accuracy.
-- The interface follows the primary browser language: Dutch for Dutch locales, English otherwise. Keep both translations consistent; generated-article language is a separate user choice.
+- Write repository documentation in English, including headings, examples, and explanatory comments in documentation code blocks.
+  Use English interface labels in guides; preserve exact identifiers and quoted diagnostic output when needed for accuracy.
+- The interface follows the primary browser language: Dutch for Dutch locales, English otherwise.
+  Keep both translations consistent; generated-article language is a separate user choice.
 - Preserve the editorial visual style in `public/styles.css`: warm paper colors, serif article typography, compact monospace metadata, and restrained controls.
-- Read [docs/BRAND.md](docs/BRAND.md) before changing user-facing design or copy. It defines the intended visual identity, component roles, and corner-radius rules.
-- Use [docs/USER-JOURNEYS.md](docs/USER-JOURNEYS.md) to identify the user outcome, critical failure states, and value test for a feature or journey change. Distinguish proposed metrics from measured results.
+- Read [docs/BRAND.md](docs/BRAND.md) before changing user-facing design or copy.
+  It defines the intended visual identity, component roles, and corner-radius rules.
+- Use [docs/USER-JOURNEYS.md](docs/USER-JOURNEYS.md) to identify the user outcome, critical failure states, and value test for a feature or journey change.
+  Distinguish proposed metrics from measured results.
 - Keep accessibility intact: semantic elements, useful `aria-label` values, keyboard focus styles, and sufficient contrast.
 
 ## UI changes and screenshots
 
-- For every material UI change, render the real local application in a browser and visually verify it. Do not rely only on HTML/CSS inspection.
-- Check both a normal desktop viewport and the relevant mobile breakpoint. The primary mobile reference is approximately `390x844`; the primary desktop reference is approximately `1440x1000`.
-- Capture screenshots of the states affected by the change and include them in the final handoff. Store generated screenshots outside the tracked source tree when possible.
-- Include those screenshots in the pull request description for every material visual change. Show before and after images when the change modifies existing UI; an after-only image is sufficient for a genuinely new screen or state.
+- For every material UI change, render the real local application in a browser and visually verify it.
+  Do not rely only on HTML/CSS inspection.
+- Check both a normal desktop viewport and the relevant mobile breakpoint.
+  The primary mobile reference is approximately `390x844`; the primary desktop reference is approximately `1440x1000`.
+- Capture screenshots of the states affected by the change and include them in the final handoff.
+  Store generated screenshots outside the tracked source tree when possible.
+- Include those screenshots in the pull request description for every material visual change.
+  Show before and after images when the change modifies existing UI; an after-only image is sufficient for a genuinely new screen or state.
 - Record and attach a short video or animated capture when motion or interaction is important and screenshots would be ambiguous—for example responsive transitions, loading/progress behavior, audio seeking, menus, multi-step flows, focus behavior, or state changes after clicking an action.
 - Keep PR media focused and reviewable: use the smallest number of screenshots or clips that proves the affected desktop and mobile states, label each viewport/state, and avoid unrelated application or desktop content.
-- Do not commit large screenshot or video artifacts to the repository unless the project explicitly requests it. Prefer PR-hosted attachments or another approved artifact location, and link them from the PR description.
+- Do not commit large screenshot or video artifacts to the repository unless the project explicitly requests it.
+  Prefer PR-hosted attachments or another approved artifact location, and link them from the PR description.
 - Use realistic sample content so typography, wrapping, metadata, images, and long-form article layout are representative.
-- If a temporary stored job or media fixture is required for screenshots, create it under a clearly test-only ID and remove it after capture. Never alter or delete a user's existing article data.
+- If a temporary stored job or media fixture is required for screenshots, create it under a clearly test-only ID and remove it after capture.
+  Never alter or delete a user's existing article data.
 - Inspect the rendered DOM or accessibility tree as well as the screenshot when verifying labels and responsive visibility.
-- For local browser testing, start the compiled server from the repository root so `public/` and `data/` resolve correctly. Stop the temporary server when finished.
-- Use the fixed local browser-testing URL `http://127.0.0.1:4317` (`PORT=4317 HOST=127.0.0.1`) so Codex can reuse the same browser permission. Before starting a server, check whether that port already serves this application and reuse it when appropriate; never stop a server that Codex did not start for the current task.
+- For local browser testing, start the compiled server from the repository root so `public/` and `data/` resolve correctly.
+  Stop the temporary server when finished.
+- Use the fixed local browser-testing URL `http://127.0.0.1:4317` (`PORT=4317 HOST=127.0.0.1`) so Codex can reuse the same browser permission.
+  Before starting a server, check whether that port already serves this application and reuse it when appropriate; never stop a server that Codex did not start for the current task.
 
 ## Current article-action behavior
 
-- Article pages expose three primary owner reading actions: `Mark as read`, PDF export, and permalink copy. Podcast following, shared-link statistics, and deletion have their own controls.
-- On mobile, keep the localized `Mark as read` label written out. PDF and permalink actions should use recognizable printer and share icons with accessible labels; their visible text may collapse at the mobile breakpoint.
+- Article pages expose three primary owner reading actions: `Mark as read`, PDF export, and permalink copy.
+  Podcast following, shared-link statistics, and deletion have their own controls.
+- On mobile, keep the localized `Mark as read` label written out.
+  PDF and permalink actions should use recognizable printer and share icons with accessible labels; their visible text may collapse at the mobile breakpoint.
 - Keep the same actions available at the top of the article and in the completion footer unless the task explicitly changes that behavior.
 
-- Shared-load and estimated-read counts appear only in the owner article footer, never at the top or on anonymous shared pages. Keep unavailable counts distinct from zero.
+- Shared-load and estimated-read counts appear only in the owner article footer, never at the top or on anonymous shared pages.
+  Keep unavailable counts distinct from zero.
 
 ## Permalink security invariants
 
-- Public permalinks are capability URLs backed by a stable, high-entropy token. Do not replace them with a sequential identifier, username, article index, or bare job UUID.
-- A public token may resolve only its own completed article and its own source audio. It must not grant access to `/api/articles`, `/api/jobs`, reading state, account identity, another article, or owner-only mutations.
-- Public API responses must be explicitly shaped. Do not serialize an entire stored `Job` object.
-- Shared monitoring counters and visit receipts remain owner-only. Public events must never change owner read state, expose statistics, or copy the original analytics into a saved article.
+- Public permalinks are capability URLs backed by a stable, high-entropy token.
+  Do not replace them with a sequential identifier, username, article index, or bare job UUID.
+- A public token may resolve only its own completed article and its own source audio.
+  It must not grant access to `/api/articles`, `/api/jobs`, reading state, account identity, another article, or owner-only mutations.
+- Public API responses must be explicitly shaped.
+  Do not serialize an entire stored `Job` object.
+- Shared monitoring counters and visit receipts remain owner-only.
+  Public events must never change owner read state, expose statistics, or copy the original analytics into a saved article.
 - Shared pages are anonymous: do not expose the username, account details, sender identity, internal job ID, share token in the payload, or read state.
-- Keep public routes narrowly registered before the authentication middleware. All owner and collection routes remain authenticated when authentication is enabled.
-- Shared pages need server-rendered Open Graph and Twitter metadata because link-preview crawlers do not execute the client application. Escape all metadata values.
+- Keep public routes narrowly registered before the authentication middleware.
+  All owner and collection routes remain authenticated when authentication is enabled.
+- Shared pages need server-rendered Open Graph and Twitter metadata because link-preview crawlers do not execute the client application.
+  Escape all metadata values.
 - Use `PUBLIC_BASE_URL` for canonical production permalink and Open Graph URLs when configured; fall back to the request origin for local development.
 - Keep shared capability pages out of search indexes with `noindex, nofollow` unless the product requirements explicitly change.
 
@@ -51,62 +72,99 @@ This file applies to the entire repository.
 
 - `src/server.ts`: Express routes, authentication boundary, public share surface, and server startup.
 - `src/services/jobs.ts`: job persistence, per-user isolation, processing queue, read state, and share-token lookup.
-- `src/services/share-analytics.ts` and `public/share-analytics.js`: anonymous shared-visit counters and active reading detection. See [docs/SHARED-ARTICLE-MONITORING.md](docs/SHARED-ARTICLE-MONITORING.md) for definitions and limits.
+- `src/services/share-analytics.ts` and `public/share-analytics.js`: anonymous shared-visit counters and active reading detection.
+  See [docs/SHARED-ARTICLE-MONITORING.md](docs/SHARED-ARTICLE-MONITORING.md) for definitions and limits.
 - `src/services/pdf.ts`: server-side PDF generation.
 - `src/types.ts`: persisted and API-related domain types.
 - `public/index.html` and `public/app.js`: authenticated/owner application UI.
 - `public/share.html`, `public/share.js`, and `public/share.css`: anonymous public article reader.
-- `public/styles.css`: shared and owner styling. Keep additions scoped and avoid unrelated reformatting, but do not copy the compressed formatting of older rules.
-- `data/users/<username>/`: runtime data. Treat it as user-owned and do not commit it.
+- `public/styles.css`: shared and owner styling.
+  Keep additions scoped and avoid unrelated reformatting, but do not copy the compressed formatting of older rules.
+- `data/users/<username>/`: runtime data.
+  Treat it as user-owned and do not commit it.
 
 ## Code style
 
-Readability is the default. Some older frontend files are densely formatted; treat that as legacy code, not as the style to imitate. Source files must remain pleasant to review without a formatter or minifier.
+Readability is the default.
+Some older frontend files are densely formatted; treat that as legacy code, not as the style to imitate.
+Source files must remain pleasant to review without a formatter or minifier.
 
 ### General formatting
 
-- Use Yarn 1.22.22, pinned in `package.json`, for dependency installation and scripts. Install with `yarn install --frozen-lockfile`; keep `yarn.lock` as the only dependency lockfile. npm may bootstrap Yarn or Corepack, but must not install project dependencies.
+- Write Markdown and other prose documentation with one sentence per source line, regardless of sentence length.
+  This also applies to plain-text files such as `.txt`, extensionless documents such as `LICENSE`, and prose comments where the file syntax permits it.
+  Do not hard-wrap prose at 80, 120, or any other character limit.
+  Preserve paragraph breaks and indent continuation sentences within list items.
+  Keep code blocks, tables, URLs, and other syntax-sensitive content structurally intact.
+  Keep Prettier's `proseWrap` set to `preserve` so formatting retains these sentence boundaries.
+  Check files outside Prettier's coverage manually; formatter coverage does not limit this preference.
 
-- Prettier is the formatting authority for all supported repository files. Run `yarn run format` after editing and do not manually fight its output.
-- Run `yarn run format:check` to verify formatting without changing files. The full `yarn run check` command includes this verification.
+- Use Yarn 1.22.22, pinned in `package.json`, for dependency installation and scripts.
+  Install with `yarn install --frozen-lockfile`; keep `yarn.lock` as the only dependency lockfile.
+  npm may bootstrap Yarn or Corepack, but must not install project dependencies.
+
+- Prettier is the formatting authority for all supported repository files.
+  Run `yarn run format` after editing and do not manually fight its output.
+- Run `yarn run format:check` to verify formatting without changing files.
+  The full `yarn run check` command includes this verification.
 - Do not hand-minify, manually align, or use formatting tricks that Prettier will undo.
-- Keep statements and control flow structurally clear before formatting. Prettier standardizes layout; it does not make overly compressed logic readable.
-- Always use braces for `if`, `else`, loops, and `try`/`catch`, including one-line bodies. ESLint enforces this rule; run `yarn run lint:fix` to repair violations.
-- Keep comments for intent, constraints, and non-obvious tradeoffs. Do not narrate code that is already clear from its names and structure.
+- Keep statements and control flow structurally clear before formatting.
+  Prettier standardizes layout; it does not make overly compressed logic readable.
+- Always use braces for `if`, `else`, loops, and `try`/`catch`, including one-line bodies.
+  ESLint enforces this rule; run `yarn run lint:fix` to repair violations.
+- Keep comments for intent, constraints, and non-obvious tradeoffs.
+  Do not narrate code that is already clear from its names and structure.
 
 ### TypeScript and JavaScript
 
-- Use descriptive domain names. Avoid single-letter names except for conventional, very small scopes; prefer names such as `response`, `article`, and `segment` over abbreviations.
-- Keep functions focused on one responsibility. Extract named helpers when a route handler, rendering function, or callback starts mixing validation, transformation, persistence, and presentation.
-- Prefer early returns and guard clauses over deeply nested branches. Expand conditionals when compression would hide behavior.
-- Preserve strict typing. Avoid `any`, unchecked casts, and non-null assertions; validate external input and narrow `unknown` values before use. If a boundary requires a cast, keep it local and explain why it is safe when that is not obvious.
-- Use `interface` for object shapes with a stable domain identity and `type` for unions, aliases, and composed types. Reuse the domain types in `src/types.ts` rather than recreating similar inline shapes.
+- Use descriptive domain names.
+  Avoid single-letter names except for conventional, very small scopes; prefer names such as `response`, `article`, and `segment` over abbreviations.
+- Keep functions focused on one responsibility.
+  Extract named helpers when a route handler, rendering function, or callback starts mixing validation, transformation, persistence, and presentation.
+- Prefer early returns and guard clauses over deeply nested branches.
+  Expand conditionals when compression would hide behavior.
+- Preserve strict typing.
+  Avoid `any`, unchecked casts, and non-null assertions; validate external input and narrow `unknown` values before use.
+  If a boundary requires a cast, keep it local and explain why it is safe when that is not obvious.
+- Use `interface` for object shapes with a stable domain identity and `type` for unions, aliases, and composed types.
+  Reuse the domain types in `src/types.ts` rather than recreating similar inline shapes.
 - Keep imports grouped at the top of the file: Node built-ins, external packages, then local modules, with type-only imports marked using `import type`.
-- Use `async`/`await` for asynchronous flows. Handle expected failures at the boundary that can add useful context; do not silently swallow errors unless failure is explicitly best-effort.
-- In browser code, cache repeatedly used DOM elements, use semantic event-handler names, and keep HTML escaping at every untrusted interpolation point. Use the local `html` tagged template for markup assigned through `innerHTML` so Prettier formats the embedded HTML; prefer DOM APIs when a template still becomes difficult to read or audit.
+- Use `async`/`await` for asynchronous flows.
+  Handle expected failures at the boundary that can add useful context; do not silently swallow errors unless failure is explicitly best-effort.
+- In browser code, cache repeatedly used DOM elements, use semantic event-handler names, and keep HTML escaping at every untrusted interpolation point.
+  Use the local `html` tagged template for markup assigned through `innerHTML` so Prettier formats the embedded HTML; prefer DOM APIs when a template still becomes difficult to read or audit.
 
 ### HTML and CSS
 
-- Use semantic HTML before adding ARIA. Every interactive control needs an accessible name and must remain usable with a keyboard.
-- Let Prettier format HTML nesting, attributes, selectors, and declarations. Do not preserve compressed legacy formatting by hand.
-- Keep selectors component-scoped and avoid `!important` except for an established utility or a documented cascade requirement. Reuse the existing custom properties before introducing literal colors, fonts, or spacing values.
-- Place responsive adjustments next to the component they modify when practical. Verify that desktop, mobile, print, hover, focus, and reduced-motion behavior still agree.
+- Use semantic HTML before adding ARIA.
+  Every interactive control needs an accessible name and must remain usable with a keyboard.
+- Let Prettier format HTML nesting, attributes, selectors, and declarations.
+  Do not preserve compressed legacy formatting by hand.
+- Keep selectors component-scoped and avoid `!important` except for an established utility or a documented cascade requirement.
+  Reuse the existing custom properties before introducing literal colors, fonts, or spacing values.
+- Place responsive adjustments next to the component they modify when practical.
+  Verify that desktop, mobile, print, hover, focus, and reduced-motion behavior still agree.
 
 ### Tests
 
-- Add or update tests for behavior changes and bug fixes. Tests should describe observable behavior rather than implementation details.
+- Add or update tests for behavior changes and bug fixes.
+  Tests should describe observable behavior rather than implementation details.
 - Follow arrange, act, assert within each test, separated by blank lines when those phases are not already obvious.
-- Keep fixtures minimal but realistic. Prefer typed fixtures with `satisfies` and shared helpers over broad casts or large copied payloads.
+- Keep fixtures minimal but realistic.
+  Prefer typed fixtures with `satisfies` and shared helpers over broad casts or large copied payloads.
 - Cover failure paths and boundary conditions for validation, authentication, storage isolation, public payload shaping, and external-service parsing.
 
 ## Implementation guidelines
 
-- Preserve per-user storage isolation. Validate usernames and UUID-shaped job IDs before constructing storage paths.
+- Preserve per-user storage isolation.
+  Validate usernames and UUID-shaped job IDs before constructing storage paths.
 - Persist tokens and job mutations through the existing job persistence helpers so links survive restarts.
 - Repeated permalink creation must return the same link for the same article rather than silently creating multiple URLs.
 - Use `crypto.randomBytes` or an equivalently cryptographically secure generator for capability tokens.
-- Keep public payloads minimal. For source buttons, expose only the fields the reader needs, such as transcript source ID and start time—not the full private transcript unless explicitly required.
-- Escape untrusted content before inserting it into HTML. Continue using the existing client-side `escapeHtml` pattern and server-side metadata escaping.
+- Keep public payloads minimal.
+  For source buttons, expose only the fields the reader needs, such as transcript source ID and start time—not the full private transcript unless explicitly required.
+- Escape untrusted content before inserting it into HTML.
+  Continue using the existing client-side `escapeHtml` pattern and server-side metadata escaping.
 - Avoid adding a framework or build step for the static frontend unless the task requires it.
 - Keep changes focused and preserve unrelated user modifications in a dirty worktree.
 
@@ -139,7 +197,8 @@ For authentication or permalink work, smoke-test at least these runtime boundari
 - A valid token returns only the intended article payload.
 - An unrelated or malformed token cannot fetch article data or audio.
 
-Report the checks performed and any checks that could not be run. Do not claim visual verification unless the rendered browser state was actually inspected.
+Report the checks performed and any checks that could not be run.
+Do not claim visual verification unless the rendered browser state was actually inspected.
 
 In the pull request description, include a concise verification section with:
 
@@ -151,23 +210,46 @@ In the pull request description, include a concise verification section with:
 ## Pull requests
 
 - Pull request titles, descriptions, section headings, image/video captions, and reviewer-facing notes must always be written in English, even when the user request or product UI is in Dutch.
-- When the user indicates that a pull request should be created, carry the task through to an actual PR: prepare the branch and commits as needed, push the branch, create the PR, and return the PR link. Do not stop after drafting a title or description unless an external blocker or missing authorization prevents creation.
-- Prefer the local `gh` CLI and documented GitHub APIs for PR operations. Do not open GitHub in a browser solely to create or edit a PR or to work around a missing API capability.
-- Before starting PR operations, run `gh auth status`. If the worktree is on a detached `HEAD`, create a focused branch before committing. Preserve unrelated worktree changes and stage only the files intended for the PR.
-- When bringing branches up to date with each other, prefer rebasing over creating merge commits. Use `git pull --rebase` to update from the tracked upstream, or fetch and run `git rebase <target-branch>` (for example, `git fetch origin` followed by `git rebase origin/main`) to update a feature branch against another branch. Preserve unrelated work and resolve conflicts before continuing. If a rebased branch was already pushed, use `git push --force-with-lease`, never an unconditional force push.
+- When the user indicates that a pull request should be created, carry the task through to an actual PR: prepare the branch and commits as needed, push the branch, create the PR, and return the PR link.
+  Do not stop after drafting a title or description unless an external blocker or missing authorization prevents creation.
+- Prefer the local `gh` CLI and documented GitHub APIs for PR operations.
+  Do not open GitHub in a browser solely to create or edit a PR or to work around a missing API capability.
+- Before starting PR operations, run `gh auth status`.
+  If the worktree is on a detached `HEAD`, create a focused branch before committing.
+  Preserve unrelated worktree changes and stage only the files intended for the PR.
+- When bringing branches up to date with each other, prefer rebasing over creating merge commits.
+  Use `git pull --rebase` to update from the tracked upstream, or fetch and run `git rebase <target-branch>` (for example, `git fetch origin` followed by `git rebase origin/main`) to update a feature branch against another branch.
+  Preserve unrelated work and resolve conflicts before continuing.
+  If a rebased branch was already pushed, use `git push --force-with-lease`, never an unconditional force push.
 - Before creating the PR, run the required validation and produce the applicable screenshots or recordings described above.
-- Before creating or updating a PR, review repository documentation for anything affected by the final diff, including the README, architecture and API references, user journeys, setup and operations guides, and agent instructions. Update affected documentation in the same PR so behavior, defaults, limits, examples, and configuration stay in sync with the implementation. Search for outdated descriptions rather than checking only files already changed, and report any documentation gaps that remain.
-- Write the PR description to a temporary Markdown file and pass it with `gh pr create --body-file` or `gh pr edit --body-file`. Do not pass multiline Markdown inline through the shell because backticks and substitutions may be interpreted as commands.
-- Add the screenshots and videos to the PR description itself, or use durable links/attachments that reviewers can open from the PR. Do not leave required visual evidence only in a local filesystem path.
-- Prefer native image/video uploads with `gh pr create --attach` or `gh pr edit --attach` (GitHub CLI 2.99.0 or newer). Check `gh version` and command help before use, and pass the description through `--body-file`. Attachments support images and videos, not PDFs, CSVs, or HTML. Verify the remote body contains the uploaded URLs. If the CLI lacks `--attach`, report that it needs updating; do not claim GitHub cannot upload attachments.
-- If native uploads cannot be used, use an approved durable artifact location. The existing long-lived `assets` branch is a fallback: store media under `pr-media/<PR number>/`, keep binaries out of feature branches, embed raw GitHub URLs, and state this storage choice in the PR. Preserve that branch and existing files so earlier PR links remain valid.
+- Before creating a PR, fetch `origin` and rebase the feature branch onto the latest `origin/main`.
+  Resolve any conflicts and rerun the required validation against the rebased result before pushing and creating the PR.
+- Keep each PR to a single commit by default; squash routine iterations before creating or updating the PR.
+  Use multiple commits only when there is a clear reason, such as a separate fix for a bug exposed by a test, and explain that reason in the PR description.
+- Before creating or updating a PR, review repository documentation for anything affected by the final diff, including the README, architecture and API references, user journeys, setup and operations guides, and agent instructions.
+  Update affected documentation in the same PR so behavior, defaults, limits, examples, and configuration stay in sync with the implementation.
+  Search for outdated descriptions rather than checking only files already changed, and report any documentation gaps that remain.
+- Write the PR description to a temporary Markdown file and pass it with `gh pr create --body-file` or `gh pr edit --body-file`.
+  Do not pass multiline Markdown inline through the shell because backticks and substitutions may be interpreted as commands.
+- Add the screenshots and videos to the PR description itself, or use durable links/attachments that reviewers can open from the PR.
+  Do not leave required visual evidence only in a local filesystem path.
+- Prefer native image/video uploads with `gh pr create --attach` or `gh pr edit --attach` (GitHub CLI 2.99.0 or newer).
+  Check `gh version` and command help before use, and pass the description through `--body-file`.
+  Attachments support images and videos, not PDFs, CSVs, or HTML.
+  Verify the remote body contains the uploaded URLs.
+  If the CLI lacks `--attach`, report that it needs updating; do not claim GitHub cannot upload attachments.
+- If native uploads cannot be used, use an approved durable artifact location.
+  The existing long-lived `assets` branch is a fallback: store media under `pr-media/<PR number>/`, keep binaries out of feature branches, embed raw GitHub URLs, and state this storage choice in the PR.
+  Preserve that branch and existing files so earlier PR links remain valid.
 - If no durable upload is possible, report the limitation clearly in the PR, include all remaining evidence, and provide the exact local artifact paths so the user can attach them; do not silently omit required media.
-- PR titles and descriptions must be concise but complete. Remove repetition and implementation diary details, but never omit behavior changes, security implications, migrations/configuration, verification performed, visual evidence, known limitations, or reviewer-relevant tradeoffs.
+- PR titles and descriptions must be concise but complete.
+  Remove repetition and implementation diary details, but never omit behavior changes, security implications, migrations/configuration, verification performed, visual evidence, known limitations, or reviewer-relevant tradeoffs.
 - Prefer this compact PR-description structure when applicable:
   - **Summary:** what changed and why.
   - **Security/behavior:** access boundaries, persistence, compatibility, or other important implications.
   - **Visuals:** labelled desktop/mobile screenshots and short recordings where interaction matters.
   - **Verification:** commands and focused runtime checks performed.
   - **Notes:** configuration, migrations, limitations, or follow-up work; omit this section when empty.
-- Ensure the final PR description reflects the actual diff and completed checks. Do not claim an attachment, test, screenshot, or recording that was not successfully produced and made available to reviewers.
+- Ensure the final PR description reflects the actual diff and completed checks.
+  Do not claim an attachment, test, screenshot, or recording that was not successfully produced and made available to reviewers.
 - After every PR creation or description update, use `gh pr view --json` to verify the remote title, body, head branch, state, verification claims, and media URLs before handing off.
