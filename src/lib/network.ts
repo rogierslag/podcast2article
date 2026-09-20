@@ -1,3 +1,4 @@
+import { DomainError } from "./errors.js";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
@@ -32,15 +33,15 @@ function isPrivateIp(address: string): boolean {
 export async function assertPublicUrl(value: string): Promise<URL> {
   const url = new URL(value);
   if (!["http:", "https:"].includes(url.protocol)) {
-    throw new Error("Alleen publieke HTTP(S)-bronnen zijn toegestaan.");
+    throw new DomainError("error.sourceProtocol");
   }
   const hostname = url.hostname.toLowerCase();
   if (PRIVATE_HOSTS.has(hostname) || hostname.endsWith(".local")) {
-    throw new Error("Privé-netwerkadressen zijn niet toegestaan.");
+    throw new DomainError("error.privateAddress");
   }
   if (isIP(hostname)) {
     if (isPrivateIp(hostname)) {
-      throw new Error("Privé-netwerkadressen zijn niet toegestaan.");
+      throw new DomainError("error.privateAddress");
     }
   } else {
     const addresses = await lookup(hostname, { all: true });
@@ -48,9 +49,7 @@ export async function assertPublicUrl(value: string): Promise<URL> {
       !addresses.length ||
       addresses.some(({ address }) => isPrivateIp(address))
     ) {
-      throw new Error(
-        "De bron verwijst niet uitsluitend naar een publiek netwerkadres.",
-      );
+      throw new DomainError("error.sourceAddress");
     }
   }
   return url;
@@ -69,11 +68,11 @@ export async function safeFetch(
   });
   if ([301, 302, 303, 307, 308].includes(response.status)) {
     if (redirects >= 6) {
-      throw new Error("Te veel redirects bij het ophalen van de bron.");
+      throw new DomainError("error.sourceRedirectLimit");
     }
     const location = response.headers.get("location");
     if (!location) {
-      throw new Error("Redirect zonder bestemming ontvangen.");
+      throw new DomainError("error.redirectDestinationMissing");
     }
     return safeFetch(new URL(location, url).toString(), init, redirects + 1);
   }

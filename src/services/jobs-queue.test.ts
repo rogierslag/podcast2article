@@ -1,5 +1,6 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProcessingEvent } from "../lib/processing-events.js";
 import type { ApiRequestUsage, Job } from "../types.js";
 
 const state = vi.hoisted(() => ({
@@ -975,3 +976,90 @@ it("exempt accounts can keep processing above the limit while costs remain track
     jobs.createJob("owner", { ...input, articleLength: "long" }),
   ).rejects.toThrow("error.accountBudget");
 });
+
+it("persists typed waiting events with reworded diagnostics through both processing stages", async () => {
+  resolveMetadata();
+  const jobs = await import("./jobs.js");
+  let finishTranscription: (segments: []) => void = () => {};
+  let finishArticle: (article: {
+    title: string;
+    sections: [];
+  }) => void = () => {};
+  state.transcribe.mockImplementation(
+    (
+      _files,
+      _language,
+      _progress,
+      onStatus: (event: ProcessingEvent) => void,
+    ) => {
+      onStatus({
+        type: "transcription.waiting",
+        message: "Completely reworded transcription log",
+        data: { chunk: "1/2", waitingSeconds: 120 },
+      });
+      return new Promise<[]>((resolve) => {
+        finishTranscription = resolve;
+      });
+    },
+  );
+  state.writeArticle.mockImplementation(
+    (_transcript, _metadata, onStatus: (event: ProcessingEvent) => void) => {
+      onStatus({
+        type: "article.waiting",
+        message: "Completely reworded article log",
+        data: { waitingSeconds: 180 },
+      });
+      return new Promise<{ title: string; sections: [] }>((resolve) => {
+        finishArticle = resolve;
+      });
+    },
+  );
+
+  const job = await jobs.createJob("owner", input);
+
+  await vi.waitFor(() =>
+    expect(job).toMatchObject({
+      message: "progress.wait",
+      messageValues: { chunk: "1/2", minutes: 2 },
+    }),
+  );
+  finishTranscription([]);
+  await vi.waitFor(() =>
+    expect(job).toMatchObject({
+      message: "progress.writing",
+      messageValues: { minutes: 3 },
+    }),
+  );
+  finishArticle({ title: "Article", sections: [] });
+  await vi.waitFor(() => expect(job.stage).toBe("complete"));
+});
+
+it.each([true, false])(
+  "persists safe failure keys and structured values (domain error: %s)",
+  async (known) => {
+    resolveMetadata();
+    const { DomainError } = await import("../lib/errors.js");
+    const jobs = await import("./jobs.js");
+    const error = known
+      ? new DomainError("error.mediaSize", { size: 125 })
+      : new Error("private request token");
+    error.message = "private request token";
+    state.transcribe.mockRejectedValue(error);
+
+    const job = await jobs.createJob("owner", input);
+
+    await vi.waitFor(() => expect(job.stage).toBe("failed"));
+    expect(job.error).toBe(known ? "error.mediaSize" : "error.processing");
+    expect(job.messageValues).toEqual(known ? { size: 125 } : undefined);
+    const file = path.join(
+      jobs.userDirectory("owner"),
+      "jobs",
+      `${job.id}.json`,
+    );
+    await vi.waitFor(() => {
+      const stored = state.files.get(file) ?? "";
+      expect(stored).toContain(job.error);
+      expect(stored).not.toContain("private request token");
+    });
+  },
+);

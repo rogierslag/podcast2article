@@ -1,5 +1,6 @@
 import { rm, stat } from "node:fs/promises";
 import { youtubeDl } from "youtube-dl-exec";
+import { DomainError } from "../lib/errors.js";
 import type { Episode } from "../types.js";
 
 const YOUTUBE_HOSTS = new Set([
@@ -35,7 +36,7 @@ export function youtubeVideoId(value: string): string {
   const url = new URL(value);
   const host = url.hostname.toLowerCase();
   if (!["http:", "https:"].includes(url.protocol) || !isYouTubeHost(host)) {
-    throw new Error("Plak een publieke YouTube-videolink.");
+    throw new DomainError("error.youtubeLinkRequired");
   }
 
   let id: string | null | undefined;
@@ -50,9 +51,7 @@ export function youtubeVideoId(value: string): string {
   }
 
   if (!id || !VIDEO_ID.test(id)) {
-    throw new Error(
-      "Gebruik een YouTube-link naar één video, niet naar een kanaal, zoekopdracht of afspeellijst.",
-    );
+    throw new DomainError("error.youtubeVideoRequired");
   }
   return id;
 }
@@ -73,22 +72,20 @@ export function youtubeEpisodeFromMetadata(
   metadata: YouTubeMetadata,
 ): Episode {
   if (!metadata.title) {
-    throw new Error("YouTube gaf geen titel voor deze video terug.");
+    throw new DomainError("error.youtubeTitleMissing");
   }
   if (
     metadata.availability &&
     !["public", "unlisted"].includes(metadata.availability)
   ) {
-    throw new Error("Deze YouTube-video is niet openbaar beschikbaar.");
+    throw new DomainError("error.youtubePrivate");
   }
   if (
     metadata.is_live ||
     metadata.live_status === "is_live" ||
     metadata.live_status === "is_upcoming"
   ) {
-    throw new Error(
-      "Live en geplande YouTube-streams worden niet ondersteund. Gebruik de opname nadat de stream is afgelopen.",
-    );
+    throw new DomainError("error.youtubeLiveUnsupported");
   }
 
   const duration = metadata.duration;
@@ -119,38 +116,38 @@ function errorDetails(error: unknown): string {
 function youtubeFailure(error: unknown, action: "lezen" | "downloaden"): Error {
   const details = errorDetails(error).toLowerCase();
   if (details.includes("private video") || details.includes("members-only")) {
-    return new Error("Deze YouTube-video is niet openbaar beschikbaar.");
+    return new DomainError("error.youtubePrivate");
   }
   if (
     details.includes("sign in") ||
     details.includes("login required") ||
     details.includes("age-restricted")
   ) {
-    return new Error(
-      "YouTube vereist aanmelding voor deze video; alleen publiek toegankelijke video's worden ondersteund.",
-    );
+    return new DomainError("error.youtubeLoginRequired");
   }
   if (
     details.includes("live event will begin") ||
     details.includes("premieres in")
   ) {
-    return new Error("Geplande YouTube-streams worden niet ondersteund.");
+    return new DomainError("error.youtubeScheduled");
   }
   if (
     details.includes("video unavailable") ||
     details.includes("not available")
   ) {
-    return new Error("Deze YouTube-video is niet beschikbaar.");
+    return new DomainError("error.youtubeUnavailable");
   }
   if (
     details.includes("larger than max-filesize") ||
     details.includes("file is larger")
   ) {
-    return new Error(
-      "De YouTube-audio overschrijdt de ingestelde downloadlimiet.",
-    );
+    return new DomainError("error.youtubeDownloadLimit");
   }
-  return new Error(`YouTube kon deze publieke video niet ${action}.`);
+  return new DomainError(
+    action === "lezen"
+      ? "error.youtubeUnreadable"
+      : "error.youtubeDownloadFailed",
+  );
 }
 
 export async function resolveYouTubeVideo(
@@ -183,7 +180,7 @@ export async function resolveYouTubeVideo(
       { signal: requestSignal },
     );
     if (typeof metadata !== "object" || metadata === null) {
-      throw new Error("YouTube gaf geen videogegevens terug.");
+      throw new DomainError("error.youtubeMetadataMissing");
     }
     return youtubeEpisodeFromMetadata(sourceUrl, metadata as YouTubeMetadata);
   } catch (error) {
@@ -191,21 +188,9 @@ export async function resolveYouTubeVideo(
       throw signal.reason;
     }
     if (timeoutSignal.aborted) {
-      throw new Error("YouTube reageerde niet binnen de ingestelde tijd.");
+      throw new DomainError("error.youtubeTimeout");
     }
-    if (error instanceof Error && error.message.startsWith("Deze YouTube-")) {
-      throw error;
-    }
-    if (
-      error instanceof Error &&
-      error.message.startsWith("Live en geplande")
-    ) {
-      throw error;
-    }
-    if (
-      error instanceof Error &&
-      error.message.startsWith("YouTube gaf geen titel")
-    ) {
+    if (error instanceof DomainError) {
       throw error;
     }
     throw youtubeFailure(error, "lezen");
@@ -257,17 +242,13 @@ export async function downloadYouTubeAudio(
     try {
       size = (await stat(target)).size;
     } catch {
-      throw new Error(
-        "De YouTube-audio is niet beschikbaar of overschrijdt de ingestelde downloadlimiet.",
-      );
+      throw new DomainError("error.youtubeAudioUnavailable");
     }
     if (!size) {
-      throw new Error("YouTube gaf een leeg audiobestand terug.");
+      throw new DomainError("error.youtubeAudioEmpty");
     }
     if (size > maxMegabytes * 1024 * 1024) {
-      throw new Error(
-        "De YouTube-audio overschrijdt de ingestelde downloadlimiet.",
-      );
+      throw new DomainError("error.youtubeDownloadLimit");
     }
   } catch (error) {
     await rm(target, { force: true }).catch(() => undefined);
@@ -275,13 +256,9 @@ export async function downloadYouTubeAudio(
       throw signal.reason;
     }
     if (timeoutSignal.aborted) {
-      throw new Error("Het downloaden van YouTube duurde te lang.");
+      throw new DomainError("error.youtubeDownloadTimeout");
     }
-    if (
-      error instanceof Error &&
-      (error.message.startsWith("De YouTube-audio") ||
-        error.message.startsWith("YouTube gaf een leeg"))
-    ) {
+    if (error instanceof DomainError) {
       throw error;
     }
     throw youtubeFailure(error, "downloaden");

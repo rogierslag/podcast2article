@@ -10,6 +10,8 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { processingProgress } from "../lib/processing-events.js";
+import { DomainError } from "../lib/errors.js";
 import {
   maxArticleRetries,
   normalizeStoredJob,
@@ -67,12 +69,12 @@ const processingSlots = new ConcurrencyGate(3);
 const mediaSlots = new ConcurrencyGate(1);
 let shuttingDown = false;
 
-export class DuplicateJobError extends Error {
+export class DuplicateJobError extends DomainError {
   constructor(public readonly existingJob: Job) {
     super(
       existingJob.stage === "complete"
-        ? "Deze opname is al verwerkt. Het bestaande artikel staat in je overzicht."
-        : "Deze opname wordt al verwerkt. Bekijk de bestaande opdracht in je overzicht.",
+        ? "error.duplicateComplete"
+        : "error.duplicateProcessing",
     );
     this.name = "DuplicateJobError";
   }
@@ -80,7 +82,7 @@ export class DuplicateJobError extends Error {
 
 export function userDirectory(username: string): string {
   if (!/^[a-z][a-z0-9_-]{1,31}$/.test(username)) {
-    throw new Error("Ongeldige gebruikersnaam.");
+    throw new DomainError("error.usernameInvalid");
   }
   return path.join(root, "users", username);
 }
@@ -438,13 +440,13 @@ export async function deleteArticle(
 ): Promise<void> {
   const job = await getStoredJob(username, id);
   if (!job) {
-    throw new Error("Opdracht niet gevonden.");
+    throw new DomainError("error.jobNotFound");
   }
   if (job.deletedAt) {
     return;
   }
   if (job.stage !== "complete" || !job.article || !job.episode) {
-    throw new Error("Dit artikel is nog niet klaar om te verwijderen.");
+    throw new DomainError("error.articleDeleteNotReady");
   }
   await persist(username, { ...job, deletedAt: new Date().toISOString() });
 }
@@ -534,10 +536,10 @@ export async function setArticleRead(
 ): Promise<ArticleSummary> {
   const job = await getJob(username, id);
   if (!job) {
-    throw new Error("Opdracht niet gevonden.");
+    throw new DomainError("error.jobNotFound");
   }
   if (job.stage !== "complete" || !job.article || !job.episode) {
-    throw new Error("Dit artikel is nog niet klaar om te lezen.");
+    throw new DomainError("error.articleReadNotReady");
   }
   await update(username, job, {
     readAt: read ? new Date().toISOString() : undefined,
@@ -552,17 +554,17 @@ export async function setArticleReadingPosition(
 ): Promise<ArticleReadingPosition> {
   const job = await getJob(username, id);
   if (!job) {
-    throw new Error("Opdracht niet gevonden.");
+    throw new DomainError("error.jobNotFound");
   }
   if (job.stage !== "complete" || !job.article || !job.episode) {
-    throw new Error("Dit artikel is nog niet klaar om te lezen.");
+    throw new DomainError("error.articleReadNotReady");
   }
   if (
     !Number.isInteger(sectionIndex) ||
     sectionIndex < 0 ||
     sectionIndex >= job.article.sections.length
   ) {
-    throw new Error("Deze leespositie bestaat niet in het artikel.");
+    throw new DomainError("error.readingPositionInvalid");
   }
   const readingPosition = {
     sectionIndex,
@@ -582,7 +584,7 @@ export async function createArticleShare(
 ): Promise<string> {
   const job = await getJob(username, id);
   if (!job) {
-    throw new Error("Opdracht niet gevonden.");
+    throw new DomainError("error.jobNotFound");
   }
   if (
     job.stage !== "complete" ||
@@ -590,7 +592,7 @@ export async function createArticleShare(
     !job.episode ||
     !job.transcript
   ) {
-    throw new Error("Dit artikel is nog niet klaar om te delen.");
+    throw new DomainError("error.articleShareNotReady");
   }
   if (!job.shareToken || !isShareToken(job.shareToken)) {
     const shareToken = randomBytes(32).toString("base64url");
@@ -692,7 +694,7 @@ async function copySharedArticle(
 ): Promise<Job> {
   const shared = getSharedArticle(token);
   if (!shared?.job.article || !shared.job.episode || !shared.job.transcript) {
-    throw new Error("Gedeeld artikel niet gevonden.");
+    throw new DomainError("error.sharedNotFound");
   }
   const existing = findSavedSharedArticle(username, token);
   if (existing) {
@@ -738,7 +740,7 @@ async function copySharedArticle(
   const sourceAudio = playbackFileForJob(shared.username, source.id);
   const targetAudio = playbackFileForJob(username, id);
   if (!sourceAudio || !targetAudio) {
-    throw new Error("Gedeeld artikel niet gevonden.");
+    throw new DomainError("error.sharedNotFound");
   }
   await mkdir(path.dirname(targetAudio), { recursive: true });
   try {
@@ -765,32 +767,26 @@ async function copySharedArticle(
 export async function retryArticle(username: string, id: string): Promise<Job> {
   const key = jobKey(username, id);
   if (articleRetryReservations.has(key)) {
-    throw new Error("Deze opdracht wordt al verwerkt.");
+    throw new DomainError("error.jobAlreadyProcessing");
   }
   articleRetryReservations.add(key);
   try {
     const job = await getJob(username, id);
     if (!job) {
-      throw new Error("Opdracht niet gevonden.");
+      throw new DomainError("error.jobNotFound");
     }
     if (activeRuns.has(key) || pendingJobIds.has(key)) {
-      throw new Error("Deze opdracht wordt al verwerkt.");
+      throw new DomainError("error.jobAlreadyProcessing");
     }
     if (job.savedShareKey || !job.transcript?.length || !job.episode) {
-      throw new Error(
-        "Deze opdracht heeft geen complete transcriptie om te hergebruiken.",
-      );
+      throw new DomainError("error.transcriptIncomplete");
     }
     if (job.stage !== "failed") {
-      throw new Error(
-        "Alleen mislukte opdrachten kunnen opnieuw worden geprobeerd.",
-      );
+      throw new DomainError("error.articleRetryNotFailed");
     }
     const attempts = job.articleRetryAttempts ?? 0;
     if (attempts >= maxArticleRetries) {
-      throw new Error(
-        "Deze opdracht heeft het maximum van twee artikelpogingen bereikt.",
-      );
+      throw new DomainError("error.articleRetryLimit");
     }
     checkAccountBudget(username);
     const retryJob: Job = {
@@ -951,7 +947,8 @@ async function processArticleRetry(
       articleTitle: article.title,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Onbekende fout";
+    const message =
+      error instanceof DomainError ? error.code : "error.processing";
     if (signal.aborted) {
       await update(username, job, {
         stage: "queued",
@@ -965,6 +962,7 @@ async function processArticleRetry(
         stage: "failed",
         error: message,
         message,
+        messageValues: error instanceof DomainError ? error.values : undefined,
         progress: job.progress,
       });
     }
@@ -1111,17 +1109,11 @@ async function processJob(
           messageValues: { done, total },
         });
       },
-      (message, data) => {
-        jobLog(job.id, "transcribing", message, data);
-        if (message.startsWith("Nog in afwachting")) {
-          const waitingSeconds = Number(data.waitingSeconds ?? 0);
-          void update(username, job, {
-            message: "progress.wait",
-            messageValues: {
-              chunk: String(data.chunk),
-              minutes: Math.max(1, Math.round(waitingSeconds / 60)),
-            },
-          });
+      (event) => {
+        jobLog(job.id, "transcribing", event.message, event.data);
+        const progress = processingProgress(event);
+        if (progress) {
+          void update(username, job, progress);
         }
       },
       signal,
@@ -1157,7 +1149,8 @@ async function processJob(
       articleTitle: article.title,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Onbekende fout";
+    const message =
+      error instanceof DomainError ? error.code : "error.processing";
     if (signal.aborted) {
       jobLog(
         job.id,
@@ -1176,6 +1169,7 @@ async function processJob(
         stage: "failed",
         error: message,
         message,
+        messageValues: error instanceof DomainError ? error.values : undefined,
         progress: job.progress,
       });
     }
@@ -1212,18 +1206,11 @@ async function generateArticle(
       language: job.language,
       length: job.articleLength,
     },
-    (message, data) => {
-      jobLog(job.id, "writing", message, data);
-      if (message.startsWith("Nog in afwachting")) {
-        void update(username, job, {
-          message: "progress.writing",
-          messageValues: {
-            minutes: Math.max(
-              1,
-              Math.round(Number(data.waitingSeconds ?? 0) / 60),
-            ),
-          },
-        });
+    (event) => {
+      jobLog(job.id, "writing", event.message, event.data);
+      const progress = processingProgress(event);
+      if (progress) {
+        void update(username, job, progress);
       }
     },
     signal,

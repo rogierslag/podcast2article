@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { decodeHTMLStrict } from "entities";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { z } from "zod";
+import { DomainError } from "../lib/errors.js";
 import { safeFetch } from "../lib/network.js";
 import type { PodcastFeed } from "../types.js";
 import { validateSpotifyUrl } from "./resolver.js";
@@ -53,14 +54,14 @@ function httpUrl(value: string, base: string): string | undefined {
 export function parsePodcastFeed(xml: string, url: string): PodcastFeed {
   // DTDs and custom entities are unnecessary for podcast feeds and permit expansion attacks.
   if (/<!DOCTYPE|<!ENTITY/i.test(xml) || XMLValidator.validate(xml) !== true) {
-    throw new Error("series.errorFeed");
+    throw new DomainError("series.errorFeed");
   }
   const parsed: unknown = parser.parse(xml);
   const channel = record(record(record(parsed).rss).channel);
   // RSS display fields often contain HTML entities inside XML or CDATA.
   const title = decodeHTMLStrict(text(channel.title));
   if (!title) {
-    throw new Error("series.errorFeed");
+    throw new DomainError("series.errorFeed");
   }
   const imageUrl = httpUrl(
     text(record(channel["itunes:image"])["@_href"]) ||
@@ -114,7 +115,7 @@ export function parsePodcastFeed(xml: string, url: string): PodcastFeed {
     });
   }
   if (!episodes.length) {
-    throw new Error("series.errorEmpty");
+    throw new DomainError("series.errorEmpty");
   }
   episodes.sort((left, right) =>
     (right.episode.publishedAt || "").localeCompare(
@@ -127,13 +128,13 @@ export function parsePodcastFeed(xml: string, url: string): PodcastFeed {
 export async function fetchPodcastFeed(value: string): Promise<PodcastFeed> {
   const url = httpUrl(value, value);
   if (!url) {
-    throw new Error("series.errorFeed");
+    throw new DomainError("series.errorFeed");
   }
   const response = await safeFetch(url, {
     headers: { Accept: "application/rss+xml, application/xml, text/xml" },
   });
   if (!response.ok || !response.body) {
-    throw new Error("series.errorFeed");
+    throw new DomainError("series.errorFeed");
   }
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -146,7 +147,7 @@ export async function fetchPodcastFeed(value: string): Promise<PodcastFeed> {
       }
       bytes += chunk.byteLength;
       if (bytes > maxFeedBytes) {
-        throw new Error("series.errorFeed");
+        throw new DomainError("series.errorFeed");
       }
       chunks.push(chunk);
     }
@@ -175,7 +176,7 @@ export async function fetchPodcastFeed(value: string): Promise<PodcastFeed> {
       fatal: true,
     }).decode(buffer);
   } catch {
-    throw new Error("series.errorFeed");
+    throw new DomainError("series.errorFeed");
   }
   return parsePodcastFeed(xml, url);
 }
@@ -200,19 +201,19 @@ export async function discoverPodcastFeeds(value: string) {
   ) {
     const url = httpUrl(value, value);
     if (!url) {
-      throw new Error("series.errorFeed");
+      throw new DomainError("series.errorFeed");
     }
     return [{ title: url, url, author: "" }];
   }
   const url = validateSpotifyUrl(value);
   if (!/^\/show\/[a-zA-Z0-9]+\/?$/.test(url.pathname)) {
-    throw new Error("series.errorShow");
+    throw new DomainError("series.errorShow");
   }
   const metadataResponse = await safeFetch(
     `https://open.spotify.com/oembed?url=${encodeURIComponent(url.toString())}`,
   );
   if (!metadataResponse.ok) {
-    throw new Error("series.errorDiscovery");
+    throw new DomainError("series.errorDiscovery");
   }
   const metadata = z
     .object({ title: z.string().min(1) })
@@ -226,7 +227,7 @@ export async function discoverPodcastFeeds(value: string) {
   });
   const response = await safeFetch(`https://itunes.apple.com/search?${params}`);
   if (!response.ok) {
-    throw new Error("series.errorDiscovery");
+    throw new DomainError("series.errorDiscovery");
   }
   const results = searchSchema.parse(await response.json()).results;
   const candidates = results.flatMap((item) => {
@@ -243,7 +244,7 @@ export async function discoverPodcastFeeds(value: string) {
       : [];
   });
   if (!candidates.length) {
-    throw new Error("series.errorDiscovery");
+    throw new DomainError("series.errorDiscovery");
   }
   // Matching by title is ambiguous: the reader chooses and previews the actual feed.
   return [

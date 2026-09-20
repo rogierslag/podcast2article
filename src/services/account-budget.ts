@@ -1,3 +1,4 @@
+import { DomainError } from "../lib/errors.js";
 import type { AccountBudget, Job } from "../types.js";
 
 export const accountLimitUsd = 5;
@@ -71,7 +72,7 @@ export function summarizeAccountBudget(
   };
 }
 
-export class AccountBudgetError extends Error {
+export class AccountBudgetError extends DomainError {
   constructor() {
     super("error.accountBudget");
     this.name = "AccountBudgetError";

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchPodcastFeed, discoverPodcastFeeds } from "./podcast-feeds.js";
 import { subscriptionRouter } from "./subscription-routes.js";
 import { SubscriptionStore } from "./subscriptions.js";
+import { AccountBudgetError } from "./account-budget.js";
 import { getJob } from "./jobs.js";
 import { findEpisodeFeed } from "./resolver.js";
 import type { Job, PodcastFeed } from "../types.js";
@@ -284,7 +285,9 @@ it("returns a localized budget error when catch-up cannot reserve paid work", as
     backfill: "none",
   });
   const { id } = await followed.json();
-  enqueue.mockRejectedValue(new Error("error.accountBudget"));
+  const budgetError = new AccountBudgetError();
+  budgetError.message = "Reworded operational budget diagnostic";
+  enqueue.mockRejectedValue(budgetError);
 
   const response = await request(`/${id}/backfill`, "POST");
 
@@ -292,4 +295,18 @@ it("returns a localized budget error when catch-up cannot reserve paid work", as
   expect((await response.json()).error).toContain("$5 account limit");
   await store.check("alice");
   expect(store.list("alice")[0]?.error).toBe("error.accountBudget");
+});
+
+it("returns a safe localized fallback for unknown service failures", async () => {
+  vi.mocked(fetchPodcastFeed).mockRejectedValue(
+    new Error("secret internal URL and credentials"),
+  );
+
+  const response = await request("/preview", "POST", { url: feed.url });
+
+  expect(response.status).toBe(400);
+  const payload = await response.json();
+  expect(payload.error).not.toContain("secret");
+  expect(payload.error).not.toContain("credentials");
+  expect(payload.error).toBeTruthy();
 });

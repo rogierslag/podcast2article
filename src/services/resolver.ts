@@ -1,4 +1,5 @@
 import { decodeHTMLAttribute, decodeHTMLStrict } from "entities";
+import { DomainError } from "../lib/errors.js";
 import { similarity } from "../lib/format.js";
 import { safeFetch } from "../lib/network.js";
 import type { Episode } from "../types.js";
@@ -49,12 +50,10 @@ export function validateSpotifyUrl(value: string): URL {
     host !== "spotify.com" &&
     host !== "www.spotify.com"
   ) {
-    throw new Error("Plak een publieke open.spotify.com-link.");
+    throw new DomainError("error.spotifyLinkRequired");
   }
   if (!/^\/(episode|show)\/[A-Za-z0-9]+/.test(url.pathname)) {
-    throw new Error(
-      "Gebruik een Spotify-link naar een aflevering of podcastshow.",
-    );
+    throw new DomainError("error.spotifyLinkInvalid");
   }
   url.search = "";
   return url;
@@ -63,7 +62,7 @@ export function validateSpotifyUrl(value: string): URL {
 export function googleDriveFileId(value: string): string {
   const url = new URL(value);
   if (!DRIVE_HOSTS.has(url.hostname.toLowerCase())) {
-    throw new Error("Plak een publieke Google Drive-link naar de Meet-opname.");
+    throw new DomainError("error.driveLinkRequired");
   }
   const pathMatch = url.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]{10,})/);
   const fileId =
@@ -72,9 +71,7 @@ export function googleDriveFileId(value: string): string {
       ? url.searchParams.get("id")
       : undefined);
   if (!fileId || !/^[A-Za-z0-9_-]{10,}$/.test(fileId)) {
-    throw new Error(
-      "Gebruik een Google Drive-link naar één opnamebestand, niet naar een map of Meet-ruimte.",
-    );
+    throw new DomainError("error.driveFileRequired");
   }
   return fileId;
 }
@@ -100,9 +97,7 @@ export function validateSourceUrl(value: string): URL {
     return validateGoogleDriveUrl(value);
   }
   if (host === "meet.google.com") {
-    throw new Error(
-      "Plak de Google Drive-link naar de opname, niet de link naar de Meet-ruimte.",
-    );
+    throw new DomainError("error.meetRoomLink");
   }
   if (
     host === "open.spotify.com" ||
@@ -114,7 +109,7 @@ export function validateSourceUrl(value: string): URL {
   if (isYouTubeHost(host)) {
     return validateYouTubeUrl(value);
   }
-  throw new Error("error.sourceUnsupported");
+  throw new DomainError("error.sourceUnsupported");
 }
 
 function metaContent(html: string, property: string): string | undefined {
@@ -134,9 +129,7 @@ function metaContent(html: string, property: string): string | undefined {
 export function parseGoogleDriveMetadata(html: string): DriveMetadata {
   const title = metaContent(html, "og:title");
   if (!title) {
-    throw new Error(
-      "Google Drive gaf geen bestandsgegevens terug. Controleer of iedereen met de link toegang heeft.",
-    );
+    throw new DomainError("error.driveMetadataMissing");
   }
   const mimeType = html.match(/"docs-dm"\s*:\s*"([^"]+)"/i)?.[1];
   const supportedMimeType = Boolean(
@@ -145,9 +138,7 @@ export function parseGoogleDriveMetadata(html: string): DriveMetadata {
       mimeType.toLowerCase().startsWith("video/")),
   );
   if (!MEDIA_EXTENSION.test(title) && !supportedMimeType) {
-    throw new Error(
-      "De Google Drive-link verwijst niet naar een ondersteund audio- of videobestand.",
-    );
+    throw new DomainError("error.driveMediaUnsupported");
   }
   return { title, imageUrl: metaContent(html, "og:image"), mimeType };
 }
@@ -174,7 +165,7 @@ async function getSpotifyMetadata(url: string): Promise<SpotifyEmbed> {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
-    throw new Error("Spotify kon deze publieke link niet lezen.");
+    throw new DomainError("error.spotifyLinkUnreadable");
   }
   const metadata = (await response.json()) as SpotifyEmbed;
   return {
@@ -199,7 +190,7 @@ async function searchItunes(
     { headers: { Accept: "application/json" } },
   );
   if (!response.ok) {
-    throw new Error("De openbare podcastindex is tijdelijk niet bereikbaar.");
+    throw new DomainError("error.podcastDirectoryUnavailable");
   }
   const body = (await response.json()) as { results?: ItunesResult[] };
   return (body.results ?? []).map((item) => ({
@@ -237,23 +228,19 @@ export async function resolveSpotifyEpisode(value: string): Promise<Episode> {
   const spotifyUrl = validateSpotifyUrl(value).toString();
   const type = new URL(spotifyUrl).pathname.split("/")[1];
   if (type === "show") {
-    throw new Error(
-      "Kies een specifieke Spotify-aflevering; een show bevat meerdere mogelijke afleveringen.",
-    );
+    throw new DomainError("error.spotifyEpisodeRequired");
   }
 
   const spotify = await getSpotifyMetadata(spotifyUrl);
   if (!spotify.title) {
-    throw new Error("Spotify gaf geen titel voor deze aflevering terug.");
+    throw new DomainError("error.spotifyTitleMissing");
   }
 
   const candidates = await searchItunes(spotify.title, "podcastEpisode");
   const match = selectBestEpisode(spotify.title, candidates);
   const score = match ? similarity(spotify.title, match.trackName ?? "") : 0;
   if (!match?.episodeUrl || score < 0.34) {
-    throw new Error(
-      "Deze publieke Spotify-aflevering kon niet met voldoende zekerheid aan een openbare podcastbron worden gekoppeld. Controleer of de aflevering ook via RSS/Apple Podcasts beschikbaar is.",
-    );
+    throw new DomainError("error.spotifySourceUnmatched");
   }
 
   return {
@@ -281,15 +268,16 @@ export async function resolveGoogleDriveRecording(
     headers: { Accept: "text/html" },
   });
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new DomainError("error.drivePrivate");
+    }
     throw new Error(
-      response.status === 401 || response.status === 403
-        ? "Deze Google Meet-opname is niet openbaar. Kies in Drive voor ‘Iedereen met de link’."
-        : `Google Drive kon deze opname niet openen (${response.status}).`,
+      `Google Drive kon deze opname niet openen (${response.status}).`,
     );
   }
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("text/html")) {
-    throw new Error("Google Drive gaf geen geldige opnamepagina terug.");
+    throw new DomainError("error.drivePageInvalid");
   }
   const metadata = parseGoogleDriveMetadata(await response.text());
   const fileId = googleDriveFileId(sourceUrl);

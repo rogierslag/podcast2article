@@ -290,7 +290,11 @@ Backup extraction also accepts older files directly, so an offline backup does n
 
 New processing messages store semantic translation keys and separate `messageValues` for progress counts and waiting times.
 API responses translate these for the reader's language.
-Previously stored Dutch messages and current service errors still use the compatibility translator.
+Service failures use typed `DomainError` codes and structured interpolation values; the API boundary selects HTTP statuses and Dutch or English messages without inspecting diagnostic text.
+Unknown failures return a safe localized fallback, and failed jobs persist a message key rather than raw internal error text.
+Previously stored Dutch messages remain readable through the explicit `translateStoredMessage` compatibility path.
+OpenAI callbacks emit typed processing events; waiting events carry elapsed seconds and, for transcription, the chunk identity independently of operational log wording.
+Downloader adapters still classify external tool diagnostics at their boundary, then propagate domain errors by identity.
 
 JSON persistence is simple and inspectable, but it does not provide database transactions, multi-process coordination, querying, or horizontal scaling.
 The architecture assumes exactly one application process.

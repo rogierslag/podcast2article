@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
-import { requestLanguage } from "../lib/i18n.js";
-import { translate } from "../../public/i18n.js";
+import { DomainError, domainErrorStatus } from "../lib/errors.js";
+import { requestLanguage, translateDomainError } from "../lib/i18n.js";
 import type { PodcastFeed } from "../types.js";
 import { discoverPodcastFeeds, fetchPodcastFeed } from "./podcast-feeds.js";
 import { findEpisodeFeed } from "./resolver.js";
@@ -62,7 +62,7 @@ export function subscriptionRouter(store: SubscriptionStore) {
       !job.episode ||
       !["spotify", "rss"].includes(job.episode.sourceType)
     ) {
-      throw new Error("series.errorNotFound");
+      throw new DomainError("series.errorNotFound");
     }
     const subscriptions = store.list(username);
     let subscription = subscriptions.find((item) => item.jobIds.includes(id));
@@ -71,7 +71,7 @@ export function subscriptionRouter(store: SubscriptionStore) {
       feedUrl = await findEpisodeFeed(job.episode);
     }
     if (!feedUrl) {
-      throw new Error("series.errorDiscovery");
+      throw new DomainError("series.errorDiscovery");
     }
     subscription ??= subscriptions.find((item) => item.feedUrl === feedUrl);
     response.json({
@@ -115,10 +115,10 @@ export function subscriptionRouter(store: SubscriptionStore) {
       preview.id !== input.previewId ||
       preview.expires < Date.now()
     ) {
-      throw new Error("series.errorPreview");
+      throw new DomainError("series.errorPreview");
     }
     if (!process.env.OPENAI_API_KEY) {
-      throw new Error("error.creationUnavailable");
+      throw new DomainError("error.creationUnavailable");
     }
     const subscription = await store.follow(
       username,
@@ -153,36 +153,18 @@ export function subscriptionRouter(store: SubscriptionStore) {
       response: import("express").Response,
       _next: import("express").NextFunction,
     ) => {
-      const key =
-        error instanceof Error &&
-        /^(series\.error\w+|error.creationUnavailable|error.accountBudget)$/.test(
-          error.message,
-        )
-          ? error.message
-          : error instanceof z.ZodError
-            ? "error.input"
-            : "series.errorFeed";
-      response
-        .status(
-          key === "error.accountBudget"
-            ? 429
-            : key === "series.errorNotFound"
-              ? 404
-              : key === "series.errorDuplicate" || key === "series.errorLimit"
-                ? 409
-                : key === "error.creationUnavailable"
-                  ? 503
-                  : 400,
-        )
-        .json({
-          error: translate(
-            requestLanguage(
-              request.get("Accept-Language"),
-              request.headers.cookie,
-            ),
-            key,
+      const fallback =
+        error instanceof z.ZodError ? "error.input" : "series.errorFeed";
+      response.status(domainErrorStatus(error, 400)).json({
+        error: translateDomainError(
+          requestLanguage(
+            request.get("Accept-Language"),
+            request.headers.cookie,
           ),
-        });
+          error,
+          fallback,
+        ),
+      });
     },
   );
   return router;
