@@ -207,6 +207,10 @@ Feed identity and available episodes are previewed before confirmation.
 Following defaults to future episodes only; catch-up is explicit and restricted to the latest three episodes.
 Older archive episodes are not downloaded automatically.
 Active feeds are checked at startup and hourly.
+The Articles menu badge counts completed articles from currently followed series since the last successfully loaded Articles overview.
+The checkpoint is stored per account across devices; the first visit establishes a baseline without flagging the existing backlog.
+Opening the overview clears arrivals without marking articles as read; failed loads do not clear them.
+The badge refreshes every 30 seconds while visible and when returning to the app.
 Five unread, queued, or processing episodes in that series trigger an automatic pause.
 Reading frees capacity, but the reader must explicitly resume.
 Catch-up respects capacity and preserves a manual pause.

@@ -2383,3 +2383,19 @@ input::placeholder {
     display: none;
   }
 }
+
+.main-nav .article-arrivals {
+  margin-left: 0.4em;
+  padding: 0.1em 0.4em;
+  border-radius: var(--control-radius);
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.main-nav .article-arrivals[hidden] {
+  display: none;
+}

@@ -1,3 +1,7 @@
+import {
+  ArticleVisits,
+  countArticleArrivals,
+} from "./services/article-visits.js";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import express from "express";
@@ -561,8 +565,36 @@ const readingPositionSchema = z.object({
   sectionIndex: z.number().int().nonnegative(),
 });
 
+const articleVisits = new ArticleVisits(userDirectory);
+app.get("/api/articles/arrivals", async (_request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  const username = response.locals.username;
+  const checkpoint = await articleVisits.checkpoint(username);
+  const count = countArticleArrivals(
+    listReadyArticles(username),
+    subscriptions.list(username),
+    checkpoint,
+  );
+  response.json({ count });
+});
+
+app.post("/api/articles/visit", async (request, response) => {
+  const parsed = z
+    .object({ visitedAt: z.iso.datetime() })
+    .safeParse(request.body);
+  if (!parsed.success || Date.parse(parsed.data.visitedAt) > Date.now()) {
+    return response.sendStatus(400);
+  }
+  await articleVisits.checkpoint(
+    response.locals.username,
+    new Date(parsed.data.visitedAt).toISOString(),
+  );
+  response.sendStatus(204);
+});
+
 app.get("/api/articles", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
+  response.setHeader("X-Articles-Snapshot", new Date().toISOString());
   response.json(listReadyArticles(response.locals.username));
 });
 

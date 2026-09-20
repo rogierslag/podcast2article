@@ -10,6 +10,9 @@ Completed articles appear automatically on the [`/articles`](http://localhost:30
 You can mark articles as read and undo that choice; the status is stored locally with the job.
 Queued and processing jobs appear at the top with their current stage and progress.
 This part of the overview refreshes automatically.
+The Articles menu badge counts newly completed articles from followed series since your last successful overview visit.
+Opening the overview clears the badge without marking articles as read.
+The server stores this visit per account across devices; your first visit establishes a baseline without flagging the existing backlog.
 
 Unknown page URLs redirect to `/articles` after authentication; logged-out visitors still go to `/login`.
 Unknown API routes and invalid shared links remain errors.

@@ -1,3 +1,4 @@
+import { acknowledgeArticleVisit } from "./article-arrivals.js";
 import {
   t,
   countText,
@@ -1445,6 +1446,11 @@ async function showArticles(showLoading = true) {
     articlesState = articles;
     processingState = processing;
     renderArticlesOverview();
+    if (!document.hidden) {
+      void acknowledgeArticleVisit(
+        articlesResponse.headers.get("X-Articles-Snapshot"),
+      );
+    }
     scheduleOverviewRefresh();
   } catch (error) {
     if (version !== routeVersion) {
