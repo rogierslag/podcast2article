@@ -1,5 +1,15 @@
 import { createReadStream } from "node:fs";
 import OpenAI from "openai";
+import {
+  articleSnapshot,
+  retrieveArticleAnswer,
+  type ArticleCheckpoint,
+} from "./background-article.js";
+import { paidRequestDrain } from "./deployment-drain.js";
+import {
+  chunkTranscriptSchema,
+  type ChunkTranscript,
+} from "./processing-artifacts.js";
 import type { ProcessingEvent } from "../lib/processing-events.js";
 import { DomainError } from "../lib/errors.js";
 import { endpointRegion, trackedRequest, reserveApiCost } from "./api-usage.js";
@@ -48,11 +58,12 @@ export function articleServiceTier(): "flex" | "default" {
   throw new Error('Invalid ARTICLE_SERVICE_TIER. Use "flex" or "default".');
 }
 
-interface DiarizedSegment {
-  start?: number;
-  end?: number;
-  speaker?: string;
-  text?: string;
+interface TranscriptionCheckpoint {
+  chunkSeconds: number;
+  model: string;
+  language: string;
+  load(index: number): Promise<ChunkTranscript | undefined>;
+  save(index: number, response: ChunkTranscript): Promise<void>;
 }
 
 export async function transcribeChunks(
@@ -62,10 +73,11 @@ export async function transcribeChunks(
   onStatus: (event: ProcessingEvent) => void = () => undefined,
   signal?: AbortSignal,
   recordUsage?: UsageRecorder,
+  checkpoint?: TranscriptionCheckpoint,
 ): Promise<TranscriptSegment[]> {
   const openai = client();
   const all: TranscriptSegment[] = [];
-  const chunkSeconds = audioChunkSeconds();
+  const chunkSeconds = checkpoint?.chunkSeconds ?? audioChunkSeconds();
   for (let index = 0; index < files.length; index += 1) {
     signal?.throwIfAborted();
     const chunkNumber = index + 1;
@@ -92,40 +104,56 @@ export async function transcribeChunks(
       });
     }, 30_000);
     heartbeat.unref();
-    let response: { segments?: DiarizedSegment[]; text?: string };
+    let response: ChunkTranscript | undefined;
     try {
-      const model =
-        process.env.TRANSCRIPTION_MODEL ?? "gpt-4o-transcribe-diarize";
-      response = await trackedRequest(
-        {
-          stage: "transcription",
-          model,
-          region: endpointRegion(openai.baseURL),
-          reservedCostUsd: reserveApiCost(
+      response = await checkpoint?.load(index);
+      if (!response) {
+        const model =
+          checkpoint?.model ??
+          process.env.TRANSCRIPTION_MODEL ??
+          "gpt-4o-transcribe-diarize";
+        response = await trackedRequest<ChunkTranscript>(
+          {
+            stage: "transcription",
             model,
-            endpointRegion(openai.baseURL),
-            { audioSeconds: chunkSeconds + 1 },
-          ),
-          chunkNumber,
-          signal,
-          record: recordUsage,
-        },
-        () =>
-          openai.audio.transcriptions
-            .create(
-              {
-                file: createReadStream(files[index]!),
-                model,
-                response_format: "diarized_json",
-                chunking_strategy: "auto",
-                language: language === "auto" ? undefined : language,
-              } as never,
-              { timeout: timeoutMs, signal, maxRetries: 0 },
-            )
-            .withResponse(),
-      );
+            region: endpointRegion(openai.baseURL),
+            reservedCostUsd: reserveApiCost(
+              model,
+              endpointRegion(openai.baseURL),
+              { audioSeconds: chunkSeconds + 1 },
+            ),
+            chunkNumber,
+            acquire: (requestSignal) => paidRequestDrain.acquire(requestSignal),
+            saveResult: async (result) => {
+              const saved = chunkTranscriptSchema.parse(result);
+              await checkpoint?.save(index, saved);
+            },
+            signal,
+            record: recordUsage,
+          },
+          () =>
+            openai.audio.transcriptions
+              .create(
+                {
+                  file: createReadStream(files[index]!),
+                  model,
+                  response_format: "diarized_json",
+                  chunking_strategy: "auto",
+                  language:
+                    (checkpoint?.language ?? language) === "auto"
+                      ? undefined
+                      : (checkpoint?.language ?? language),
+                } as never,
+                { timeout: timeoutMs, signal, maxRetries: 0 },
+              )
+              .withResponse(),
+        );
+      }
     } finally {
       clearInterval(heartbeat);
+    }
+    if (!response) {
+      throw new Error("Transcription result is missing");
     }
     const offset = index * chunkSeconds;
     const segments = response.segments?.length
@@ -366,6 +394,7 @@ export async function writeArticle(
   onStatus: (event: ProcessingEvent) => void = () => undefined,
   signal?: AbortSignal,
   recordUsage?: UsageRecorder,
+  checkpoint?: ArticleCheckpoint,
 ): Promise<Article> {
   signal?.throwIfAborted();
   const openai = client();
@@ -398,15 +427,19 @@ export async function writeArticle(
     });
   }, 30_000);
   heartbeat.unref();
-  let response;
+  let savedResponse = checkpoint?.state;
+  let answer: string;
   try {
-    const model = process.env.ARTICLE_MODEL ?? "gpt-5.6-terra";
-    // Preserve the coverage wording evaluated in docs/ARTICLE-COVERAGE-EVALUATION.md.
-    const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
-      model,
-      service_tier: serviceTier,
-      max_output_tokens: 16_384,
-      instructions: `You are a careful editor. Write solely from the supplied transcript.
+    if (!savedResponse) {
+      const model = process.env.ARTICLE_MODEL ?? "gpt-5.6-terra";
+      // Preserve the coverage wording evaluated in docs/ARTICLE-COVERAGE-EVALUATION.md.
+      const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
+        model,
+        background: true,
+        store: true,
+        service_tier: serviceTier,
+        max_output_tokens: 16_384,
+        instructions: `You are a careful editor. Write solely from the supplied transcript.
 
 ${articleLanguageInstruction(metadata.language)}
 
@@ -418,54 +451,73 @@ Each paragraph must contain 1-5 source IDs that directly support its entire cont
 
 COVERAGE REQUIREMENT: Before writing, survey the complete transcript and choose the main substantive topics across the beginning, middle and end. Preserve each central assertion, its defining example or qualification, important counterarguments, and substantive career or personal stories when these explain the episode. Do not let an attractive opening theme turn the article into a narrower essay that silently loses other major topics. Exclude ads, housekeeping and repetition. Allocate space across the topics before drafting; when space is tight, combine related themes and shorten explanations before dropping a distinct main topic. Internally check the finished article for accidental omissions and unsupported additions. Return only the final article JSON, not a plan or review. The transcript remains the only factual source; publisher writing and external knowledge must not be used.
 `,
-      input: [
-        {
-          role: "user",
-          content: `Source: ${metadata.sourceName}\nTitle: ${metadata.title}\n\nTRANSCRIPT (only factual source):\n${transcriptText}`,
+        input: [
+          {
+            role: "user",
+            content: `Source: ${metadata.sourceName}\nTitle: ${metadata.title}\n\nTRANSCRIPT (only factual source):\n${transcriptText}`,
+          },
+        ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "source_linked_article",
+            strict: true,
+            schema: articleSchemaFor(validIds),
+          },
         },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "source_linked_article",
-          strict: true,
-          schema: articleSchemaFor(validIds),
-        },
-      },
-    };
-    const reservedCostUsd = reserveApiCost(
-      model,
-      endpointRegion(openai.baseURL),
-      {
-        inputBytes: Buffer.byteLength(JSON.stringify(payload)),
-        outputTokens: 16_384,
-      },
-    );
-    response = await trackedRequest(
-      {
-        stage: "article",
-        serviceTier,
-        reservedCostUsd,
+      };
+      const reservedCostUsd = reserveApiCost(
         model,
-        region: endpointRegion(openai.baseURL),
-        signal,
-        record: recordUsage,
-      },
-      (requestedTier) =>
-        openai.responses
-          .create(
-            { ...payload, service_tier: requestedTier },
-            { timeout: timeoutMs, signal, maxRetries: 0 },
-          )
-          .withResponse(),
+        endpointRegion(openai.baseURL),
+        {
+          inputBytes: Buffer.byteLength(JSON.stringify(payload)),
+          outputTokens: 16_384,
+        },
+      );
+      await trackedRequest<OpenAI.Responses.Response>(
+        {
+          stage: "article",
+          background: true,
+          acquire: (requestSignal) => paidRequestDrain.acquire(requestSignal),
+          saveResult: async (response, request) => {
+            savedResponse = articleSnapshot(response, request, openai.baseURL);
+            await checkpoint?.save(savedResponse);
+          },
+          serviceTier,
+          reservedCostUsd,
+          model,
+          region: endpointRegion(openai.baseURL),
+          signal,
+          record: recordUsage,
+        },
+        (requestedTier) =>
+          openai.responses
+            .create(
+              { ...payload, service_tier: requestedTier },
+              { timeout: timeoutMs, signal, maxRetries: 0 },
+            )
+            .withResponse(),
+      );
+    }
+    if (!savedResponse) {
+      throw new Error("Article response was not saved");
+    }
+    answer = await retrieveArticleAnswer(
+      openai,
+      savedResponse,
+      checkpoint,
+      signal,
+      checkpoint?.state || savedResponse.status !== "completed"
+        ? recordUsage
+        : undefined,
     );
   } finally {
     clearInterval(heartbeat);
   }
-  if (!response.output_text) {
+  if (!answer) {
     throw new DomainError("error.articleMissing");
   }
-  const article = JSON.parse(response.output_text) as Article;
+  const article = JSON.parse(answer) as Article;
   onStatus({
     type: "article.completed",
     message: "OpenAI-artikel ontvangen",

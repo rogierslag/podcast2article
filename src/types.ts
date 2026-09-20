@@ -113,6 +113,14 @@ export interface ShareAnalytics {
   recentVisits: Array<{ digest: string; loadedAt: number; read: boolean }>;
 }
 
+export interface BackgroundArticle {
+  responseId: string;
+  baseURL: string;
+  status: string;
+  answer?: string;
+  request: ApiRequestUsage;
+}
+
 export interface Job {
   id: string;
   sourceUrl: string;
@@ -140,6 +148,8 @@ export interface Job {
   episode?: Episode;
   transcript?: TranscriptSegment[];
   article?: Article;
+  /** Provider response and received answer survive deployment and local validation failure. */
+  backgroundArticle?: BackgroundArticle;
   error?: string;
   /** Accepted article-only retries, excluding the initial generation. */
   articleRetryAttempts?: number;

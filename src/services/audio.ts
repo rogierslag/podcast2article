@@ -181,16 +181,16 @@ export async function splitAudio(
   input: string,
   directory: string,
   signal?: AbortSignal,
+  chunkSeconds = audioChunkSeconds(),
 ): Promise<string[]> {
   const outputPattern = `${directory}/chunk-%03d.mp3`;
-  const chunkSeconds = audioChunkSeconds();
   await runFfmpeg(
     audioSplitArguments(input, outputPattern, chunkSeconds),
     signal,
   );
   const files = (await readdir(directory))
     .filter((name) => /^chunk-\d+\.mp3$/.test(name))
-    .sort()
+    .sort((left, right) => left.localeCompare(right, "en", { numeric: true }))
     .map((name) => `${directory}/${name}`);
   if (!files.length) {
     throw new DomainError("error.audioSegmentsEmpty");

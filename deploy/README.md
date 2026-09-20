@@ -139,7 +139,10 @@ sudo tail -f /var/log/podcast2article-update.log
 ```
 
 The updater fetches the exact `main` commit, installs locked dependencies, builds, tests, creates an immutable release, and runs the real synthetic media pipeline with the production service environment.
-Only after this succeeds does it switch the `current` symlink, start the app, and perform a health check with rollback on failure when a previous release exists.
+After validation, the updater pauses new paid requests and waits up to 15 minutes for active transcription results and article response IDs to be saved.
+Only after acknowledgement does it switch the `current` symlink, restart the app, and perform a health check with rollback on failure when a previous release exists.
+Its exit handler resumes admission after success or failure.
+The first upgrade from a release without the drain protocol requires an idle, manual activation; see [deployment recovery](../docs/DEPLOYMENT-RECOVERY.md).
 The validation command is `yarn run check`; browser tests run separately in GitHub Actions.
 The updater does not wait for those CI checks, so confirm them before merging to `main`.
 

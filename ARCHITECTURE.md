@@ -17,7 +17,7 @@ Podcast2Article turns a public Spotify podcast episode, YouTube video, or public
 4. a downloadable PDF containing the article and source links.
 
 The application is designed for a small, fixed group of trusted users rather than for public self-service.
-Credentials are configured by the administrator, each user's data is isolated on disk and in the API, and the application uses three processing slots with one shared slot for downloads and FFmpeg.
+Credentials are configured by the administrator, each user's data is isolated on disk and in the API, and the application uses three media/transcription slots, three article slots, and one shared slot for downloads and FFmpeg.
 
 ## 2. System context
 
@@ -143,11 +143,11 @@ Public capability URLs grant access only to their completed article and audio, a
 Metadata resolution has three independent FIFO slots, so queued jobs acquire recognizable titles and artwork without waiting for audio processing.
 Resolved jobs wait in `queued` with their metadata persisted.
 
-Full jobs and article-only retries share three processing slots.
+Media preparation and transcription share three processing slots; article generation and article-only retries use three separate slots.
 Downloading, normalization, and splitting share one media slot because downloaders can also invoke FFmpeg.
 That slot is released before transcription: remote transcription and article requests can overlap across jobs without concurrent media processing.
 Chunks within each job are still transcribed sequentially.
-Up to three jobs can retain temporary audio at once, so disk use can exceed the former serial queue.
+Up to three jobs actively prepare or transcribe audio at once; interrupted and failed workspaces remain available for recovery.
 Slot waits are abortable and slots are released on both success and failure.
 
 The persisted job record is updated at important boundaries.
@@ -160,18 +160,25 @@ On startup:
 2. completed, failed, and deleted jobs are not scheduled;
 3. incomplete jobs are reset to `queued`;
 4. resumable jobs enter the processing pipeline;
-5. the full pipeline runs again, including media preparation and transcription.
+5. saved complete transcripts bypass media preparation and transcription;
+6. otherwise, saved media and chunk responses are reused using their original manifest settings;
+7. persisted background article response IDs are retrieved rather than regenerated.
 
-A stored transcript does not yet provide durable stage recovery.
-Restarting incomplete jobs can therefore repeat paid work.
+Completed chunk responses and received article answers are saved before local assembly or validation.
+See [deployment recovery](docs/DEPLOYMENT-RECOVERY.md) for checkpoint, retention, and failure semantics.
 
 On shutdown:
 
 1. the HTTP server stops accepting work;
 2. active OpenAI requests receive an `AbortSignal`;
 3. interrupted work returns to a resumable queued state;
-4. temporary media is removed;
+4. unfinished transcription artifacts remain available for recovery;
 5. the application forces exit after 15 seconds; systemd's 20-second stop timeout is the outer limit.
+
+The deployment updater first closes admission of new paid HTTP requests and waits for active transcription results and background article submission IDs to be saved.
+It then restarts the application and removes its pause marker on success or failure.
+Remote article generation continues during deployment; polling resumes against its saved response ID.
+Optional signed OpenAI webhooks wake the same poller and do not mutate jobs directly.
 
 ### 3.5 Source resolution
 
@@ -225,11 +232,11 @@ For each job:
 
 1. source media is streamed to a per-job work directory;
 2. FFmpeg performs one normalization pass;
-3. output becomes mono, 16 kHz, 48 kbps MP3;
+3. output becomes mono, 16 kHz, 48 kbps MP3 and is published as persistent playback;
 4. the normalized MP3 is split into transcript chunks with stream copy;
-5. chunks are uploaded sequentially to OpenAI;
-6. the original download and temporary chunks are removed;
-7. the normalized MP3 becomes persistent playback media.
+5. the chunk manifest is persisted and the original download is removed;
+6. chunks are uploaded sequentially to OpenAI and each response is saved;
+7. temporary chunks are removed after the complete transcript is persisted.
 
 Stream-copy splitting avoids a second encode.
 At 48 kbps, one hour of retained audio is approximately 22 MB.
@@ -282,11 +289,13 @@ This design substantially reduces memory usage compared with browser-based print
 The application deliberately does not use a database.
 
 ```text
-data/users/<username>/jobs/<uuid>.json   job, transcript, article, read state, share analytics
+data/users/<username>/jobs/<uuid>.json   job, transcript, article, background response, read state, share analytics
 data/users/<username>/media/<uuid>.mp3   normalized playback audio
-data/users/<username>/work/<uuid>/       temporary downloads and chunks
+data/users/<username>/work/<uuid>/       source media, chunk manifest, audio chunks and saved responses
 data/users/<username>/subscriptions.json series configuration and scheduling state
 data/article-backups/<username>/<uuid>.sha256 successful S3 upload receipt
+data/deployment-drain.json             deployment admission pause request
+data/deployment-drain-status.json      matching active-request acknowledgement
 ```
 
 In production, `data` is a symlink to `/var/lib/podcast2article`.
@@ -335,7 +344,7 @@ All six share an operation ID.
 `ARTICLE_SERVICE_TIER=default` disables Flex and permits three standard attempts.
 Transcription retains three attempts.
 The wrapper honors retry headers and exponential backoff; permanent errors and shutdown cancellation stop without fallback.
-The per-attempt article timeout and budget checks apply to both tiers.
+The per-attempt background submission timeout and budget checks apply to both tiers.
 A successful response that fails article validation is not retried here.
 
 The ledger stores numeric usage counters, reported audio duration, requested and actual model/tier, request IDs, timestamps, and HTTP outcomes.
@@ -415,14 +424,17 @@ Detailed flow:
 3. Resolve the public source in a metadata slot and persist its title and artwork.
 4. Wait for a processing slot and the media slot.
 5. Enforce the source-specific download limit.
-6. Download the source to the temporary work directory.
-7. Normalize once to compact playback MP3.
-8. Split by stream copy and release the media slot.
-9. Transcribe each chunk and merge timestamped segments.
-10. Move normalized audio to persistent media storage.
-11. Generate the source-grounded article.
-12. Persist the completed job and completion timestamp.
-13. Remove the work directory.
+6. Download the source to a temporary file and publish it by rename.
+7. Normalize once and publish the compact playback MP3 in persistent media storage.
+8. Split by stream copy, save the chunk manifest, and release the media slot.
+9. Transcribe each chunk, save its response atomically, and merge timestamped segments.
+10. Persist the complete transcript, remove its work directory, and release the processing slot.
+11. Acquire an article slot, submit background generation, and persist the response ID.
+12. Retrieve the response through polling, optionally woken by a signed webhook, and save the final answer and usage before validation.
+13. Validate the article and persist the completed job and completion timestamp.
+
+Recovery reuses existing checkpoints and complete transcripts and resumes saved background response IDs.
+See [deployment recovery](docs/DEPLOYMENT-RECOVERY.md) for persistence boundaries and remaining crash risks.
 
 ## 5. API surface
 
@@ -433,6 +445,7 @@ Detailed flow:
 | `GET`    | `/api/shared/:token/audio`       | That article's source audio                | Capability     |
 | `POST`   | `/api/shared/:token/events`      | Record anonymous load/read                 | Capability     |
 | `GET`    | `/share-target`                  | Prefill an incoming source                 | No             |
+| `POST`   | `/hooks/openai`                  | Wake background article retrieval          | Signature      |
 | `GET`    | `/api/health`                    | Deployment health                          | No             |
 | `GET`    | `/login`                         | Login form                                 | No             |
 | `POST`   | `/login`                         | Create session                             | No             |
@@ -457,6 +470,8 @@ Detailed flow:
 
 “Yes” means the configured owner session is required; without account configuration, local development uses the `local` account.
 “Capability” means a valid high-entropy token, independent of account authentication.
+“Signature” means the raw webhook body is verified with `OPENAI_WEBHOOK_SECRET`; without that secret the route returns `404`.
+The webhook only wakes polling and does not expose owner APIs.
 
 `POST /api/jobs` requires `sourceUrl`, with optional `language` and `articleLength`.
 The former `spotifyUrl` request alias is no longer accepted as a source.
@@ -508,7 +523,8 @@ Values must never be committed or copied into this document.
 | `FFMPEG_BIN`                      | Optional absolute path overriding the bundled FFmpeg executable                                           |
 | `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                                                                 |
 | `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                                                                     |
-| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                                                                       |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | Background article submission timeout                                                                     |
+| `OPENAI_WEBHOOK_SECRET`           | Optional background article webhook signing secret; polling works without it                              |
 | `LOG_STACKS`                      | Enable full stack traces in logs                                                                          |
 
 S3 backups use `ARTICLE_BACKUP_BUCKET` (empty disables backups), `ARTICLE_BACKUP_REGION` (required when enabled), `ARTICLE_BACKUP_PREFIX` (default `articles`) and the standard AWS credential chain.
@@ -550,6 +566,10 @@ src/services/podcast-feeds.ts RSS feed discovery and parsing
 src/services/audio.ts      FFmpeg normalization and splitting
 src/services/openai.ts     transcription and article generation
 src/services/jobs.ts       queue, persistence, lifecycle, recovery
+src/services/processing-artifacts.ts atomic chunk manifests and response checkpoints
+src/services/background-article.ts persisted response retrieval and webhook wakeups
+src/services/openai-webhook.ts signature-verified notification route
+src/services/deployment-drain.ts admission pause and persisted-result drain
 src/services/api-usage.ts  request ledger and stored cost estimates
 src/services/account-budget.ts rolling allowance and operator exemptions
 src/services/pdf.ts        PDFKit export
@@ -585,7 +605,7 @@ On failure it restores the previous release when one exists; a first deployment 
 
 ## 10. Architectural constraints and known limitations
 
-- Designed for a small fixed user group and three globally active processing jobs with serial media preparation.
+- Designed for a small fixed user group, three media/transcription slots, and three separate article slots, with serial media preparation.
 - Accounts are administrator-managed environment configuration, not a user database.
 - Job files are local JSON rather than transactional database records.
 - Horizontal scaling is not supported.
@@ -618,7 +638,7 @@ Transcript chunking then copies the encoded stream without another CPU-heavy pas
 
 ### Bounded concurrency
 
-Three processing slots overlap remote API waits.
+Three media/transcription slots and three separate article slots overlap remote API waits.
 One media slot keeps downloads and FFmpeg serial on the V1 server.
 Independent metadata slots let the queue show titles and artwork before media processing begins.
 

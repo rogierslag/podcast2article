@@ -1,6 +1,8 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import express from "express";
+import { startDeploymentDrain } from "./services/deployment-drain.js";
+import { openaiWebhookRouter } from "./services/openai-webhook.js";
 import { z } from "zod";
 import { DomainError, domainErrorStatus } from "./lib/errors.js";
 import {
@@ -102,6 +104,7 @@ app.use((_request, response, next) => {
   response.vary("Cookie");
   next();
 });
+app.use(openaiWebhookRouter());
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: false, limit: "2kb" }));
 
@@ -884,6 +887,7 @@ app.use(
   },
 );
 
+const stopDeploymentDrain = await startDeploymentDrain();
 await resumeIncompleteJobs(auth.enabled ? auth.usernames : ["local"]);
 startArticleBackups();
 await subscriptions.load(auth.enabled ? auth.usernames : ["local"]);
@@ -928,6 +932,7 @@ async function shutdown(signal: "SIGINT" | "SIGTERM"): Promise<void> {
   forcedExit.unref();
   await Promise.all([
     subscriptions.stop(),
+    stopDeploymentDrain(),
     shutdownJobs(signal),
     stopArticleBackups(),
   ]);

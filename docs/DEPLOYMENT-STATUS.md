@@ -32,8 +32,9 @@ No logs, account details, credentials, filesystem paths, or private failure flag
 - `unknown`: required information is missing, malformed, future-dated, or more than 45 minutes old, or no active deployment can be established.
   Staleness takes precedence over all other states, even a previously matching release.
 
-The 30-minute deployment window matches systemd's updater timeout.
-The 45-minute freshness window allows that full deployment window plus 15 minutes for scheduling and reconciliation.
+The 30-minute deployment window is a UI warning threshold, separate from systemd's 45-minute updater timeout and the 15-minute drain limit.
+A long-running deployment can therefore appear delayed before systemd times it out.
+The freshness window remains 45 minutes; without a new successful remote check, the status then becomes unknown.
 Cron now starts the updater every five minutes, including when webhooks are missed.
 Thus the endpoint describes the **latest known** main commit, not a live GitHub comparison: a new push can remain undiscovered until the next successful check.
 A long-running update holds the existing lock; skipped invocations leave its timestamps unchanged.

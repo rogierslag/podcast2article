@@ -92,7 +92,7 @@ Judge whether the resulting article preserves the recording's meaning; meeting a
 **Implemented.**
 A job shows its processing stage and progress.
 Active jobs also appear in the library, with source metadata loaded separately.
-Up to three jobs process concurrently while media preparation stays serial.
+Three media/transcription slots and three separate article slots process jobs concurrently while media preparation stays serial.
 Usage attempts and known cost estimates are stored per job.
 Article generation starts with Flex and falls back to standard processing after three transient failures, with at most three further attempts.
 This can trade longer waits for lower API costs; savings and quality have not been measured across representative jobs.
@@ -106,7 +106,7 @@ For older jobs, distinct recorded article operations count against the allowance
 Partial histories count all known operations conservatively.
 Automatic API retries within one operation count together.
 If no history exists, earlier regeneration attempts are unknown and the counter starts at zero.
-This cap does not limit new jobs or fix restart recovery.
+This cap applies to owner-requested regenerations; new jobs and restart recovery do not consume the allowance.
 Completed articles cannot be regenerated or have their content and reading state cleared through the retry endpoint.
 Returning to the form restores the source, language, and length.
 A transient status-fetch failure offers a read-only status check that creates no new job.
@@ -118,8 +118,9 @@ See [PR 48](https://github.com/rogierslag/podcast2article/pull/48).
 Progress is a processing indicator, not an ETA.
 The user needs to distinguish a slow request, failure, and unavailable service.
 Manual failures remain absent from the active-job shelf, so a failed job can be hard to rediscover after leaving its page.
-A restart queues unfinished jobs through the full pipeline, even when a transcript exists.
-[Issue 54](https://github.com/rogierslag/podcast2article/issues/54) proposes durable stage recovery; it is not implemented by the current restart behavior.
+A deployment pauses new paid requests and saves active results before restarting.
+Recovery reuses completed chunks and transcripts, and resumes background article retrieval.
+The broader independent-stage scheduler in [issue 54](https://github.com/rogierslag/podcast2article/issues/54) remains outside this deployment-recovery change.
 Unknown API charges must remain unknown.
 
 **Value test.**

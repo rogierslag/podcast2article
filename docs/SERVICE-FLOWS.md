@@ -27,10 +27,10 @@ flowchart TD
     Persist --> Resolve["Resolve metadata<br/>3 lookup slots"]
     Resolve --> Wait["Save metadata<br/>Wait for slots"]
     Wait --> Download["Download media"]
-    Download --> Prepare["FFmpeg: normalize<br/>and split audio"]
-    Prepare --> Transcribe["Transcribe chunks<br/>with OpenAI"]
-    Transcribe --> SaveTranscript["Save transcript<br/>and playback audio"]
-    SaveTranscript --> Write["Generate and<br/>validate article"]
+    Download --> Prepare["Normalize and publish playback<br/>Split audio and save manifest"]
+    Prepare --> Transcribe["Transcribe chunks<br/>Save each response"]
+    Transcribe --> SaveTranscript["Save complete transcript<br/>Release processing slot"]
+    SaveTranscript --> Write["Acquire article slot<br/>Submit background response and save ID<br/>Poll, save answer and validate"]
     Write --> Complete["Save article<br/>in owner library"]
 ```
 
@@ -39,10 +39,11 @@ YouTube and Fathom use yt-dlp.
 Drive uses public file metadata and downloads.
 RSS subscription jobs already carry server-resolved episode metadata.
 
-There are three processing slots shared by full jobs and article retries.
+There are three media/transcription slots and three separate article slots.
 Downloads and FFmpeg share a single media slot.
 Metadata resolution happens before acquiring a processing slot, allowing queued titles and images to appear while other jobs transcribe or generate articles.
-Temporary files are removed when the run finishes or fails; retained playback audio and job JSON live under `data/users/<username>/`.
+Intermediate files are removed after their durable replacement is saved; interrupted transcription retains its checkpoints.
+Playback audio and job JSON live under `data/users/<username>/`.
 
 Sources: [request routes](../src/server.ts), [job processing](../src/services/jobs.ts), [source resolution](../src/services/resolver.ts), and [OpenAI processing](../src/services/openai.ts).
 
@@ -58,9 +59,9 @@ See [article backups](ARTICLE-BACKUPS.md) for payload exclusions, access control
 
 ## Failures, retries, and server restarts
 
-An explicit article retry and restart recovery take different paths.
-Only the explicit retry reuses the stored transcript.
-Restart recovery currently enqueues the full pipeline, including audio download and transcription, even if an interrupted job already has a transcript.
+Both article retry and restart recovery reuse complete saved transcripts.
+Restart recovery also reuses individually saved chunks and resumes retrieval of existing background article responses.
+An explicit owner retry starts a new article generation.
 
 ```mermaid
 flowchart TD
@@ -74,19 +75,22 @@ flowchart TD
     Eligible -->|Yes| Budget{"Account budget available?"}
     Budget -->|No| Reject
     Budget -->|Yes| Save["Save retry count<br/>and writing stage"]
-    Save --> Article["Use saved transcript<br/>in processing slot"]
+    Save --> Article["Use saved transcript<br/>in article slot"]
     Article --> Outcome
     Queued --> Startup["Server startup loads stored jobs"]
     Interrupted["Hard stop leaves a nonterminal stage"] --> Startup
     Startup --> Recover{"Neither complete nor failed<br/>and not deleted?"}
-    Recover -->|Yes| Full["Requeue full pipeline<br/>with same ID"]
+    Recover -->|Yes| Full["Resume saved results<br/>with same ID"]
     Recover -->|No| Retain["Load without scheduling work"]
 ```
 
 Retry eligibility requires a failed, inactive job with episode metadata and a complete transcript, no saved-copy marker, and fewer than two accepted retries.
 The retry count is saved before paid work starts, and failed attempts count towards the two-retry limit.
 Automatic API retries within an operation are separate from this owner-triggered allowance.
-Shutdown aborts active requests and stops new work; a hard stop can leave pending usage records with unknown costs.
+Deployments first pause admission and drain active transcription requests and article submissions through persistence.
+Shutdown aborts the remaining HTTP connections; saved chunks and background article response IDs survive restart.
+A hard stop can still leave pending usage records with unknown costs.
+See [deployment recovery](DEPLOYMENT-RECOVERY.md) for the file handshake and rollout requirements.
 
 Sources: [retry, shutdown, and recovery helpers](../src/services/jobs.ts) and [server shutdown](../src/server.ts).
 
@@ -231,7 +235,7 @@ Sources: [usage persistence](../src/services/jobs.ts), [request tracking and pri
 ## Deploy a release and recover from failure
 
 A signed push to `main` triggers the installed updater through an isolated webhook receiver and systemd.
-Daily reconciliation invokes the same updater.
+Five-minute reconciliation invokes the same updater.
 GitHub Actions runs separately; the updater does not wait for CI, so passing CI must be checked before merging.
 
 ```mermaid
@@ -252,17 +256,25 @@ flowchart TD
     Build -.->|Failure| Mark
     Release -.->|Failure| Mark
     Media -->|Failure| Mark
-    Media -->|Success| Activate["Switch current symlink<br/>Restart application"]
+    Media -->|Success| Running{"Service running?"}
+    Running -->|No| Activate["Switch current symlink<br/>Restart application"]
+    Running -->|Yes| Drain{"Pause new paid requests<br/>Drain saved results within 15 minutes?"}
+    Drain -->|Yes| Activate
+    Drain -->|No or unsupported| Mark
     Activate --> Health{"Restart and<br/>health checks pass?"}
     Health -->|Yes| Success["Clear failure marker<br/>Prune old releases"]
     Health -->|No| Rollback["Restore and restart<br/>previous release if any"]
     Rollback --> Mark
+    Success --> Resume["Remove own pause marker if present<br/>Resume admission"]
+    Mark --> Resume
 ```
 
 Failures before activation leave the old process and symlink in place.
 A failed first deployment has no earlier release to restore.
 The application updater, systemd units, Caddy configuration, and FFmpeg selection are host infrastructure: merging application changes does not reinstall them.
-Confirm the installed updater includes the media gate before relying on it.
+Confirm the installed updater includes the media gate and drain handshake before relying on them.
+Draining is capped at 15 minutes; the full updater has a separate 45-minute timeout.
+For an older running release, follow the [first-rollout procedure](DEPLOYMENT-RECOVERY.md#first-rollout-and-limitations).
 Historical rollout and runtime-download limitations remain documented in the [operations guide](OPERATIONS.md) and [FFmpeg runbook](FFMPEG.md).
 
 Sources: [updater](../scripts/update-production.sh), [webhook receiver](../scripts/github-webhook-server.mjs), [update path](../deploy/podcast2article-update.path), and [infrastructure installer](../deploy/install-infrastructure.sh).

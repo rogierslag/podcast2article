@@ -14,6 +14,8 @@ current_link="$application_root/current"
 service="podcast2article.service"
 build_directory=""
 deployment_attempted=false
+drain_id=""
+drain_script=""
 deployment_status="/var/lib/podcast2article/deployment-status.json"
 
 log() {
@@ -65,6 +67,9 @@ PYTHON
 
 cleanup() {
   local exit_status=$?
+  if [[ -n "$drain_id" ]]; then
+    node "$drain_script" resume /var/lib/podcast2article "$drain_id" || log "Could not resume processing; remove the deployment drain marker after investigating"
+  fi
   if [[ "$deployment_attempted" == true && "$exit_status" != 0 ]]; then
     write_deployment_status true || log "Could not record deployment failure"
   fi
@@ -73,6 +78,8 @@ cleanup() {
   esac
 }
 trap cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 
 exec 9>/run/lock/podcast2article-update.lock
 if ! flock -n 9; then
@@ -142,6 +149,19 @@ log "Verifying production media processing before activation"
 # This process already holds the update lock.
 # The check runs as the app user, with the registered service's environment files and the new release's code.
 node "$new_release/scripts/ffmpeg-runtime.mjs" --locked check "$new_release"
+
+# The old release must acknowledge admission closure before activation.
+# First rollout from a release without this protocol requires an idle, manual restart.
+if systemctl is-active --quiet "$service"; then
+  if [[ ! -f "$current_release/dist/services/deployment-drain.js" ]]; then
+    log "The running release does not support deployment drain; install the first drain-aware release manually while processing is idle"
+    exit 1
+  fi
+  drain_id="$(node -e 'console.log(require("node:crypto").randomUUID())')"
+  drain_script="$new_release/scripts/deployment-drain.mjs"
+  log "Pausing paid request admission and waiting for active transcription results and article response IDs"
+  node "$drain_script" pause /var/lib/podcast2article "$drain_id"
+fi
 
 previous_target="$(readlink "$current_link" 2>/dev/null || true)"
 temporary_link="$application_root/.current.$release_name"

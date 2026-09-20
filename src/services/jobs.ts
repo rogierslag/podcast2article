@@ -34,6 +34,13 @@ import {
   spendingLimitExempt,
   summarizeAccountBudget,
 } from "./account-budget.js";
+import {
+  atomicJson,
+  completeFile,
+  readManifest,
+  chunkCheckpoint,
+  type ChunkManifest,
+} from "./processing-artifacts.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
 import { resolveSource, validateSourceUrl } from "./resolver.js";
 import { downloadFathomRecording } from "./fathom.js";
@@ -65,6 +72,7 @@ const articleRetryReservations = new Set<string>();
 // Metadata can advance through the whole queue without waiting for OpenAI.
 const metadataSlots = new ConcurrencyGate(3);
 const processingSlots = new ConcurrencyGate(3);
+const articleSlots = new ConcurrencyGate(3);
 // Downloaders can invoke FFmpeg too, so reserve the entire media preparation step.
 const mediaSlots = new ConcurrencyGate(1);
 let shuttingDown = false;
@@ -179,7 +187,9 @@ async function recordApiUsage(
       request.reservedCostUsd = accountLimitUsd;
     }
     // No await between checking and updating the in-memory reservation: parallel jobs in this server cannot both consume the same remaining allowance.
-    checkAccountBudget(username, request.reservedCostUsd);
+    if (!job.apiUsage?.requests.some((entry) => entry.id === request.id)) {
+      checkAccountBudget(username, request.reservedCostUsd);
+    }
   }
   const usage = job.apiUsage ?? {
     trackingStartedAt: new Date().toISOString(),
@@ -796,6 +806,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
       messageValues: undefined,
       error: undefined,
       article: undefined,
+      backgroundArticle: undefined,
       readAt: undefined,
       readingPosition: undefined,
       articleRetryAttempts: attempts + 1,
@@ -829,7 +840,14 @@ export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
             await readFile(path.join(jobDirectory, file), "utf8"),
           ) as StoredJob,
         );
-        memory.set(jobKey(username, job.id), job);
+        if (job.id !== path.basename(file, ".json")) {
+          throw new Error("Stored job identity does not match its filename");
+        }
+        const key = jobKey(username, job.id);
+        if (activeRuns.has(key) || pendingJobIds.has(key)) {
+          continue;
+        }
+        memory.set(key, job);
         if (
           job.deletedAt ||
           job.stage === "complete" ||
@@ -858,7 +876,11 @@ export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
     }
   }
   for (const { username, job } of recovered) {
-    enqueueJob(username, job, "full");
+    enqueueJob(
+      username,
+      job,
+      job.transcript?.length && job.episode ? "article" : "full",
+    );
   }
 }
 
@@ -927,7 +949,11 @@ async function processArticleRetry(
 ): Promise<void> {
   let releaseProcessing: (() => void) | undefined;
   try {
-    releaseProcessing = await processingSlots.acquire(signal);
+    releaseProcessing = await articleSlots.acquire(signal);
+    await rm(path.join(userDirectory(username), "work", job.id), {
+      recursive: true,
+      force: true,
+    });
     const article = await generateArticle(
       username,
       job,
@@ -988,21 +1014,108 @@ export async function shutdownJobs(
   );
 }
 
+async function prepareAudio(
+  username: string,
+  job: Job,
+  workspace: string,
+  mediaTarget: string,
+  signal: AbortSignal,
+): Promise<ChunkManifest> {
+  const saved = await readManifest(workspace);
+  if (saved) {
+    const checkpoint = chunkCheckpoint(workspace, saved);
+    const available = await Promise.all(
+      saved.files.map(
+        async (file, index) =>
+          Boolean(await checkpoint.load(index)) ||
+          (await completeFile(path.join(workspace, file))),
+      ),
+    );
+    if (available.every(Boolean)) {
+      return saved;
+    }
+    // Rebuilding changed media could give saved paid chunks a different meaning.
+    if (!(await completeFile(mediaTarget))) {
+      throw new Error(
+        "Playback audio is missing for a partially transcribed recording",
+      );
+    }
+  }
+  const episode = job.episode;
+  if (!episode) {
+    throw new Error("Source metadata is missing");
+  }
+  const input = path.join(workspace, "source.media");
+  if (!(await completeFile(mediaTarget))) {
+    if (!(await completeFile(input))) {
+      const partial = `${input}.partial`;
+      jobLog(job.id, "downloading", "Media downloaden");
+      const options = { maxMegabytes: mediaLimit(episode.sourceType) };
+      if (episode.sourceType === "youtube") {
+        await downloadYouTubeAudio(episode.sourceUrl, partial, signal, options);
+      } else if (episode.sourceType === "fathom") {
+        await downloadFathomRecording(
+          episode.sourceUrl,
+          partial,
+          signal,
+          options,
+        );
+      } else {
+        await downloadMedia(episode.mediaUrl, partial, signal, options);
+      }
+      await rename(partial, input);
+    }
+    await update(username, job, {
+      progress: 28,
+      message: "job.extractingAudio",
+    });
+    const partialPlayback = path.join(workspace, "playback.partial.mp3");
+    await normalizeAudio(input, partialPlayback, signal);
+    await mkdir(path.dirname(mediaTarget), { recursive: true });
+    await rename(partialPlayback, mediaTarget);
+  }
+  const chunkSeconds = saved?.chunkSeconds ?? audioChunkSeconds();
+  const staging = path.join(workspace, "splitting");
+  await rm(staging, { recursive: true, force: true });
+  await mkdir(staging, { recursive: true });
+  await update(username, job, { progress: 32, message: "job.splittingAudio" });
+  jobLog(job.id, "downloading", "FFmpeg maakt transcriptiefragmenten", {
+    chunkSeconds,
+  });
+  const chunks = await splitAudio(mediaTarget, staging, signal, chunkSeconds);
+  const files = chunks.map((file) => path.basename(file));
+  if (saved && JSON.stringify(saved.files) !== JSON.stringify(files)) {
+    throw new Error("Rebuilt audio chunks do not match the saved manifest");
+  }
+  for (const file of chunks) {
+    await rename(file, path.join(workspace, path.basename(file)));
+  }
+  const manifest: ChunkManifest = saved ?? {
+    version: 1,
+    chunkSeconds,
+    model: process.env.TRANSCRIPTION_MODEL ?? "gpt-4o-transcribe-diarize",
+    language: job.language,
+    files,
+  };
+  await atomicJson(path.join(workspace, "chunks.json"), manifest);
+  await rm(input, { force: true });
+  await rm(staging, { recursive: true, force: true });
+  return manifest;
+}
+
 async function processJob(
   username: string,
   job: Job,
   signal: AbortSignal,
 ): Promise<void> {
   const workDirectory = path.join(userDirectory(username), "work");
-  const mediaDirectory = path.join(userDirectory(username), "media");
   const workspace = path.join(workDirectory, job.id);
   const mediaTarget = playbackFileForJob(username, job.id)!;
   const jobStartedAt = Date.now();
   let releaseProcessing: (() => void) | undefined;
   let releaseMedia: (() => void) | undefined;
   try {
-    await rm(workspace, { recursive: true, force: true });
-    await rm(mediaTarget, { force: true });
+    // Final artifacts and completed chunk transcripts are recovery checkpoints.
     await mkdir(workspace, { recursive: true });
     jobLog(job.id, "resolving", "Publieke bron zoeken");
     await update(username, job, {
@@ -1011,7 +1124,7 @@ async function processJob(
       message: "job.checkingSource",
     });
     let episode: NonNullable<Job["episode"]>;
-    if (job.podcastEpisodeKey && job.episode) {
+    if (job.episode) {
       episode = structuredClone(job.episode);
     } else {
       const releaseMetadata = await metadataSlots.acquire(signal);
@@ -1038,59 +1151,21 @@ async function processJob(
     releaseProcessing = await processingSlots.acquire(signal);
     releaseMedia = await mediaSlots.acquire(signal);
 
-    const input = path.join(workspace, "source.media");
-    const downloadStartedAt = Date.now();
-    jobLog(job.id, "downloading", "Media downloaden");
     await update(username, job, {
       stage: "downloading",
       progress: 22,
       message: "job.downloading",
     });
-    const maxMegabytes = mediaLimit(episode.sourceType);
-    if (episode.sourceType === "youtube") {
-      await downloadYouTubeAudio(episode.sourceUrl, input, signal, {
-        maxMegabytes,
-      });
-    } else if (episode.sourceType === "fathom") {
-      await downloadFathomRecording(episode.sourceUrl, input, signal, {
-        maxMegabytes,
-      });
-    } else {
-      await downloadMedia(episode.mediaUrl, input, signal, { maxMegabytes });
-    }
-    const mediaBytes = (await stat(input)).size;
-    jobLog(job.id, "downloading", "Media gedownload", {
-      megabytes: (mediaBytes / 1024 / 1024).toFixed(1),
-      elapsedSeconds: Math.round((Date.now() - downloadStartedAt) / 1000),
-    });
-    await update(username, job, {
-      progress: 28,
-      message: "job.extractingAudio",
-    });
-    const playbackAudio = path.join(workspace, "playback.mp3");
-    await normalizeAudio(input, playbackAudio, signal);
-    await update(username, job, {
-      progress: 32,
-      message: "job.splittingAudio",
-    });
-    const splitStartedAt = Date.now();
-    jobLog(job.id, "downloading", "FFmpeg maakt transcriptiefragmenten", {
-      chunkSeconds: audioChunkSeconds(),
-    });
-    const chunks = await splitAudio(playbackAudio, workspace, signal);
+    const manifest = await prepareAudio(
+      username,
+      job,
+      workspace,
+      mediaTarget,
+      signal,
+    );
+    const chunks = manifest.files.map((file) => path.join(workspace, file));
     releaseMedia();
     releaseMedia = undefined;
-    await rm(input, { force: true });
-    const chunkSizes = await Promise.all(
-      chunks.map(async (file) =>
-        ((await stat(file)).size / 1024 / 1024).toFixed(1),
-      ),
-    );
-    jobLog(job.id, "downloading", "Audiofragmenten gereed", {
-      chunks: chunks.length,
-      sizesMb: chunkSizes.join(","),
-      elapsedSeconds: Math.round((Date.now() - splitStartedAt) / 1000),
-    });
 
     await update(username, job, {
       stage: "transcribing",
@@ -1117,18 +1192,21 @@ async function processJob(
       },
       signal,
       (request) => recordApiUsage(username, job, request),
+      chunkCheckpoint(workspace, manifest),
     );
     jobLog(job.id, "transcribing", "Volledige transcriptie gereed", {
       segments: transcript.length,
     });
-    await mkdir(mediaDirectory, { recursive: true });
-    await rename(playbackAudio, mediaTarget);
+
     await update(username, job, {
       transcript,
       progress: 78,
       message: "job.transcriptComplete",
     });
 
+    await rm(workspace, { recursive: true, force: true });
+    releaseProcessing();
+    releaseProcessing = await articleSlots.acquire(signal);
     const article = await generateArticle(
       username,
       job,
@@ -1174,11 +1252,7 @@ async function processJob(
     }
   } finally {
     releaseMedia?.();
-    await rm(workspace, { recursive: true, force: true }).catch(
-      () => undefined,
-    );
     releaseProcessing?.();
-    jobLog(job.id, job.stage, "Tijdelijke audiobestanden opgeruimd");
   }
 }
 
@@ -1214,5 +1288,9 @@ async function generateArticle(
     },
     signal,
     (request) => recordApiUsage(username, job, request),
+    {
+      state: job.backgroundArticle,
+      save: (backgroundArticle) => update(username, job, { backgroundArticle }),
+    },
   );
 }

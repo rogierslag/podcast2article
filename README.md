@@ -135,15 +135,15 @@ flowchart LR
 See the [service flow diagrams](docs/SERVICE-FLOWS.md) for request validation, processing stages, failure recovery, podcast subscriptions, budget enforcement, and the boundary between owner access and public permalinks.
 
 Jobs are stored per user as JSON in `data/users/<username>/jobs/`.
-Compact playback audio is stored in `data/users/<username>/media/`; downloaded source files and transcription chunks are deleted.
+Compact playback audio is stored in `data/users/<username>/media/`; source files and chunks are removed after their replacement results are persisted.
 Users can access only their own jobs, articles, transcripts, and audio through owner routes.
 Public permalinks separately grant access to one completed article and its audio.
 Unfinished jobs restart automatically after a server restart with the same job ID.
-Up to three jobs are processed concurrently.
+Up to three jobs prepare media or transcribe concurrently, with three separate article slots.
 Downloads and FFmpeg run one at a time; transcription and article generation can overlap with other jobs.
 Source metadata is fetched separately, with up to three concurrent requests, so titles and images already appear in the queue.
-Incomplete jobs restart through the full pipeline, even when a transcript already exists.
-This avoids stuck jobs but can repeat downloads, transcription, and paid API work; durable stage recovery remains unfinished.
+Incomplete jobs reuse saved source audio, chunk transcripts, complete transcripts, and background article response IDs.
+A hard crash can still lose an in-flight transcription or an article submission whose response ID was not saved.
 
 Article generation requests Flex processing by default, keeping the configured article model.
 Transient failures (including capacity errors and timeouts) receive up to three Flex attempts, then up to three standard-processing attempts with `service_tier: "default"`.
@@ -151,7 +151,7 @@ Retries use exponential backoff and respect provider retry headers.
 Cancellation and permanent errors stop immediately.
 Set `ARTICLE_SERVICE_TIER=default` to use standard processing from the first attempt.
 Transcription retains its existing three-attempt policy.
-Each attempt uses `OPENAI_ARTICLE_TIMEOUT_MS` (10 minutes by default), so repeated timeouts can take roughly an hour across all six attempts.
+Each article submission uses `OPENAI_ARTICLE_TIMEOUT_MS` (10 minutes by default); background generation continues independently and is polled until a terminal status is received.
 Budget checks apply before every attempt and can stop processing before fallback.
 Actual reported tiers determine prices; unknown outcomes retain unknown costs and their budget reservations.
 
@@ -187,9 +187,12 @@ Operators can set `SPENDING_LIMIT_EXEMPT_USERS=rogier` (comma-separated exact us
 Limited accounts cannot use models or endpoints without verified reservation pricing.
 See the [budget runbook](docs/OPERATIONS.md#account-processing-budget) for configuration, restart and revocation behavior.
 
-On `SIGINT` or `SIGTERM`, the server stops accepting requests and cancels all active OpenAI HTTP requests through `AbortSignal`.
-Interrupted jobs are saved as resumable, temporary audio is cleaned up, and the process waits up to 15 seconds for graceful shutdown.
-Closing the HTTP request is the available client-side cancellation mechanism; the API provides no separate server-side cancellation endpoint for transcription requests.
+Deployments pause new transcription requests and article submissions, wait for active results to be saved, then restart and resume processing.
+Draining is capped at 15 minutes; a timeout cancels deployment, keeps the current release running, and resumes admission.
+Completed chunks and complete transcripts are reused after restart.
+Article generation runs in OpenAI background mode; persisted response IDs allow retrieval to continue after deployment, with optional signed webhooks to wake the five-second poller.
+Direct `SIGINT` or `SIGTERM` still cancels active HTTP connections within a 15-second shutdown deadline; it does not cancel remote background articles.
+See [deployment recovery](docs/DEPLOYMENT-RECOVERY.md) for the first-rollout procedure, failure handling, retention, and remaining crash risks.
 
 ## Sharing and monitoring
 
@@ -223,29 +226,30 @@ Tests automatically check all HTML templates and browser modules for missing tra
 The server uses `Accept-Language` for the initial HTML response; browser requests include the selected interface language.
 Refresh the page after changing the browser language.
 
-| Variable                          | Default                     | Meaning                                                                                                   |
-| --------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`                  | required for processing     | OpenAI API key supplied through the process environment or environment file                               |
-| `APP_USERS`                       | empty                       | JSON account map; unset or blank disables authentication                                                  |
-| `SPENDING_LIMIT_EXEMPT_USERS`     | empty                       | Comma-separated usernames exempt from spending limits; usage stays tracked                                |
-| `OPENAI_REGION`                   | `global`                    | OpenAI API region: `global`, `eu` (EEA + Switzerland), or `us`                                            |
-| `OPENAI_BASE_URL`                 | region-selected endpoint    | Advanced endpoint override; custom endpoints have no verified cost estimate or reservation pricing        |
-| `HOST`                            | `127.0.0.1`                 | Network interface; consider `0.0.0.0` only inside a container                                             |
-| `PUBLIC_BASE_URL`                 | request origin              | Canonical external origin for permalinks and social previews                                              |
-| `PORT`                            | `3000`                      | HTTP port                                                                                                 |
-| `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Article generation model                                                                                  |
-| `ARTICLE_SERVICE_TIER`            | `flex`                      | Article tier: `flex` (three attempts, then standard fallback) or `default`                                |
-| `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcription model                                                                                       |
-| `MAX_AUDIO_MB`                    | `500`                       | Maximum Spotify/RSS audio download size                                                                   |
-| `MAX_YOUTUBE_MB`                  | `500`                       | Maximum YouTube audio download size                                                                       |
-| `MAX_RECORDING_MB`                | `1500`                      | Maximum Google Drive or Fathom recording download size                                                    |
-| `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | YouTube metadata timeout (1 minute)                                                                       |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | `900000`                    | Media download timeout (15 minutes)                                                                       |
-| `FFMPEG_BIN`                      | bundled binary              | Absolute path to an alternative FFmpeg executable for normalization, splitting, and Fathom postprocessing |
-| `AUDIO_CHUNK_SECONDS`             | `300`                       | Audio chunk length (5 minutes; allowed range: 60–1200)                                                    |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcription chunk (10 minutes)                                                              |
-| `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Article generation timeout (10 minutes)                                                                   |
-| `LOG_STACKS`                      | `false`                     | Show full error stacks in the CLI                                                                         |
+| Variable                          | Default                     | Meaning                                                                                                     |
+| --------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | required for processing     | OpenAI API key supplied through the process environment or environment file                                 |
+| `APP_USERS`                       | empty                       | JSON account map; unset or blank disables authentication                                                    |
+| `SPENDING_LIMIT_EXEMPT_USERS`     | empty                       | Comma-separated usernames exempt from spending limits; usage stays tracked                                  |
+| `OPENAI_REGION`                   | `global`                    | OpenAI API region: `global`, `eu` (EEA + Switzerland), or `us`                                              |
+| `OPENAI_BASE_URL`                 | region-selected endpoint    | Advanced endpoint override; custom endpoints have no verified cost estimate or reservation pricing          |
+| `HOST`                            | `127.0.0.1`                 | Network interface; consider `0.0.0.0` only inside a container                                               |
+| `PUBLIC_BASE_URL`                 | request origin              | Canonical external origin for permalinks and social previews                                                |
+| `PORT`                            | `3000`                      | HTTP port                                                                                                   |
+| `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Article generation model                                                                                    |
+| `ARTICLE_SERVICE_TIER`            | `flex`                      | Article tier: `flex` (three attempts, then standard fallback) or `default`                                  |
+| `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcription model                                                                                         |
+| `MAX_AUDIO_MB`                    | `500`                       | Maximum Spotify/RSS audio download size                                                                     |
+| `MAX_YOUTUBE_MB`                  | `500`                       | Maximum YouTube audio download size                                                                         |
+| `MAX_RECORDING_MB`                | `1500`                      | Maximum Google Drive or Fathom recording download size                                                      |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | `60000`                     | YouTube metadata timeout (1 minute)                                                                         |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | `900000`                    | Media download timeout (15 minutes)                                                                         |
+| `FFMPEG_BIN`                      | bundled binary              | Absolute path to an alternative FFmpeg executable for normalization, splitting, and Fathom postprocessing   |
+| `OPENAI_WEBHOOK_SECRET`           | unset                       | Optional signature secret for background article notifications at `/hooks/openai`; polling works without it |
+| `AUDIO_CHUNK_SECONDS`             | `300`                       | Audio chunk length (5 minutes; allowed range: 60–1200)                                                      |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcription chunk (10 minutes)                                                                |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Background article submission timeout (10 minutes)                                                          |
+| `LOG_STACKS`                      | `false`                     | Show full error stacks in the CLI                                                                           |
 
 Download limits are independent: `MAX_AUDIO_MB` applies to Spotify/RSS, `MAX_YOUTUBE_MB` to YouTube, and `MAX_RECORDING_MB` to Drive and Fathom.
 The former `MAX_MEDIA_MB` setting is ignored, and YouTube no longer inherits `MAX_AUDIO_MB`.
@@ -277,7 +281,8 @@ For older jobs without a counter, recorded article operations count as previous 
 The initial generation is subtracted only when usage history is complete; partial histories count all known operations.
 Automatic API retries within the same operation count together as one attempt.
 Without recorded history, the counter starts at zero; unknown earlier attempts cannot be reconstructed.
-This limit applies to article regeneration, not to new jobs or the remaining restart-recovery work.
+This limit applies to owner-requested article regeneration.
+New jobs and restart recovery do not consume this allowance.
 
 The length selector shows target word counts: compact (700–1,000), standard (1,100–1,700), and extended (1,800–2,600).
 These are generation guidelines, not guaranteed counts.
@@ -376,7 +381,7 @@ Each new processing job uses the configured paid transcription and article model
 
 The server checks active series at startup and every hour after that.
 It must keep running; no external cron job is required.
-The existing queue processes up to three recordings concurrently, while media preparation remains serial.
+The queue has three media/transcription slots and three separate article slots, while media preparation remains serial.
 **Pause** stops new checks; jobs already in the processing queue still complete.
 **Resume** also retrieves episodes missed during the pause, provided they are still in the feed.
 
