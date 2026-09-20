@@ -9,9 +9,19 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { promisify } from "node:util";
+import { gzip, gunzip } from "node:zlib";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { z } from "zod";
 import type { Job } from "../types.js";
+
+const gzipAsync = promisify(gzip);
+const gunzipAsync = promisify(gunzip);
+const BACKUP_RETRY_DELAY_MS = 15 * 60_000;
 
 const usernameSchema = z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/);
 const idSchema = z
@@ -147,7 +157,7 @@ export function backupKey(
 ): string {
   usernameSchema.parse(owner);
   idSchema.parse(id);
-  return [config.prefix, "v1", "users", owner, `${id}.json`]
+  return [config.prefix, "v1", "users", owner, `${id}.json.gz`]
     .filter(Boolean)
     .join("/");
 }
@@ -155,19 +165,75 @@ export function backupKey(
 export function s3BackupUploader(
   config: BackupConfiguration,
 ): (key: string, body: string) => Promise<void> {
-  const client = new S3Client({ region: config.region, maxAttempts: 3 });
+  const client = new S3Client({ region: config.region, maxAttempts: 1 });
   return async (key, body) => {
+    const compressed = await gzipAsync(body);
     await client.send(
       new PutObjectCommand({
         Bucket: config.bucket,
         Key: key,
-        Body: body,
+        Body: compressed,
+        ChecksumSHA256: createHash("sha256")
+          .update(compressed)
+          .digest("base64"),
         ContentType: "application/json",
+        ContentEncoding: "gzip",
         ServerSideEncryption: "AES256",
       }),
       { abortSignal: AbortSignal.timeout(30_000) },
     );
   };
+}
+
+export async function fetchArticleBackup(
+  client: S3Client,
+  config: BackupConfiguration,
+  owner: string,
+  id: string,
+): Promise<unknown> {
+  const key = backupKey(config, owner, id);
+  const getObject = async (objectKey: string) =>
+    client.send(
+      new GetObjectCommand({
+        Bucket: config.bucket,
+        Key: objectKey,
+        ChecksumMode: "ENABLED",
+      }),
+      { abortSignal: AbortSignal.timeout(30_000) },
+    );
+  const response = await getObject(key).catch((error: unknown) => {
+    // Only a missing gzip key permits falling back to a potentially older legacy object.
+    if (error instanceof Error && error.name === "NoSuchKey") {
+      return getObject(key.slice(0, -3));
+    }
+    throw error;
+  });
+  if (!response.Body) {
+    throw new Error("Empty backup response");
+  }
+  return decodeArticleBackup(
+    await response.Body.transformToByteArray(),
+    response.ContentEncoding,
+    response.ChecksumSHA256,
+  );
+}
+
+export async function decodeArticleBackup(
+  body: Uint8Array,
+  contentEncoding?: string,
+  checksumSHA256?: string,
+): Promise<unknown> {
+  if (
+    checksumSHA256 &&
+    createHash("sha256").update(body).digest("base64") !== checksumSHA256
+  ) {
+    throw new Error("Article backup checksum mismatch");
+  }
+  const compressed =
+    contentEncoding?.toLowerCase() === "gzip" ||
+    (body[0] === 0x1f && body[1] === 0x8b);
+  const decoded = compressed ? await gunzipAsync(body) : Buffer.from(body);
+  return JSON.parse(decoded.toString("utf8"));
 }
 
 function failure(context: string, error: unknown): void {
@@ -182,6 +248,7 @@ export class ArticleBackupWorker {
   private timer?: NodeJS.Timeout;
   private requested = false;
   private stopped = false;
+  private retryAfter = 0;
   constructor(
     private readonly root: string,
     private readonly config: BackupConfiguration,
@@ -201,7 +268,7 @@ export class ArticleBackupWorker {
     this.requested = true;
     if (!this.running) {
       void this.flush().catch((error: unknown) =>
-        failure("scan failed; retry in 60 seconds", error),
+        failure("scan failed; retry in 15 minutes", error),
       );
     }
   }
@@ -216,10 +283,16 @@ export class ArticleBackupWorker {
     if (this.running) {
       return this.running;
     }
+    if (Date.now() < this.retryAfter) {
+      return 1;
+    }
     this.requested = false;
     this.running = this.scan();
     try {
       return await this.running;
+    } catch (error) {
+      this.retryAfter = Date.now() + BACKUP_RETRY_DELAY_MS;
+      throw error;
     } finally {
       this.running = undefined;
       if (this.requested && !this.stopped) {
@@ -298,11 +371,20 @@ export class ArticleBackupWorker {
           if (previous === digest) {
             continue;
           }
-          await this.upload(key, body);
-          await mkdir(receiptDirectory, { recursive: true, mode: 0o700 });
-          const temporary = `${receipt}.tmp`;
-          await writeFile(temporary, digest, { mode: 0o600 });
-          await rename(temporary, receipt);
+          try {
+            await this.upload(key, body);
+            await mkdir(receiptDirectory, { recursive: true, mode: 0o700 });
+            const temporary = `${receipt}.tmp`;
+            await writeFile(temporary, digest, { mode: 0o600 });
+            await rename(temporary, receipt);
+          } catch (error) {
+            this.retryAfter = Date.now() + BACKUP_RETRY_DELAY_MS;
+            failure(
+              `${user.name}/${file} upload or receipt failed; retained locally for retry in 15 minutes`,
+              error,
+            );
+            return failures + 1;
+          }
           console.log(
             `${new Date().toISOString()} INFO Article backup uploaded: ${user.name}/${payload.jobId}`,
           );

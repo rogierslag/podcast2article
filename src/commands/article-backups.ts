@@ -1,9 +1,9 @@
 import path from "node:path";
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { S3Client } from "@aws-sdk/client-s3";
 import {
   ArticleBackupWorker,
   backupConfiguration,
-  backupKey,
+  fetchArticleBackup,
   restoreArticleBackup,
 } from "../services/article-backups.js";
 
@@ -22,19 +22,9 @@ if (command === "backfill" && !owner) {
 } else if (command === "restore" && owner && id && extra.length === 0) {
   const client = new S3Client({ region: config.region, maxAttempts: 3 });
   try {
-    const response = await client.send(
-      new GetObjectCommand({
-        Bucket: config.bucket,
-        Key: backupKey(config, owner, id),
-      }),
-      { abortSignal: AbortSignal.timeout(30_000) },
-    );
-    if (!response.Body) {
-      throw new Error("Empty backup response");
-    }
     const destination = await restoreArticleBackup(
       root,
-      JSON.parse(await response.Body.transformToString()),
+      await fetchArticleBackup(client, config, owner, id),
       owner,
       id,
     );
