@@ -82,3 +82,54 @@ for (const url of ["/articles", "/series"]) {
     );
   });
 }
+
+for (const url of ["/articles", "/series"]) {
+  test(`${url}: footer stacks utilities below side-by-side languages with large tap targets`, async ({
+    page,
+  }) => {
+    await page.goto(url);
+    await expect(page.locator("#logout-form")).toBeVisible();
+    const footer = page.locator(".owner-footer");
+    await footer.scrollIntoViewIfNeeded();
+    const controls = await footer.locator("button, a").evaluateAll((elements) =>
+      elements.map((element) => {
+        const { x, y, width, height } = element.getBoundingClientRect();
+        return { x, y, width, height };
+      }),
+    );
+
+    expect(controls).toHaveLength(6);
+    for (const control of controls) {
+      expect(control.width).toBeGreaterThanOrEqual(44);
+      expect(control.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(controls[0].y).toBe(controls[1].y);
+    expect(controls[0].x + controls[0].width).toBeLessThanOrEqual(
+      controls[1].x,
+    );
+    expect(controls[4].y).toBe(controls[5].y);
+    expect(controls[4].y).toBeGreaterThanOrEqual(
+      controls[3].y + controls[3].height,
+    );
+    expect(controls[4].x + controls[4].width).toBeLessThanOrEqual(
+      controls[5].x,
+    );
+    await expect(footer.locator(".footer-credits a").first()).toHaveCSS(
+      "font-size",
+      "10px",
+    );
+    const footerBounds = await footer.boundingBox();
+    for (let index = 2; index < 4; index++) {
+      const control = controls[index];
+      const previous = controls[index - 1];
+      expect(control.y).toBeGreaterThanOrEqual(previous.y + previous.height);
+      expect(
+        Math.abs(
+          control.x +
+            control.width / 2 -
+            (footerBounds.x + footerBounds.width / 2),
+        ),
+      ).toBeLessThan(1);
+    }
+  });
+}

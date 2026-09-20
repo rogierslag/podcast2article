@@ -429,6 +429,10 @@ export const messages = {
     nl: "Je kunt het artikel alleen opnieuw maken als de verwerking is mislukt.",
     en: "You can only regenerate the article if processing has failed.",
   },
+  "budget.title": { nl: "Verbruik", en: "Usage" },
+  "budget.close": { nl: "Sluiten", en: "Close" },
+  "footer.sourceCode": { nl: "Broncode", en: "Source code" },
+  "footer.author": { nl: "Auteur", en: "Author" },
   "budget.loading": { nl: "Verbruik laden…", en: "Loading usage…" },
   "budget.summary": {
     nl: "Verbruik · {amount} in 30 dagen",
@@ -1073,10 +1077,6 @@ export const messages = {
   "transcript.show": {
     nl: "Toon",
     en: "Show",
-  },
-  footer: {
-    nl: "Open source · openbare opnames · jouw API-sleutel",
-    en: "Open source · public recordings · your API key",
   },
   "login.title": {
     nl: "Inloggen — Podcast2Article",
