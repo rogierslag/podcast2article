@@ -3,26 +3,21 @@
 Document version: 2026-09-19
 
 This document describes the application architecture of Podcast2Article.
-Infrastructure, deployment, security operations, recovery, and server
-administration are documented separately in `docs/OPERATIONS.md`.
+Infrastructure, deployment, security operations, recovery, and server administration are documented separately in `docs/OPERATIONS.md`.
 
-The [service flow diagrams](docs/SERVICE-FLOWS.md) show request handling,
-processing, recovery, subscriptions, public sharing, and API budget enforcement.
+The [service flow diagrams](docs/SERVICE-FLOWS.md) show request handling, processing, recovery, subscriptions, public sharing, and API budget enforcement.
 
 ## 1. Purpose
 
-Podcast2Article turns a public Spotify podcast episode, YouTube video, or public
-Google Drive or Fathom recording into:
+Podcast2Article turns a public Spotify podcast episode, YouTube video, or public Google Drive or Fathom recording into:
 
 1. a speaker-attributed transcript with timestamps;
 2. a source-grounded article;
 3. clickable paragraph citations that seek to the supporting audio moment;
 4. a downloadable PDF containing the article and source links.
 
-The application is designed for a small, fixed group of trusted users rather
-than for public self-service. Credentials are configured by the administrator,
-each user's data is isolated on disk and in the API, and the application
-uses three processing slots with one shared slot for downloads and FFmpeg.
+The application is designed for a small, fixed group of trusted users rather than for public self-service.
+Credentials are configured by the administrator, each user's data is isolated on disk and in the API, and the application uses three processing slots with one shared slot for downloads and FFmpeg.
 
 ## 2. System context
 
@@ -58,17 +53,15 @@ Podcast2Article / Express
 GitHub webhook -> isolated webhook receiver -> update mechanism-+
 ```
 
-The transcription and article models run remotely through the OpenAI API. The
-VPS performs source resolution, download, audio normalization, chunking,
-orchestration, persistence, HTML delivery, and PDF generation.
+The transcription and article models run remotely through the OpenAI API.
+The VPS performs source resolution, download, audio normalization, chunking, orchestration, persistence, HTML delivery, and PDF generation.
 
 ## 3. Runtime components
 
 ### 3.1 Browser interface
 
-The browser interface consists of static HTML, CSS, images, and vanilla
-JavaScript under `public/`. Owner pages require authentication when configured;
-public reader assets and capability routes are registered before that boundary.
+The browser interface consists of static HTML, CSS, images, and vanilla JavaScript under `public/`.
+Owner pages require authentication when configured; public reader assets and capability routes are registered before that boundary.
 
 The interface provides:
 
@@ -92,14 +85,13 @@ The article source links use fragments shaped like:
 #job=<job-uuid>&time=<seconds>
 ```
 
-The client resolves the job audio endpoint and seeks the audio player to the
-specified timestamp.
+The client resolves the job audio endpoint and seeks the audio player to the specified timestamp.
 
 ### 3.2 HTTP application
 
-`src/server.ts` creates an Express 5 server bound to `127.0.0.1:3000` in
-production. It is not directly exposed to the internet. Caddy is the only
-public HTTP entry point.
+`src/server.ts` creates an Express 5 server bound to `127.0.0.1:3000` in production.
+It is not directly exposed to the internet.
+Caddy is the only public HTTP entry point.
 
 Important middleware decisions:
 
@@ -118,16 +110,17 @@ GET /api/health -> {"ok":true,"deployment":{"status":"unknown","runningCommit":n
 ```
 
 The updater uses `ok` for availability independently of deployment freshness.
-Freshness reads local updater state, never GitHub per request. See the
-[deployment-status contract](docs/DEPLOYMENT-STATUS.md) for timing, states, and
-required host installation. It exposes no logs, user data, or secrets.
+Freshness reads local updater state, never GitHub per request.
+See the [deployment-status contract](docs/DEPLOYMENT-STATUS.md) for timing, states, and required host installation.
+It exposes no logs, user data, or secrets.
 
 ### 3.3 Authentication
 
 Authentication is implemented in `src/services/auth.ts`.
 
 - `APP_USERS` is a JSON object containing fixed usernames and passwords.
-- An empty `APP_USERS` disables authentication only when the legacy `APP_PASSWORD` is also absent. Without either, local development uses the `local` account; production must configure accounts.
+- An empty `APP_USERS` disables authentication only when the legacy `APP_PASSWORD` is also absent.
+  Without either, local development uses the `local` account; production must configure accounts.
 - Password comparison is timing-safe.
 - The complete credential configuration derives the session signing key using `scrypt`.
 - A successful login produces a signed, 30-day `HttpOnly` cookie containing the username.
@@ -137,33 +130,27 @@ Authentication is implemented in `src/services/auth.ts`.
 - Five failed attempts from one IP block new attempts for 15 minutes.
 - Login attempts are stored in memory and reset after a process restart.
 
-The application has no user database, self-service registration, account
-recovery, or roles. Every authenticated user has the same capabilities, but
-owner job, article, transcript, PDF, and audio access is scoped to that user.
-Public capability URLs grant access only to their completed article and audio,
-and permit anonymous monitoring events for that article.
+The application has no user database, self-service registration, account recovery, or roles.
+Every authenticated user has the same capabilities, but owner job, article, transcript, PDF, and audio access is scoped to that user.
+Public capability URLs grant access only to their completed article and audio, and permit anonymous monitoring events for that article.
 
 ### 3.4 Job manager and queue
 
-`src/services/jobs.ts` owns job lifecycle, persistence, recovery, and
-concurrency.
+`src/services/jobs.ts` owns job lifecycle, persistence, recovery, and concurrency.
 
-Metadata resolution has three independent FIFO slots, so queued jobs acquire
-recognizable titles and artwork without waiting for audio processing. Resolved
-jobs wait in `queued` with their metadata persisted.
+Metadata resolution has three independent FIFO slots, so queued jobs acquire recognizable titles and artwork without waiting for audio processing.
+Resolved jobs wait in `queued` with their metadata persisted.
 
-Full jobs and article-only retries share three processing slots. Downloading,
-normalization, and splitting share one media slot because downloaders can also
-invoke FFmpeg. That slot is released before transcription: remote transcription
-and article requests can overlap across jobs without concurrent media processing.
-Chunks within each job are still transcribed sequentially. Up to three jobs can
-retain temporary audio at once, so disk use can exceed the former serial queue.
+Full jobs and article-only retries share three processing slots.
+Downloading, normalization, and splitting share one media slot because downloaders can also invoke FFmpeg.
+That slot is released before transcription: remote transcription and article requests can overlap across jobs without concurrent media processing.
+Chunks within each job are still transcribed sequentially.
+Up to three jobs can retain temporary audio at once, so disk use can exceed the former serial queue.
 Slot waits are abortable and slots are released on both success and failure.
 
-The persisted job record is updated at important boundaries. Job files are
-written as formatted JSON under `data/users/<username>/jobs/<uuid>.json`.
-Series configuration, seen episode keys, and pending selections are stored
-separately in `data/users/<username>/subscriptions.json`.
+The persisted job record is updated at important boundaries.
+Job files are written as formatted JSON under `data/users/<username>/jobs/<uuid>.json`.
+Series configuration, seen episode keys, and pending selections are stored separately in `data/users/<username>/subscriptions.json`.
 
 On startup:
 
@@ -173,8 +160,8 @@ On startup:
 4. resumable jobs enter the processing pipeline;
 5. the full pipeline runs again, including media preparation and transcription.
 
-A stored transcript does not yet provide durable stage recovery. Restarting
-incomplete jobs can therefore repeat paid work.
+A stored transcript does not yet provide durable stage recovery.
+Restarting incomplete jobs can therefore repeat paid work.
 
 On shutdown:
 
@@ -182,8 +169,7 @@ On shutdown:
 2. active OpenAI requests receive an `AbortSignal`;
 3. interrupted work returns to a resumable queued state;
 4. temporary media is removed;
-5. the application forces exit after 15 seconds; systemd's 20-second stop timeout
-   is the outer limit.
+5. the application forces exit after 15 seconds; systemd's 20-second stop timeout is the outer limit.
 
 ### 3.5 Source resolution
 
@@ -191,57 +177,47 @@ On shutdown:
 
 #### Spotify
 
-Spotify is used for episode identity and metadata, not as the audio download
-source. The resolver searches the public Apple Podcasts episode index and
-matches the title, then uses the selected result's public episode audio URL.
+Spotify is used for episode identity and metadata, not as the audio download source.
+The resolver searches the public Apple Podcasts episode index and matches the title, then uses the selected result's public episode audio URL.
 RSS feed fetching is a separate path used by podcast subscriptions.
 
 Spotify-exclusive episodes without a public RSS equivalent cannot be processed.
 
 #### YouTube
 
-`src/services/youtube.ts` uses the bundled `youtube-dl-exec`/yt-dlp integration
-to inspect metadata and download the best available audio stream.
+`src/services/youtube.ts` uses the bundled `youtube-dl-exec`/yt-dlp integration to inspect metadata and download the best available audio stream.
 
 Supported sources include public videos, Shorts, and completed livestreams.
-Playlists, active or scheduled livestreams, private content, and content that
-requires authentication are rejected.
+Playlists, active or scheduled livestreams, private content, and content that requires authentication are rejected.
 
 #### Google Drive recordings
 
-Public Google Drive file links are resolved without Google authentication. The
-file must be accessible to anyone with the link and permit download. Meet room
-links, Drive folders, and Calendar links do not point directly to media and are
-not accepted.
+Public Google Drive file links are resolved without Google authentication.
+The file must be accessible to anyone with the link and permit download.
+Meet room links, Drive folders, and Calendar links do not point directly to media and are not accepted.
 
 #### Fathom
 
-Public `fathom.video/share/...` links are resolved through yt-dlp. Private calls,
-team-only access, cookies, and existing Fathom summaries or transcripts are not
-imported. Recordings follow the same local audio and transcription pipeline.
+Public `fathom.video/share/...` links are resolved through yt-dlp.
+Private calls, team-only access, cookies, and existing Fathom summaries or transcripts are not imported.
+Recordings follow the same local audio and transcription pipeline.
 
 ### 3.6 Media pipeline
 
-`src/services/audio.ts` uses `ffmpeg-static` to resolve the executable. By
-default this is the bundled binary; `FFMPEG_BIN` selects an alternative absolute
-path. `src/services/fathom.ts` uses the same resolver for yt-dlp's FFmpeg
-location. A system FFmpeg package is not required. The production installer
-provisions a versioned Linux x64 build from a checksum-pinned manifest; local
-development continues to use the bundled binary unless explicitly overridden.
+`src/services/audio.ts` uses `ffmpeg-static` to resolve the executable.
+By default this is the bundled binary; `FFMPEG_BIN` selects an alternative absolute path.
+`src/services/fathom.ts` uses the same resolver for yt-dlp's FFmpeg location.
+A system FFmpeg package is not required.
+The production installer provisions a versioned Linux x64 build from a checksum-pinned manifest; local development continues to use the bundled binary unless explicitly overridden.
 
-Fathom HLS downloads can invoke FFmpeg inside yt-dlp to remux MPEG-TS into MP4
-before the application starts audio normalization. A failure in that
-postprocessing step therefore appears in the application's `downloading` stage.
-Postprocessing errors have a separate, localized error key from access or size
-failures; raw downloader diagnostics and signed URLs are never returned.
+Fathom HLS downloads can invoke FFmpeg inside yt-dlp to remux MPEG-TS into MP4 before the application starts audio normalization.
+A failure in that postprocessing step therefore appears in the application's `downloading` stage.
+Postprocessing errors have a separate, localized error key from access or size failures; raw downloader diagnostics and signed URLs are never returned.
 
-The updater runs a synthetic MPEG-TS → MP4 → MP3 → playable chunks test as the
-application user, using the registered service environment and candidate release
-code, before switching the live symlink. A native crash therefore blocks
-activation even when unit tests and HTTP health pass. FFmpeg selection survives
-application rollbacks and has its own guarded rollback. See the
-[runtime runbook](docs/FFMPEG.md) and
-[2026-08-28 incident](docs/incidents/2026-08-28-fathom-ffmpeg.md).
+The updater runs a synthetic MPEG-TS → MP4 → MP3 → playable chunks test as the application user, using the registered service environment and candidate release code, before switching the live symlink.
+A native crash therefore blocks activation even when unit tests and HTTP health pass.
+FFmpeg selection survives application rollbacks and has its own guarded rollback.
+See the [runtime runbook](docs/FFMPEG.md) and [2026-08-28 incident](docs/incidents/2026-08-28-fathom-ffmpeg.md).
 
 For each job:
 
@@ -253,11 +229,11 @@ For each job:
 6. the original download and temporary chunks are removed;
 7. the normalized MP3 becomes persistent playback media.
 
-Stream-copy splitting avoids a second encode. At 48 kbps, one hour of retained
-audio is approximately 22 MB.
+Stream-copy splitting avoids a second encode.
+At 48 kbps, one hour of retained audio is approximately 22 MB.
 
-The default chunk duration is five minutes. Each chunk is checked against the
-OpenAI upload-size constraint before transcription.
+The default chunk duration is five minutes.
+Each chunk is checked against the OpenAI upload-size constraint before transcription.
 
 ### 3.7 OpenAI integration
 
@@ -266,31 +242,28 @@ OpenAI upload-size constraint before transcription.
 - diarized transcription with speaker labels and timestamps;
 - article generation from the completed transcript and source metadata.
 
-Audio chunks are opened with filesystem read streams rather than loaded fully
-into application memory. Chunks are transcribed sequentially.
+Audio chunks are opened with filesystem read streams rather than loaded fully into application memory.
+Chunks are transcribed sequentially.
 
-The selected API region is controlled by `OPENAI_REGION`. Configuring `eu` or
-`us` selects the corresponding endpoint, but actual data-residency eligibility
-also depends on the OpenAI project, model, and feature configuration.
+The selected API region is controlled by `OPENAI_REGION`.
+Configuring `eu` or `us` selects the corresponding endpoint, but actual data-residency eligibility also depends on the OpenAI project, model, and feature configuration.
 
-If transcription succeeds but article generation fails, the article-only retry
-endpoint reuses the stored transcript and avoids retranscription costs. It is
-restricted to failed jobs and at most two accepted retries per job, including
-failed attempts. Completed jobs cannot be regenerated through this endpoint.
+If transcription succeeds but article generation fails, the article-only retry endpoint reuses the stored transcript and avoids retranscription costs.
+It is restricted to failed jobs and at most two accepted retries per job, including failed attempts.
+Completed jobs cannot be regenerated through this endpoint.
 
 ### 3.8 PDF generation
 
 `src/services/pdf.ts` creates A4 PDFs directly with PDFKit.
 
-- No browser engine is required for production PDF generation. Playwright installs
-  browsers separately for development tests and brand-asset generation.
+- No browser engine is required for production PDF generation.
+  Playwright installs browsers separately for development tests and brand-asset generation.
 - PDF generation is a short-lived in-process operation.
 - Page numbers and article styling are applied directly.
 - Source citations remain clickable.
 - The final PDF is buffered briefly before the HTTP response is sent.
 
-This design substantially reduces memory usage compared with browser-based
-printing.
+This design substantially reduces memory usage compared with browser-based printing.
 
 ### 3.9 Persistence
 
@@ -304,107 +277,95 @@ data/users/<username>/subscriptions.json series configuration and scheduling sta
 data/article-backups/<username>/<uuid>.sha256 successful S3 upload receipt
 ```
 
-In production, `data` is a symlink to `/var/lib/podcast2article`. This keeps
-mutable data outside immutable application releases.
+In production, `data` is a symlink to `/var/lib/podcast2article`.
+This keeps mutable data outside immutable application releases.
 
-JSON persistence is simple and inspectable, but it does not provide database
-transactions, multi-process coordination, querying, or horizontal scaling.
-The architecture assumes exactly one application process. Job writes use an atomic
-rename so the backup worker cannot read a partially written record. Optional S3
-backups select final article fields only; receipts prevent unchanged uploads and
-local completed jobs provide restart recovery. See [article backups](docs/ARTICLE-BACKUPS.md).
+JSON persistence is simple and inspectable, but it does not provide database transactions, multi-process coordination, querying, or horizontal scaling.
+The architecture assumes exactly one application process.
+Job writes use an atomic rename so the backup worker cannot read a partially written record.
+Optional S3 backups select final article fields only; receipts prevent unchanged uploads and local completed jobs provide restart recovery.
+See [article backups](docs/ARTICLE-BACKUPS.md).
 
 ### Podcast subscriptions
 
-`src/services/subscriptions.ts` persists subscription mutations atomically and
-serializes operations per user. Active feeds are checked at startup and hourly.
-Following defaults to future episodes only; explicit catch-up is limited to the
-feed's latest three. Polling excludes dated episodes published before following.
+`src/services/subscriptions.ts` persists subscription mutations atomically and serializes operations per user.
+Active feeds are checked at startup and hourly.
+Following defaults to future episodes only; explicit catch-up is limited to the feed's latest three.
+Polling excludes dated episodes published before following.
 Undated entries must precede a known episode in feed order to qualify as new.
 
-Five unread, queued, or processing jobs pause a series. Read, deleted, and failed
-jobs free capacity, but resuming requires an explicit action. Existing confirmed
-pending selections survive restarts; this policy change does not cancel jobs or
-previously confirmed selections. See [the series guide](README.md#following-podcast-series).
+Five unread, queued, or processing jobs pause a series.
+Read, deleted, and failed jobs free capacity, but resuming requires an explicit action.
+Existing confirmed pending selections survive restarts; this policy change does not cancel jobs or previously confirmed selections.
+See [the series guide](README.md#following-podcast-series).
 
 ### API usage accounting
 
-Each new job has an `apiUsage` ledger. The OpenAI boundary persists a pending
-attempt before sending and its usage immediately after receiving a response,
-before article parsing and validation. Each automatic retry is a separate attempt
-under the same operation ID; SDK retries are disabled to avoid invisible attempts.
-Article generation defaults to explicit `flex`: three attempts on transient
-failures, followed by up to three explicit `default` attempts. All six share an
-operation ID. `ARTICLE_SERVICE_TIER=default` disables Flex and permits three
-standard attempts. Transcription retains three attempts. The wrapper honors retry
-headers and exponential backoff; permanent errors and shutdown cancellation stop
-without fallback. The per-attempt article timeout and budget checks apply to both
-tiers. A successful response that fails article validation is not retried here.
+Each new job has an `apiUsage` ledger.
+The OpenAI boundary persists a pending attempt before sending and its usage immediately after receiving a response, before article parsing and validation.
+Each automatic retry is a separate attempt under the same operation ID; SDK retries are disabled to avoid invisible attempts.
+Article generation defaults to explicit `flex`: three attempts on transient failures, followed by up to three explicit `default` attempts.
+All six share an operation ID.
+`ARTICLE_SERVICE_TIER=default` disables Flex and permits three standard attempts.
+Transcription retains three attempts.
+The wrapper honors retry headers and exponential backoff; permanent errors and shutdown cancellation stop without fallback.
+The per-attempt article timeout and budget checks apply to both tiers.
+A successful response that fails article validation is not retried here.
 
-The ledger stores numeric usage counters, reported audio duration, requested and
-actual model/tier, request IDs, timestamps, and HTTP outcomes. It excludes prompts,
-response text, credentials, and error bodies. Job writes are serialized to prevent
-progress updates from overwriting accounting records. Article retries and restart
-recovery preserve the ledger. A hard stop leaves pending attempts with unknown cost.
+The ledger stores numeric usage counters, reported audio duration, requested and actual model/tier, request IDs, timestamps, and HTTP outcomes.
+It excludes prompts, response text, credentials, and error bodies.
+Job writes are serialized to prevent progress updates from overwriting accounting records.
+Article retries and restart recovery preserve the ledger.
+A hard stop leaves pending attempts with unknown cost.
 
-Known USD estimates are summed separately from unknown-cost attempts. Price snapshots
-are stored in `src/services/api-usage.ts` with their source and date
-(2026-09-19), covering diarization, Terra, and Sol. Diarization uses the published
-per-minute estimate applied to reported seconds. Article models use reported
-tokens, cache reads/writes, actual service tier, the
-[272K context boundary](https://developers.openai.com/api/docs/models/gpt-5.6-terra),
-and regional uplift. These are estimates, excluding infrastructure and invoice-level
-adjustments. Unsupported models, custom endpoints, and missing usage remain unknown.
+Known USD estimates are summed separately from unknown-cost attempts.
+Price snapshots are stored in `src/services/api-usage.ts` with their source and date (2026-09-19), covering diarization, Terra, and Sol.
+Diarization uses the published per-minute estimate applied to reported seconds.
+Article models use reported tokens, cache reads/writes, actual service tier, the [272K context boundary](https://developers.openai.com/api/docs/models/gpt-5.6-terra), and regional uplift.
+These are estimates, excluding infrastructure and invoice-level adjustments.
+Unsupported models, custom endpoints, and missing usage remain unknown.
 Legacy jobs have unknown history; tracking initiated later is marked partial.
 Public payloads and saved shared copies never include the source owner's ledger.
 
 ### Account budgets
 
-`src/services/account-budget.ts` aggregates the existing request ledger across all
-of an account's jobs, including failed and deleted jobs, over the preceding 30 days.
-It reports confirmed estimates separately from reservations. Historical requests
-without `reservedCostUsd` remain visible but do not consume the USD 5 allowance.
-New paid attempts persist a conservative reservation before sending; automatic
-retries reserve separately. Article output is capped at 16,384 tokens. Confirmed
-usage replaces reservations; unknown outcomes retain them until they age out.
+`src/services/account-budget.ts` aggregates the existing request ledger across all of an account's jobs, including failed and deleted jobs, over the preceding 30 days.
+It reports confirmed estimates separately from reservations.
+Historical requests without `reservedCostUsd` remain visible but do not consume the USD 5 allowance.
+New paid attempts persist a conservative reservation before sending; automatic retries reserve separately.
+Article output is capped at 16,384 tokens.
+Confirmed usage replaces reservations; unknown outcomes retain them until they age out.
 
-The synchronous check and reservation update prevent concurrent jobs in the same
-process from reusing budget. Startup loads all histories before resuming work and
-fails closed on unreadable job files. Multiple servers sharing data are unsupported.
+The synchronous check and reservation update prevent concurrent jobs in the same process from reusing budget.
+Startup loads all histories before resuming work and fails closed on unreadable job files.
+Multiple servers sharing data are unsupported.
 
-`GET /api/account-budget` requires authentication, uses only the session account,
-sets `Cache-Control: no-store`, and returns `windowDays`, `spentUsd`,
-`historicalSpendUsd`, `countedSpendUsd`, `reservedUsd`, `unknownCostRequests`,
-`limitUsd` and `remainingUsd`. It exposes no job IDs or provider request details.
+`GET /api/account-budget` requires authentication, uses only the session account, sets `Cache-Control: no-store`, and returns `windowDays`, `spentUsd`, `historicalSpendUsd`, `countedSpendUsd`, `reservedUsd`, `unknownCostRequests`, `limitUsd` and `remainingUsd`.
+It exposes no job IDs or provider request details.
 `public/account-budget.js` refreshes this summary every 30 seconds and on focus.
 
-`SPENDING_LIMIT_EXEMPT_USERS` is an operator-managed comma-separated list of exact
-account names. Exempt accounts have null limits and continue tracking costs;
-revocation includes their recent new spending. Unknown-price exempt requests retain
-USD 5 reservations for future revocation. Limited accounts cannot start requests
-with unverified reservation prices. Credentials and exemptions are separate settings.
+`SPENDING_LIMIT_EXEMPT_USERS` is an operator-managed comma-separated list of exact account names.
+Exempt accounts have null limits and continue tracking costs; revocation includes their recent new spending.
+Unknown-price exempt requests retain USD 5 reservations for future revocation.
+Limited accounts cannot start requests with unverified reservation prices.
+Credentials and exemptions are separate settings.
 
 ### Shared permalink monitoring
 
-`public/share-analytics.js` counts visible reading time, and `public/share.js`
-sends credential-free `load` and `read` events after rendering. Loads require
-two consecutive visible seconds; hidden or suspended time resets that window.
-Browsers declaring `navigator.webdriver === true` send no monitoring events. Reads require
-30 seconds of active visible time and 90% scroll progress. The public POST endpoint
-validates the capability and event schema; the server also enforces 30 seconds
-between the load and read.
+`public/share-analytics.js` counts visible reading time, and `public/share.js` sends credential-free `load` and `read` events after rendering.
+Loads require two consecutive visible seconds; hidden or suspended time resets that window.
+Browsers declaring `navigator.webdriver === true` send no monitoring events.
+Reads require 30 seconds of active visible time and 90% scroll progress.
+The public POST endpoint validates the capability and event schema; the server also enforces 30 seconds between the load and read.
 
-`src/services/share-analytics.ts` updates aggregate counts and up to 256 recent
-visit receipts per job. Receipts store a random visit ID's digest, load time, and
-read flag, with a 24-hour deduplication window. Job persistence keeps the totals
-and receipts across restarts. An owner-only endpoint returns the aggregate fields for the owner article footer.
-The footer refreshes on article opening and tab return, guards against stale
-responses after navigation, and offers a retry on failure;
-public article payloads and saved copies omit the original analytics.
+`src/services/share-analytics.ts` updates aggregate counts and up to 256 recent visit receipts per job.
+Receipts store a random visit ID's digest, load time, and read flag, with a 24-hour deduplication window.
+Job persistence keeps the totals and receipts across restarts.
+An owner-only endpoint returns the aggregate fields for the owner article footer.
+The footer refreshes on article opening and tab return, guards against stale responses after navigation, and offers a retry on failure; public article payloads and saved copies omit the original analytics.
 
-See [shared article monitoring](docs/SHARED-ARTICLE-MONITORING.md) for request and
-response contracts, pruning, and limits. These are approximate visit counts;
-client events cannot establish unique readers or comprehension.
+See [shared article monitoring](docs/SHARED-ARTICLE-MONITORING.md) for request and response contracts, pruning, and limits.
+These are approximate visit counts; client events cannot establish unique readers or comprehension.
 
 ## 4. Processing lifecycle
 
@@ -468,9 +429,8 @@ Detailed flow:
 | `GET`    | `/api/jobs/:id/pdf`              | Generate article PDF                       | Yes            |
 | `POST`   | `/api/jobs/:id/retry-article`    | Reuse transcript and rewrite               | Yes            |
 
-“Yes” means the configured owner session is required; without account
-configuration, local development uses the `local` account. “Capability” means a
-valid high-entropy token, independent of account authentication.
+“Yes” means the configured owner session is required; without account configuration, local development uses the `local` account.
+“Capability” means a valid high-entropy token, independent of account authentication.
 
 Series routes are authenticated and scoped to the current user:
 
@@ -484,17 +444,17 @@ Series routes are authenticated and scoped to the current user:
 | `POST`  | `/api/subscriptions/:id/backfill` | Request eligible episodes from the latest three |
 | `PATCH` | `/api/subscriptions/:id`          | Pause or explicitly resume                      |
 
-The former `latest` and `ten` backfill request values are rejected. Existing
-subscription files remain readable without a migration.
+The former `latest` and `ten` backfill request values are rejected.
+Existing subscription files remain readable without a migration.
 
-`POST /hooks/github` is not handled by the application. Caddy routes it to a
-separate, restricted webhook receiver. See [operations](docs/OPERATIONS.md).
+`POST /hooks/github` is not handled by the application.
+Caddy routes it to a separate, restricted webhook receiver.
+See [operations](docs/OPERATIONS.md).
 
 ## 6. Configuration contract
 
-Production application configuration is stored in
-`/etc/podcast2article.env`. Values must never be committed or copied into this
-document.
+Production application configuration is stored in `/etc/podcast2article.env`.
+Values must never be committed or copied into this document.
 
 | Variable                          | Role                                                                                                                    |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -522,9 +482,7 @@ document.
 | `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                                                                                     |
 | `LOG_STACKS`                      | Enable full stack traces in logs                                                                                        |
 
-S3 backups use `ARTICLE_BACKUP_BUCKET` (empty disables backups),
-`ARTICLE_BACKUP_REGION` (required when enabled), `ARTICLE_BACKUP_PREFIX`
-(default `articles`) and the standard AWS credential chain.
+S3 backups use `ARTICLE_BACKUP_BUCKET` (empty disables backups), `ARTICLE_BACKUP_REGION` (required when enabled), `ARTICLE_BACKUP_PREFIX` (default `articles`) and the standard AWS credential chain.
 
 ## 7. Dependency model
 
@@ -586,19 +544,15 @@ It performs:
 2. ESLint validation;
 3. TypeScript compilation;
 4. the Vitest application suite;
-5. Node tests, including authenticated/public HTTP boundaries, monitoring,
-   browser helpers, deployment, and webhook validation.
+5. Node tests, including authenticated/public HTTP boundaries, monitoring, browser helpers, deployment, and webhook validation.
 
-Frontend changes also require `node --check public/app.js`,
-`node --check public/share.js`, and `git diff --check`. Browser and media tests
-run separately; see [development](README.md#development).
+Frontend changes also require `node --check public/app.js`, `node --check public/share.js`, and `git diff --check`.
+Browser and media tests run separately; see [development](README.md#development).
 
-The production updater installs locked dependencies and runs `yarn run check`,
-including formatting, lint, compilation, Vitest, and Node tests. It separately
-runs the synthetic media preflight before activation; it does not run Playwright
-or wait for GitHub Actions. After activation, it requires the service and local
-health endpoint to become healthy. On failure it restores the previous release
-when one exists; a first deployment has no earlier release to restore.
+The production updater installs locked dependencies and runs `yarn run check`, including formatting, lint, compilation, Vitest, and Node tests.
+It separately runs the synthetic media preflight before activation; it does not run Playwright or wait for GitHub Actions.
+After activation, it requires the service and local health endpoint to become healthy.
+On failure it restores the previous release when one exists; a first deployment has no earlier release to restore.
 
 ## 10. Architectural constraints and known limitations
 
@@ -611,44 +565,40 @@ when one exists; a first deployment has no earlier release to restore.
 - Model output must be reviewed before publication.
 - Public availability of a recording does not itself grant republication rights.
 - Retained media and transcripts may contain personal or sensitive information.
-- Optional S3 article backups use `src/services/article-backups.ts` and explicit
-  versioned payloads. A worker scans atomically persisted completed jobs after
-  completion, at startup and every minute; destination/content receipts skip
-  unchanged uploads. Failed uploads never change generation status. See
-  [article backups](docs/ARTICLE-BACKUPS.md) for configuration and recovery.
+- Optional S3 article backups use `src/services/article-backups.ts` and explicit versioned payloads.
+  A worker scans atomically persisted completed jobs after completion, at startup and every minute; destination/content receipts skip unchanged uploads.
+  Failed uploads never change generation status.
+  See [article backups](docs/ARTICLE-BACKUPS.md) for configuration and recovery.
   Full account, configuration and media backups remain an infrastructure concern.
 
 ## 11. Key architectural decisions
 
 ### Native service rather than Docker
 
-The application runs directly under systemd to minimize moving parts and
-overhead on the one-GB VPS. Dependencies are sufficiently self-contained that
-a container provides limited additional benefit for this deployment.
+The application runs directly under systemd to minimize moving parts and overhead on the one-GB VPS.
+Dependencies are sufficiently self-contained that a container provides limited additional benefit for this deployment.
 
 ### PDFKit rather than Chromium
 
-Direct PDF construction avoids a large browser runtime and reduces memory
-pressure.
+Direct PDF construction avoids a large browser runtime and reduces memory pressure.
 
 ### Normalize once, split with stream copy
 
-One FFmpeg encode creates the retained MP3. Transcript chunking then copies the
-encoded stream without another CPU-heavy pass.
+One FFmpeg encode creates the retained MP3.
+Transcript chunking then copies the encoded stream without another CPU-heavy pass.
 
 ### Bounded concurrency
 
-Three processing slots overlap remote API waits. One media slot keeps downloads
-and FFmpeg serial on the V1 server. Independent metadata slots let the queue
-show titles and artwork before media processing begins.
+Three processing slots overlap remote API waits.
+One media slot keeps downloads and FFmpeg serial on the V1 server.
+Independent metadata slots let the queue show titles and artwork before media processing begins.
 
 ### Immutable releases and external mutable data
 
-Application releases can be switched or rolled back atomically while jobs and
-media remain under `/var/lib/podcast2article`.
+Application releases can be switched or rolled back atomically while jobs and media remain under `/var/lib/podcast2article`.
 
 ### Separate webhook receiver
 
-Caddy never executes deployment commands. The receiver authenticates GitHub
-and can only create a fixed trigger file. A root-owned systemd service then runs
-the hard-coded updater.
+Caddy never executes deployment commands.
+The receiver authenticates GitHub and can only create a fixed trigger file.
+A root-owned systemd service then runs the hard-coded updater.

@@ -1,8 +1,7 @@
 # Production deployment
 
-This directory contains the non-secret configuration used by the native
-systemd deployment. The current production host uses Ubuntu, Node.js 24,
-Python, Caddy, Git, rsync, Corepack/Yarn, cron, UFW, and a 2 GiB swapfile.
+This directory contains the non-secret configuration used by the native systemd deployment.
+The current production host uses Ubuntu, Node.js 24, Python, Caddy, Git, rsync, Corepack/Yarn, cron, UFW, and a 2 GiB swapfile.
 
 The installer is intentionally conservative:
 
@@ -12,8 +11,8 @@ The installer is intentionally conservative:
 - it validates Caddy and SSH configuration before reloading services;
 - it does not create a swapfile or change DNS/provider firewall settings.
 
-Full application architecture is documented in `../ARCHITECTURE.md`. The
-operational runbook is in `../docs/OPERATIONS.md`.
+Full application architecture is documented in `../ARCHITECTURE.md`.
+The operational runbook is in `../docs/OPERATIONS.md`.
 
 ## 1. Prerequisites
 
@@ -28,24 +27,20 @@ rsync --version
 corepack --version
 ```
 
-Install the Node.js major version required by `package.json` before deploying
-application changes that raise that requirement. Updating `.nvmrc` or merging a
-runtime change does not upgrade the VPS. Both the application and the media
-preflight execute `/usr/bin/node`; a runtime installed only in an SSH user's
-shell is insufficient. See the [runtime upgrade procedure](../docs/OPERATIONS.md#nodejs-runtime-upgrades)
-for package installation, Corepack recovery, and deployment verification.
+Install the Node.js major version required by `package.json` before deploying application changes that raise that requirement.
+Updating `.nvmrc` or merging a runtime change does not upgrade the VPS.
+Both the application and the media preflight execute `/usr/bin/node`; a runtime installed only in an SSH user's shell is insufficient.
+See the [runtime upgrade procedure](../docs/OPERATIONS.md#nodejs-runtime-upgrades) for package installation, Corepack recovery, and deployment verification.
 
-Point the production hostname's A and AAAA records at the VPS. Allow inbound
-TCP ports 22, 80, and 443 in the provider firewall.
+Point the production hostname's A and AAAA records at the VPS.
+Allow inbound TCP ports 22, 80, and 443 in the provider firewall.
 
-The checked-in `deploy/Caddyfile` uses `reads.rogierslag.nl`. For another host,
-replace that site address before running the installer, which copies the file
-to `/etc/caddy/Caddyfile`. Set `PUBLIC_BASE_URL` to the same public origin.
-The bundled iOS Shortcut also targets that domain and must be
-[rebuilt and signed](../docs/IOS-SHORTCUT.md#rebuilding-the-installer) for another origin.
+The checked-in `deploy/Caddyfile` uses `reads.rogierslag.nl`.
+For another host, replace that site address before running the installer, which copies the file to `/etc/caddy/Caddyfile`.
+Set `PUBLIC_BASE_URL` to the same public origin.
+The bundled iOS Shortcut also targets that domain and must be [rebuilt and signed](../docs/IOS-SHORTCUT.md#rebuilding-the-installer) for another origin.
 
-Keep a second, key-authenticated SSH session open before applying SSH or UFW
-hardening.
+Keep a second, key-authenticated SSH session open before applying SSH or UFW hardening.
 
 ## 2. Install service definitions
 
@@ -56,12 +51,10 @@ sudo deploy/install-infrastructure.sh --check
 sudo deploy/install-infrastructure.sh
 ```
 
-This installs application, webhook, updater, path, cron, logrotate, and Caddy
-configuration and the pinned Linux x64 FFmpeg/ffprobe runtime. It creates
-secret-free environment files only when they do not already exist. An existing
-`90-ffmpeg-override.conf` remains selected; see [FFmpeg management](../docs/FFMPEG.md)
-for explicit activation and rollback. Coordinate installation while jobs are idle:
-the infrastructure installer restarts configured services.
+This installs application, webhook, updater, path, cron, logrotate, and Caddy configuration and the pinned Linux x64 FFmpeg/ffprobe runtime.
+It creates secret-free environment files only when they do not already exist.
+An existing `90-ffmpeg-override.conf` remains selected; see [FFmpeg management](../docs/FFMPEG.md) for explicit activation and rollback.
+Coordinate installation while jobs are idle: the infrastructure installer restarts configured services.
 
 ## 3. Configure secrets
 
@@ -88,8 +81,7 @@ Edit the webhook environment:
 sudoedit /etc/podcast2article-webhook.env
 ```
 
-Generate a 256-bit value in a private terminal and store the same value as the
-GitHub webhook secret:
+Generate a 256-bit value in a private terminal and store the same value as the GitHub webhook secret:
 
 ```bash
 openssl rand -hex 32
@@ -113,13 +105,12 @@ sudo deploy/install-infrastructure.sh --configure-firewall
 sudo ufw status verbose
 ```
 
-The firewall mode allows TCP 22, 80, and 443 for IPv4 and IPv6 and denies other
-incoming traffic.
+The firewall mode allows TCP 22, 80, and 443 for IPv4 and IPv6 and denies other incoming traffic.
 
 ## 5. Configure swap separately
 
-On a one-GB VPS, configure a 2 GiB swapfile once. Resolve the exact target
-before running these commands and do not repeat `mkswap` on an active file:
+On a one-GB VPS, configure a 2 GiB swapfile once.
+Resolve the exact target before running these commands and do not repeat `mkswap` on an active file:
 
 ```bash
 sudo fallocate -l 2G /swapfile
@@ -147,13 +138,10 @@ sudo systemctl start podcast2article-update.service
 sudo tail -f /var/log/podcast2article-update.log
 ```
 
-The updater fetches the exact `main` commit, installs locked dependencies,
-builds, tests, creates an immutable release, and runs the real synthetic media
-pipeline with the production service environment. Only after this succeeds does
-it switch the `current` symlink, start the app, and perform a health check with
-rollback on failure when a previous release exists. The validation command is
-`yarn run check`; browser tests run separately in GitHub Actions. The updater
-does not wait for those CI checks, so confirm them before merging to `main`.
+The updater fetches the exact `main` commit, installs locked dependencies, builds, tests, creates an immutable release, and runs the real synthetic media pipeline with the production service environment.
+Only after this succeeds does it switch the `current` symlink, start the app, and perform a health check with rollback on failure when a previous release exists.
+The validation command is `yarn run check`; browser tests run separately in GitHub Actions.
+The updater does not wait for those CI checks, so confirm them before merging to `main`.
 
 ## 7. Configure the GitHub webhook
 
@@ -167,8 +155,7 @@ SSL verify:   enabled
 Events:       push only
 ```
 
-The receiver accepts only signed pushes for
-`rogierslag/podcast2article` on `refs/heads/main`.
+The receiver accepts only signed pushes for `rogierslag/podcast2article` on `refs/heads/main`.
 
 ## 8. Verify
 
@@ -194,45 +181,39 @@ Expected status: `401 Unauthorized`.
 
 ## 9. Updating infrastructure
 
-Application releases do not automatically install changed Caddy, systemd,
-cron, SSH, or journald files. After reviewing an infrastructure change, apply
-it explicitly:
+Application releases do not automatically install changed Caddy, systemd, cron, SSH, or journald files.
+After reviewing an infrastructure change, apply it explicitly:
 
 ```bash
 git pull --ff-only
 sudo deploy/install-infrastructure.sh
 ```
 
-Use the hardening flags only when the corresponding host configuration should
-also be updated.
+Use the hardening flags only when the corresponding host configuration should also be updated.
 
 ### Deployment failure alert rollout
 
 The failure alert also requires an updated `/usr/local/sbin/update-podcast2article`.
-Application releases do not replace that installed executable. Follow the
-[script-only rollout](../docs/DEPLOYMENT-STATUS.md#rollout-after-merge) after merge;
-no service-definition or secret changes are required.
+Application releases do not replace that installed executable.
+Follow the [script-only rollout](../docs/DEPLOYMENT-STATUS.md#rollout-after-merge) after merge; no service-definition or secret changes are required.
 
 ### FFmpeg and deployment guard rollout
 
-The installer copies the runtime management tool, media test, pinned manifest,
-and updater onto the host. **An application push alone does not update the
-installed updater or enable its new media gate.** Apply the reviewed installer
-explicitly before relying on that gate for future releases.
+The installer copies the runtime management tool, media test, pinned manifest, and updater onto the host.
+**An application push alone does not update the installed updater or enable its new media gate.**
+Apply the reviewed installer explicitly before relying on that gate for future releases.
 
-Fresh hosts select the pinned build. Existing `90-ffmpeg-override.conf` files,
-including the [incident mitigation](../docs/incidents/2026-08-28-fathom-ffmpeg.md),
-are preserved. FFmpeg activation and rollback are separate from application
-deployment; see the [runtime runbook](../docs/FFMPEG.md). No dependency update or
-automatic move to the latest upstream build is involved.
+Fresh hosts select the pinned build.
+Existing `90-ffmpeg-override.conf` files, including the [incident mitigation](../docs/incidents/2026-08-28-fathom-ffmpeg.md), are preserved.
+FFmpeg activation and rollback are separate from application deployment; see the [runtime runbook](../docs/FFMPEG.md).
+No dependency update or automatic move to the latest upstream build is involved.
 
 ### Shared permalink monitoring rollout
 
-The normal application deployment enables monitoring for existing and new shared
-articles. No infrastructure reinstall, migration, external analytics service, or
-new secret is needed. Counters start with post-deployment browser events and use
-the existing job JSON storage and backups. Follow the
-[operational checks](../docs/OPERATIONS.md#shared-article-usage) after rollout.
+The normal application deployment enables monitoring for existing and new shared articles.
+No infrastructure reinstall, migration, external analytics service, or new secret is needed.
+Counters start with post-deployment browser events and use the existing job JSON storage and backups.
+Follow the [operational checks](../docs/OPERATIONS.md#shared-article-usage) after rollout.
 
 ## 10. Do not commit
 
@@ -244,16 +225,13 @@ the existing job JSON storage and backups. Follow the
 
 ## Deployment freshness rollout
 
-`/api/health` retains its availability signal and adds public commit freshness
-from local updater state. Install both the updated host updater and five-minute
-cron schedule; an application push does not replace either host file. Follow the
-[deployment-status runbook](../docs/DEPLOYMENT-STATUS.md) for thresholds, JSON
-fields, compatibility, and the focused installation commands.
+`/api/health` retains its availability signal and adds public commit freshness from local updater state.
+Install both the updated host updater and five-minute cron schedule; an application push does not replace either host file.
+Follow the [deployment-status runbook](../docs/DEPLOYMENT-STATUS.md) for thresholds, JSON fields, compatibility, and the focused installation commands.
 
 ## Article backup rollout
 
-Provision a private, encrypted AWS S3 bucket and restricted writer credential, then
-set the article backup variables in the existing application environment file.
-Application startup backfills completed jobs and retries missing uploads. No new
-service definition is required. Follow the [backup runbook](../docs/ARTICLE-BACKUPS.md)
-for IAM scope, explicit backfill, retention, restore verification and costs.
+Provision a private, encrypted AWS S3 bucket and restricted writer credential, then set the article backup variables in the existing application environment file.
+Application startup backfills completed jobs and retries missing uploads.
+No new service definition is required.
+Follow the [backup runbook](../docs/ARTICLE-BACKUPS.md) for IAM scope, explicit backfill, retention, restore verification and costs.

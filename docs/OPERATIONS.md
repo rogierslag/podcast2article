@@ -3,8 +3,8 @@
 Document version: 2026-09-19
 
 This document is the production operations template for Podcast2Article.
-Replace documentation addresses and example identifiers with the values for the
-actual host. Re-verify commands and paths after material infrastructure changes.
+Replace documentation addresses and example identifiers with the values for the actual host.
+Re-verify commands and paths after material infrastructure changes.
 
 Application internals are documented in `../ARCHITECTURE.md`.
 
@@ -31,10 +31,8 @@ Incident records: [2026-08-28 Fathom FFmpeg crash and reversible override](incid
 | Runtime           | Node.js 24+, Python 3.11+                                      |
 | Deployment source | `https://github.com/rogierslag/podcast2article`, branch `main` |
 
-Earlier provisioning notes recorded about 6.4 GiB used on a 96 GiB disk and
-healthy application, webhook, Caddy, SSH, and system services. These are historical
-observations, not current host measurements; use the checks below to establish
-the live state.
+Earlier provisioning notes recorded about 6.4 GiB used on a 96 GiB disk and healthy application, webhook, Caddy, SSH, and system services.
+These are historical observations, not current host measurements; use the checks below to establish the live state.
 
 ## 2. Network topology
 
@@ -54,8 +52,8 @@ Internet
                                                           webhook receiver
 ```
 
-Only SSH, HTTP, and HTTPS listen publicly. The application, webhook receiver,
-Caddy admin endpoint, and local resolver listen on loopback.
+Only SSH, HTTP, and HTTPS listen publicly.
+The application, webhook receiver, Caddy admin endpoint, and local resolver listen on loopback.
 
 ## 3. DNS
 
@@ -73,8 +71,8 @@ dig @ns0.transip.nl production.example.nl A
 dig @ns0.transip.nl production.example.nl AAAA
 ```
 
-The IPv6 address is derived from the VPS network prefix and interface. Recheck
-both DNS records after rebuilding or replacing the VPS.
+The IPv6 address is derived from the VPS network prefix and interface.
+Recheck both DNS records after rebuilding or replacing the VPS.
 
 ## 4. Firewall and exposed ports
 
@@ -95,14 +93,15 @@ sudo ufw status verbose
 sudo ss -lntp
 ```
 
-Allow the same ports in the provider control-plane firewall. Confirm both the
-provider firewall and host firewall after every networking change.
+Allow the same ports in the provider control-plane firewall.
+Confirm both the provider firewall and host firewall after every networking change.
 
 Port 3000 and port 9000 must never be exposed publicly.
 
 ## 5. TLS and reverse proxy
 
-Caddy owns public HTTP and HTTPS. Its configuration is:
+Caddy owns public HTTP and HTTPS.
+Its configuration is:
 
 ```text
 /etc/caddy/Caddyfile
@@ -244,12 +243,10 @@ Before changing SSH configuration:
                         deployment validation and update log
 ```
 
-Release directories and executable code are root-owned and read-only to the
-application account. Persistent application data is owned by
-`podcast2article:podcast2article` with mode 0750 on the data root.
+Release directories and executable code are root-owned and read-only to the application account.
+Persistent application data is owned by `podcast2article:podcast2article` with mode 0750 on the data root.
 
-The updater retains the three newest release directories after a successful
-deployment.
+The updater retains the three newest release directories after a successful deployment.
 
 ## 9. systemd units
 
@@ -276,10 +273,9 @@ Behavior:
 #### FFmpeg override
 
 An operator can select a separately provisioned executable through `FFMPEG_BIN`.
-Keep the executable root-owned and outside both application releases and user
-data. Preserve the bundled binary for rollback. The production override installed
-on 2026-08-28 adds a systemd drop-in with a non-secret `EnvironmentFile` after
-the existing application environment file; credentials remain unchanged.
+Keep the executable root-owned and outside both application releases and user data.
+Preserve the bundled binary for rollback.
+The production override installed on 2026-08-28 adds a systemd drop-in with a non-secret `EnvironmentFile` after the existing application environment file; credentials remain unchanged.
 
 Inspect the registered drop-ins with:
 
@@ -287,12 +283,10 @@ Inspect the registered drop-ins with:
 systemctl show podcast2article.service -p DropInPaths
 ```
 
-The installer now provisions a checksum-pinned Linux x64 FFmpeg/ffprobe build
-and selects it on fresh hosts. Existing `90-ffmpeg-override.conf` files remain
-unchanged. See [FFmpeg management](FFMPEG.md) for installation, activation,
-synthetic media verification, and rollback. The
-[incident record](incidents/2026-08-28-fathom-ffmpeg.md) documents the earlier
-manual mitigation and its separate recovery script.
+The installer now provisions a checksum-pinned Linux x64 FFmpeg/ffprobe build and selects it on fresh hosts.
+Existing `90-ffmpeg-override.conf` files remain unchanged.
+See [FFmpeg management](FFMPEG.md) for installation, activation, synthetic media verification, and rollback.
+The [incident record](incidents/2026-08-28-fathom-ffmpeg.md) documents the earlier manual mitigation and its separate recovery script.
 
 ### `podcast2article-webhook.service`
 
@@ -322,8 +316,8 @@ When the file exists, it starts `podcast2article-update.service`.
 
 ### `podcast2article-update.service`
 
-Runs the root-owned updater as a low-priority one-shot service. It removes the
-fixed trigger file before starting and has a 30-minute timeout.
+Runs the root-owned updater as a low-priority one-shot service.
+It removes the fixed trigger file before starting and has a 30-minute timeout.
 
 ### Common service commands
 
@@ -356,16 +350,14 @@ Active:   yes
 SSL:      verification enabled
 ```
 
-The GitHub ping and built-in test push both returned HTTP 202 during
-provisioning.
+The GitHub ping and built-in test push both returned HTTP 202 during provisioning.
 
 The webhook secret exists in two places by design:
 
 1. GitHub's encrypted webhook configuration;
 2. `/etc/podcast2article-webhook.env` on the VPS.
 
-The plaintext value must never be copied into documentation, Git, chat, shell
-history, or logs.
+The plaintext value must never be copied into documentation, Git, chat, shell history, or logs.
 
 Inspect recent GitHub deliveries from an authenticated workstation:
 
@@ -391,9 +383,9 @@ Every valid push to `main` triggers an immediate update attempt.
 
 ### Periodic reconciliation
 
-Cron starts the same systemd update service every five minutes through
-`/etc/cron.d/podcast2article-update`. This discovers missed webhooks and refreshes
-locally persisted deployment information. The updater lock prevents overlap.
+Cron starts the same systemd update service every five minutes through `/etc/cron.d/podcast2article-update`.
+This discovers missed webhooks and refreshes locally persisted deployment information.
+The updater lock prevents overlap.
 
 ### Update algorithm
 
@@ -401,8 +393,7 @@ locally persisted deployment information. The updater lock prevents overlap.
 
 1. takes `/run/lock/podcast2article-update.lock` with `flock`;
 2. reads the current GitHub `main` commit;
-3. when already current, verifies service and HTTP health, clears the failure
-   marker only when healthy, and exits without restarting;
+3. when already current, verifies service and HTTP health, clears the failure marker only when healthy, and exits without restarting;
 4. creates an isolated build directory under `/var/tmp`;
 5. fetches the exact commit, detached;
 6. installs locked development dependencies;
@@ -410,24 +401,21 @@ locally persisted deployment information. The updater lock prevents overlap.
 8. creates a new immutable release directory;
 9. installs locked production dependencies;
 10. links `data` to `/var/lib/podcast2article`;
-11. runs synthetic MPEG-TS remuxing, MP3 normalization, chunking, and decoding
-    as the application user with the service environment and new release code;
+11. runs synthetic MPEG-TS remuxing, MP3 normalization, chunking, and decoding as the application user with the service environment and new release code;
 12. atomically changes `/opt/podcast2article/current` only if media checks pass;
 13. restarts the application;
 14. waits up to 30 seconds for systemd and `/api/health`;
 15. keeps the new release on success;
-16. restores the previous symlink and restarts on activation failure when a
-    previous release exists; first deployment has no earlier release to restore;
-17. after success, retains the three newest release directories by modification
-    time. This cleanup does not distinguish successful releases from failed candidates.
+16. restores the previous symlink and restarts on activation failure when a previous release exists; first deployment has no earlier release to restore;
+17. after success, retains the three newest release directories by modification time.
+    This cleanup does not distinguish successful releases from failed candidates.
 
-The application continues serving from the old release while a new release is
-being downloaded, built, and tested. Downtime is limited to the final graceful
-restart. A media preflight failure leaves the existing symlink and process
-untouched. Applying this guard to an existing host requires explicitly
-reinstalling the infrastructure updater; application pushes do not replace it.
-The updater does not wait for GitHub Actions and does not run the Playwright
-browser suite. Those checks run independently in CI; verify them before merging.
+The application continues serving from the old release while a new release is being downloaded, built, and tested.
+Downtime is limited to the final graceful restart.
+A media preflight failure leaves the existing symlink and process untouched.
+Applying this guard to an existing host requires explicitly reinstalling the infrastructure updater; application pushes do not replace it.
+The updater does not wait for GitHub Actions and does not run the Playwright browser suite.
+Those checks run independently in CI; verify them before merging.
 
 ### Logs
 
@@ -452,46 +440,40 @@ sudo systemctl status podcast2article-update.service
 sudo tail -n 100 /var/log/podcast2article-update.log
 ```
 
-Do not run two ad-hoc copies of the update script. The lock prevents overlap,
-but systemd is the canonical invocation path.
+Do not run two ad-hoc copies of the update script.
+The lock prevents overlap, but systemd is the canonical invocation path.
 
 ### Deployment failure alert
 
-Logged-in users see a failed deployment warning on the articles overview. Public
-permalinks never show deployment status. The updater persists the failure across
-application restarts and clears it after a healthy update or reconciliation.
-See the [deployment-status runbook](DEPLOYMENT-STATUS.md) for the marker format,
-limitations, and required installation of the updated host script after merge.
+Logged-in users see a failed deployment warning on the articles overview.
+Public permalinks never show deployment status.
+The updater persists the failure across application restarts and clears it after a healthy update or reconciliation.
+See the [deployment-status runbook](DEPLOYMENT-STATUS.md) for the marker format, limitations, and required installation of the updated host script after merge.
 
 ### A successful webhook is not a successful deployment
 
 HTTP `202` from the webhook confirms that the receiver accepted the delivery.
-GitHub Actions checks the code on its own runner. Neither proves that the VPS
-installed or activated that commit. Compare the current release's
-`.deployed-commit` with GitHub `main`, then inspect the update service and log.
+GitHub Actions checks the code on its own runner.
+Neither proves that the VPS installed or activated that commit.
+Compare the current release's `.deployed-commit` with GitHub `main`, then inspect the update service and log.
 The public `/login` page also exposes the running build in `data-build-sha`.
-`/api/health` reports availability in `ok` and deployment freshness separately
-in `deployment`. See [status rules and thresholds](DEPLOYMENT-STATUS.md).
+`/api/health` reports availability in `ok` and deployment freshness separately in `deployment`.
+See [status rules and thresholds](DEPLOYMENT-STATUS.md).
 
 On 2026-09-06, production remained on `857b546` while pushes and CI succeeded.
-Every update failed during dependency installation: the host ran Node.js
-22.22.1, but `package.json` required Node.js 24 or newer. The existing release
-continued serving normally. Upgrade the host runtime before retrying this
-failure; clearing a browser cache or redelivering the webhook cannot fix it.
+Every update failed during dependency installation: the host ran Node.js 22.22.1, but `package.json` required Node.js 24 or newer.
+The existing release continued serving normally.
+Upgrade the host runtime before retrying this failure; clearing a browser cache or redelivering the webhook cannot fix it.
 
-Recovery completed at 15:17 CEST on 2026-09-06: Node.js 24.20.0 and repaired
-Yarn shims allowed the updater to deploy `85aa3a4`. The public login build and
-theme stylesheet matched that commit. Health, anonymous API rejection, and a
-separate synthetic media check passed; the webhook was restarted afterward.
-The installed updater at recovery time still lacked the repository's media
-preflight, so this manual check does not establish that future deployments run
-that gate. Installing the updated updater remains an explicit infrastructure
-rollout as described in [FFmpeg management](FFMPEG.md).
+Recovery completed at 15:17 CEST on 2026-09-06: Node.js 24.20.0 and repaired Yarn shims allowed the updater to deploy `85aa3a4`.
+The public login build and theme stylesheet matched that commit.
+Health, anonymous API rejection, and a separate synthetic media check passed; the webhook was restarted afterward.
+The installed updater at recovery time still lacked the repository's media preflight, so this manual check does not establish that future deployments run that gate.
+Installing the updated updater remains an explicit infrastructure rollout as described in [FFmpeg management](FFMPEG.md).
 
 ## 12. Manual rollback
 
-Automatic rollback occurs when a newly activated application fails its local
-health check.
+Automatic rollback occurs when a newly activated application fails its local health check.
 
 For a manual rollback:
 
@@ -515,12 +497,11 @@ curl -fsS http://127.0.0.1:3000/api/health
 curl -I https://production.example.nl/login
 ```
 
-Use an exact release name. Never recursively delete `/opt/podcast2article` or
-`/var/lib/podcast2article` during rollback.
+Use an exact release name.
+Never recursively delete `/opt/podcast2article` or `/var/lib/podcast2article` during rollback.
 
-Application release rollback does not revert an external FFmpeg installation or
-its systemd override. Those survive release switches and require their own
-[rollback procedure](FFMPEG.md#activation-and-rollback).
+Application release rollback does not revert an external FFmpeg installation or its systemd override.
+Those survive release switches and require their own [rollback procedure](FFMPEG.md#activation-and-rollback).
 
 ## 13. Secrets and rotation
 
@@ -533,9 +514,8 @@ group: podcast2article
 mode: 0640
 ```
 
-It contains the OpenAI API key, fixed user accounts, model selection, limits,
-timeouts, region, and bind configuration. `APP_USERS` is a JSON object with a
-unique password of at least 16 characters for every username.
+It contains the OpenAI API key, fixed user accounts, model selection, limits, timeouts, region, and bind configuration.
+`APP_USERS` is a JSON object with a unique password of at least 16 characters for every username.
 
 To display the account configuration when administratively necessary:
 
@@ -563,9 +543,8 @@ group: podcast2article-webhook
 mode: 0640
 ```
 
-Rotating `GITHUB_WEBHOOK_SECRET` requires changing the GitHub webhook secret and
-the VPS value together, then restarting `podcast2article-webhook`. A mismatch
-causes safe HTTP 401 responses and no deployments.
+Rotating `GITHUB_WEBHOOK_SECRET` requires changing the GitHub webhook secret and the VPS value together, then restarting `podcast2article-webhook`.
+A mismatch causes safe HTTP 401 responses and no deployments.
 
 ## 14. Resource controls
 
@@ -576,8 +555,7 @@ causes safe HTTP 401 responses and no deployments.
 /etc/sysctl.d/99-podcast2article.conf: vm.swappiness=10
 ```
 
-Swap is a safety net for package installation and build peaks, not normal
-working memory.
+Swap is a safety net for package installation and build peaks, not normal working memory.
 
 ### Application memory
 
@@ -587,10 +565,9 @@ The main Node process starts with:
 --max-old-space-size=384
 ```
 
-A shared media slot prevents concurrent downloads and FFmpeg work. Three
-processing jobs can overlap remote API calls and retain temporary audio at once.
-The updater uses a 512 MiB Node heap ceiling during validation and is assigned low CPU and I/O priority by
-systemd.
+A shared media slot prevents concurrent downloads and FFmpeg work.
+Three processing jobs can overlap remote API calls and retain temporary audio at once.
+The updater uses a 512 MiB Node heap ceiling during validation and is assigned low CPU and I/O priority by systemd.
 
 Useful diagnostics:
 
@@ -602,8 +579,7 @@ df -h /
 sudo du -sh /var/lib/podcast2article/*
 ```
 
-Upgrade to a larger VPS if one ordinary job repeatedly causes heavy sustained
-swap use, out-of-memory kills, or unacceptable responsiveness.
+Upgrade to a larger VPS if one ordinary job repeatedly causes heavy sustained swap use, out-of-memory kills, or unacceptable responsiveness.
 
 ## 15. Logging
 
@@ -636,59 +612,47 @@ API keys, webhook secrets, passwords, and transcript text should not be logged.
 
 ### Shared article usage
 
-Anonymous shared-reader loads and estimated reads are stored in each article's
-job JSON as `shareAnalytics`, alongside a bounded set of recent visit receipts.
+Anonymous shared-reader loads and estimated reads are stored in each article's job JSON as `shareAnalytics`, alongside a bounded set of recent visit receipts.
 They require a full jobs backup; article-only S3 backups exclude these counters.
-No external analytics service,
-scheduled job, new secret, or database migration is required. Existing articles
-start at zero on their first tracked load after deployment; there is no backfill.
+No external analytics service, scheduled job, new secret, or database migration is required.
+Existing articles start at zero on their first tracked load after deployment; there is no backfill.
 
-Owners can view counts in **Shared link activity** at the bottom of their article,
-or use the authenticated `GET /api/jobs/:id/share-stats` endpoint. The footer
-refreshes when opening or returning to an article and offers **Try again** if
-the request fails; an unavailable count is never shown as zero.
-The [monitoring reference](SHARED-ARTICLE-MONITORING.md) documents the payload,
-30-second/90% read definition, privacy, and deduplication limits. Public links must
-not return statistics. Public events cannot change owner read state.
+Owners can view counts in **Shared link activity** at the bottom of their article, or use the authenticated `GET /api/jobs/:id/share-stats` endpoint.
+The footer refreshes when opening or returning to an article and offers **Try again** if the request fails; an unavailable count is never shown as zero.
+The [monitoring reference](SHARED-ARTICLE-MONITORING.md) documents the payload, 30-second/90% read definition, privacy, and deduplication limits.
+Public links must not return statistics.
+Public events cannot change owner read state.
 
-After deployment, use a test-only shared article: confirm a browser load visible for two seconds
-increments `loads`, read actively for 30 seconds and reach the end to increment
-`reads`, then verify counts survive a normal application restart when one is
-already planned. Do not restart production just to inspect counters. Requests for
-HTML previews or audio alone must not increment them. Check that signed-out
-statistics requests return `401` and another owner's article returns `404`.
+After deployment, use a test-only shared article: confirm a browser load visible for two seconds increments `loads`, read actively for 30 seconds and reach the end to increment `reads`, then verify counts survive a normal application restart when one is already planned.
+Do not restart production just to inspect counters.
+Requests for HTML previews or audio alone must not increment them.
+Check that signed-out statistics requests return `401` and another owner's article returns `404`.
 
-WebDriver-declared automation intentionally sends no load or read events; use an
-ordinary browser for the rollout check. This is a best-effort filter, not proof
-that every counted visit is human.
+WebDriver-declared automation intentionally sends no load or read events; use an ordinary browser for the rollout check.
+This is a best-effort filter, not proof that every counted visit is human.
 
-If counts stay at zero, check the browser's event POST responses and JavaScript
-availability. HTTPS (or localhost) is required for random visit IDs. `400` means
-invalid event data; `404` means the capability is unavailable; `409` means a read
-has no recent load or arrived before the server's 30-second minimum. Network and
-storage failures can lose events. Treat counts as approximate engagement signals,
-not unique-reader or billing records. Existing proxy logs are separate and may
-contain request URLs; do not export capability tokens for analysis.
+If counts stay at zero, check the browser's event POST responses and JavaScript availability.
+HTTPS (or localhost) is required for random visit IDs.
+`400` means invalid event data; `404` means the capability is unavailable; `409` means a read has no recent load or arrived before the server's 30-second minimum.
+Network and storage failures can lose events.
+Treat counts as approximate engagement signals, not unique-reader or billing records.
+Existing proxy logs are separate and may contain request URLs; do not export capability tokens for analysis.
 
 ## 16. OS maintenance
 
 ### Node.js runtime upgrades
 
-Runtime packages are host infrastructure. Application deployments and changes to
-`.nvmrc` do not install them. Check `package.json` and `.nvmrc` before merging a
-runtime requirement change, and upgrade the host first where compatible with
-the running release. The application and synthetic media service use
-`/usr/bin/node`; check that binary as well as the updater's PATH.
+Runtime packages are host infrastructure.
+Application deployments and changes to `.nvmrc` do not install them.
+Check `package.json` and `.nvmrc` before merging a runtime requirement change, and upgrade the host first where compatible with the running release.
+The application and synthetic media service use `/usr/bin/node`; check that binary as well as the updater's PATH.
 
-Production moved from Ubuntu's Node.js 22 package to the signed NodeSource
-24.x APT repository on 2026-09-06. The selected package was
-`24.20.0-1nodesource1`, matching `.nvmrc` at the time. The repository tracks
-major version 24; the installation command selects an exact package version
-without freezing future security updates with an APT hold.
+Production moved from Ubuntu's Node.js 22 package to the signed NodeSource 24.x APT repository on 2026-09-06.
+The selected package was `24.20.0-1nodesource1`, matching `.nvmrc` at the time.
+The repository tracks major version 24; the installation command selects an exact package version without freezing future security updates with an APT hold.
 
-For an Ubuntu amd64 host, inspect existing package sources before adding this
-repository. Review the [NodeSource instructions](https://github.com/nodesource/distributions)
-and signing key when repeating the procedure:
+For an Ubuntu amd64 host, inspect existing package sources before adding this repository.
+Review the [NodeSource instructions](https://github.com/nodesource/distributions) and signing key when repeating the procedure:
 
 ```bash
 /usr/bin/node --version
@@ -705,11 +669,10 @@ apt-cache policy nodejs
 sudo apt-get -s install nodejs=24.20.0-1nodesource1
 ```
 
-Review the simulation before installing. On this host the replacement removed
-Ubuntu's npm, Corepack, and their distribution JavaScript dependencies; the
-application uses its own locked dependencies in each release. Do not run
-`autoremove` as part of this upgrade. Avoid unrelated service restarts during
-package installation, then restore Corepack if the replacement removed it:
+Review the simulation before installing.
+On this host the replacement removed Ubuntu's npm, Corepack, and their distribution JavaScript dependencies; the application uses its own locked dependencies in each release.
+Do not run `autoremove` as part of this upgrade.
+Avoid unrelated service restarts during package installation, then restore Corepack if the replacement removed it:
 
 ```bash
 sudo env DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l \
@@ -735,22 +698,19 @@ cat /opt/podcast2article/current/.deployed-commit
 curl -fsS http://127.0.0.1:3000/api/health
 ```
 
-The running process retains its old runtime until restarted. Let the guarded
-updater validate and activate the release, then verify the process runtime via
-`sudo /proc/<MainPID>/exe --version`, using the PID from
-`systemctl show podcast2article -p MainPID --value`. Check the public login
-build and stylesheet against the intended commit. Restart the webhook service
-afterward so it also uses the upgraded runtime, and verify its listener and the
-update path unit remain active.
+The running process retains its old runtime until restarted.
+Let the guarded updater validate and activate the release, then verify the process runtime via `sudo /proc/<MainPID>/exe --version`, using the PID from `systemctl show podcast2article -p MainPID --value`.
+Check the public login build and stylesheet against the intended commit.
+Restart the webhook service afterward so it also uses the upgraded runtime, and verify its listener and the update path unit remain active.
 
-An application rollback only changes the release symlink; it does not undo an
-APT runtime upgrade. If the runtime itself must be rolled back, explicitly
-review and restore the previous package source and compatible runtime packages,
-then verify the app and webhook again. Do not bypass package engine checks.
+An application rollback only changes the release symlink; it does not undo an APT runtime upgrade.
+If the runtime itself must be rolled back, explicitly review and restore the previous package source and compatible runtime packages, then verify the app and webhook again.
+Do not bypass package engine checks.
 
 ### Routine system updates
 
-Ubuntu unattended security upgrades are enabled. Check with:
+Ubuntu unattended security upgrades are enabled.
+Check with:
 
 ```bash
 systemctl status unattended-upgrades
@@ -773,22 +733,18 @@ sudo systemctl status podcast2article
 sudo reboot
 ```
 
-Then verify SSH, Caddy, the application, webhook receiver, path unit, DNS, and
-HTTPS.
+Then verify SSH, Caddy, the application, webhook receiver, path unit, DNS, and HTTPS.
 
 ## 17. Backup status and requirements
 
 ### Required status
 
-Full offsite backup configuration and production restore verification remain
-operator responsibilities. Application code is
-recoverable from GitHub, but production data under
-`/var/lib/podcast2article` is not recoverable from Git.
+Full offsite backup configuration and production restore verification remain operator responsibilities.
+Application code is recoverable from GitHub, but production data under `/var/lib/podcast2article` is not recoverable from Git.
 
-Optional [S3 article backups](ARTICLE-BACKUPS.md) cover final articles and selected
-source metadata, including restart recovery, backfill and restore without generation.
-They require production bucket configuration and a restore drill. They do not
-replace the full account/configuration/media backup described below.
+Optional [S3 article backups](ARTICLE-BACKUPS.md) cover final articles and selected source metadata, including restart recovery, backfill and restore without generation.
+They require production bucket configuration and a restore drill.
+They do not replace the full account/configuration/media backup described below.
 
 ### Essential backup scope
 
@@ -802,12 +758,11 @@ replace the full account/configuration/media backup described below.
 /etc/cron.d/podcast2article-update
 ```
 
-Each user's `media` directory is optional only if source media can reliably be
-recovered. It is required to preserve timestamp playback independently of the
-original source.
+Each user's `media` directory is optional only if source media can reliably be recovered.
+It is required to preserve timestamp playback independently of the original source.
 
-Secrets in backups must be encrypted and access-controlled. A backup stored
-only on the same VPS is not an offsite backup.
+Secrets in backups must be encrypted and access-controlled.
+A backup stored only on the same VPS is not an offsite backup.
 
 ### Suggested policy
 
@@ -835,8 +790,7 @@ For complete VPS loss:
 10. recreate or update the GitHub webhook URL and secret;
 11. verify login, job history, audio, PDF, webhook, cron, IPv4, and IPv6.
 
-Recovery time and recovery point cannot be guaranteed until offsite backups and
-restore testing are implemented.
+Recovery time and recovery point cannot be guaranteed until offsite backups and restore testing are implemented.
 
 ## 19. Routine operational checklist
 
@@ -885,98 +839,78 @@ echo | openssl s_client -connect production.example.nl:443 \
 
 ## 20. Known action items
 
-1. Configure and restore-test [S3 article backups](ARTICLE-BACKUPS.md), plus a
-   separate encrypted offsite backup for full account state, configuration and media.
+1. Configure and restore-test [S3 article backups](ARTICLE-BACKUPS.md), plus a separate encrypted offsite backup for full account state, configuration and media.
 2. Confirm the provider-side TransIP firewall definitions in the control panel.
-3. Keep deployed Caddy, systemd, cron, and hardening files synchronized with
-   the reviewed files under `deploy/`.
-4. Revisit VPS sizing after observing several long real-world jobs and update
-   builds.
+3. Keep deployed Caddy, systemd, cron, and hardening files synchronized with the reviewed files under `deploy/`.
+4. Revisit VPS sizing after observing several long real-world jobs and update builds.
 5. Keep this document synchronized with material infrastructure changes.
 
 ## Account processing budget
 
 Each account has a fixed USD 5 allowance over the preceding 30 × 24 hours.
-This covers tracked OpenAI transcription and article requests, including automatic
-API retries, article retries and subscription processing. Failed and soft-deleted
-jobs retain their costs. Saving another reader's shared article consumes no budget.
+This covers tracked OpenAI transcription and article requests, including automatic API retries, article retries and subscription processing.
+Failed and soft-deleted jobs retain their costs.
+Saving another reader's shared article consumes no budget.
 Without authentication, all work belongs to the single `local` account.
 
 Before each paid request, the server persists a conservative cost reservation.
-Concurrent jobs share the remaining allowance. Confirmed usage replaces that
-reservation; failures, timeouts and unknown costs retain it because the provider
-may have processed the request. Reservations survive restarts and expire after
-30 days. Completed requests age out from their completion timestamp.
+Concurrent jobs share the remaining allowance.
+Confirmed usage replaces that reservation; failures, timeouts and unknown costs retain it because the provider may have processed the request.
+Reservations survive restarts and expire after 30 days.
+Completed requests age out from their completion timestamp.
 Article requests are bounded to 16,384 output tokens (including reasoning).
-Reservations allow for the highest supported tier, long-context/cache-write
-pricing and regional pricing; they can reject work before confirmed spend reaches
-USD 5. Large transcripts may therefore need more headroom than their eventual cost.
+Reservations allow for the highest supported tier, long-context/cache-write pricing and regional pricing; they can reject work before confirmed spend reaches USD 5.
+Large transcripts may therefore need more headroom than their eventual cost.
 
-For limited accounts, unknown models or custom endpoints cannot start paid
-requests until verified reservation pricing is added. Exempt accounts can use
-them while continuing to record usage. Historical spending is excluded from the
-allowance, not refunded by the provider: stored
-requests without a budget reservation are excluded, even if their costs are known
-and fall within the last 30 days. Missing historical coverage also consumes no
-allowance. Every new paid attempt saves a reservation before sending, so retries
-of old jobs count from deployment onward without charging their earlier work.
-The limit uses the
-application's saved price estimates, not an invoice or infrastructure charges.
+For limited accounts, unknown models or custom endpoints cannot start paid requests until verified reservation pricing is added.
+Exempt accounts can use them while continuing to record usage.
+Historical spending is excluded from the allowance, not refunded by the provider: stored requests without a budget reservation are excluded, even if their costs are known and fall within the last 30 days.
+Missing historical coverage also consumes no allowance.
+Every new paid attempt saves a reservation before sending, so retries of old jobs count from deployment onward without charging their earlier work.
+The limit uses the application's saved price estimates, not an invoice or infrastructure charges.
 Keep the price table current when provider prices change.
 
-Budget exhaustion appears through the existing localized error flow. Existing
-articles remain readable. A job stopped between stages retains its transcript
-when available, so the existing article retry can be used once budget is available.
-Subscription episodes that fail during processing retain the existing failure and
-retry behavior; they are not automatically retried when the budget recovers.
+Budget exhaustion appears through the existing localized error flow.
+Existing articles remain readable.
+A job stopped between stages retains its transcript when available, so the existing article retry can be used once budget is available.
+Subscription episodes that fail during processing retain the existing failure and retry behavior; they are not automatically retried when the budget recovers.
 
-Run only one server against a data directory: reservations coordinate concurrent
-requests within that process, not across replicas. Startup loads all account
-histories before resuming work and fails if a stored job cannot be read, because
-ignoring that history could grant an incorrect allowance.
+Run only one server against a data directory: reservations coordinate concurrent requests within that process, not across replicas.
+Startup loads all account histories before resuming work and fails if a stored job cannot be read, because ignoring that history could grant an incorrect allowance.
 
 ### Viewing spending and exempting accounts
 
-The owner-page footer contains an expandable **Usage** summary, refreshed every
-30 seconds and when the page regains focus. It shows estimated costs for the last
-30 days, historical spending excluded from the limit, counted spending, reserved
-budget and the remaining allowance. **No spending limit** replaces the allowance
-for exempt accounts. These totals reuse the stored request-level usage; historical
-article totals remain unchanged. The private `/api/account-budget` endpoint returns
-only the authenticated account's summary and is never cached.
+The owner-page footer contains an expandable **Usage** summary, refreshed every 30 seconds and when the page regains focus.
+It shows estimated costs for the last 30 days, historical spending excluded from the limit, counted spending, reserved budget and the remaining allowance.
+**No spending limit** replaces the allowance for exempt accounts.
+These totals reuse the stored request-level usage; historical article totals remain unchanged.
+The private `/api/account-budget` endpoint returns only the authenticated account's summary and is never cached.
 
-To exempt accounts, set a comma-separated list of exact usernames in
-`/etc/podcast2article.env`, then restart the application when no jobs are running:
+To exempt accounts, set a comma-separated list of exact usernames in `/etc/podcast2article.env`, then restart the application when no jobs are running:
 
 ```dotenv
 SPENDING_LIMIT_EXEMPT_USERS=rogier
 ```
 
-This is an operator setting, not an account control in the interface. Empty means
-all accounts are limited; wildcards and malformed names are rejected at startup.
-Exempt accounts continue recording usage and reservations. Removing an exemption
-restores the USD 5 limit, including that account's new spending during the preceding
-30 days. Exempt accounts can also use models with unknown pricing; those requests
-retain a conservative USD 5 reservation if their cost cannot be established, so
-removing the exemption cannot turn new unknown spending into free historical work.
+This is an operator setting, not an account control in the interface.
+Empty means all accounts are limited; wildcards and malformed names are rejected at startup.
+Exempt accounts continue recording usage and reservations.
+Removing an exemption restores the USD 5 limit, including that account's new spending during the preceding 30 days.
+Exempt accounts can also use models with unknown pricing; those requests retain a conservative USD 5 reservation if their cost cannot be established, so removing the exemption cannot turn new unknown spending into free historical work.
 
 ## Article service tier
 
-Article generation defaults to `ARTICLE_SERVICE_TIER=flex`; the configured
-`ARTICLE_MODEL` and transcription model remain unchanged. After three transient
-Flex failures, the same operation switches to `service_tier: "default"` for up to
-three standard attempts. Capacity errors, connection failures, timeouts and other
-retryable HTTP failures use the existing backoff and retry-header rules.
+Article generation defaults to `ARTICLE_SERVICE_TIER=flex`; the configured `ARTICLE_MODEL` and transcription model remain unchanged.
+After three transient Flex failures, the same operation switches to `service_tier: "default"` for up to three standard attempts.
+Capacity errors, connection failures, timeouts and other retryable HTTP failures use the existing backoff and retry-header rules.
 Cancellation and permanent errors stop without fallback.
 
-The existing `OPENAI_ARTICLE_TIMEOUT_MS` applies separately to every attempt
-(default 600000 ms). Six timeouts can therefore take roughly an hour, plus backoff.
-Budget checks run before each attempt; unknown outcomes retain their reservations
-and can block fallback. Requested and actual tiers are saved per attempt, and
-prices follow the actual reported tier. Existing estimates are not repriced.
+The existing `OPENAI_ARTICLE_TIMEOUT_MS` applies separately to every attempt (default 600000 ms).
+Six timeouts can therefore take roughly an hour, plus backoff.
+Budget checks run before each attempt; unknown outcomes retain their reservations and can block fallback.
+Requested and actual tiers are saved per attempt, and prices follow the actual reported tier.
+Existing estimates are not repriced.
 
-To disable Flex, set `ARTICLE_SERVICE_TIER=default` in the service environment and
-restart through the normal deployment procedure. Verify the effective setting
-without printing secrets, then inspect the next naturally created job's
-`apiUsage.requests` for its requested and reported tiers. Do not infer measured
-savings from configuration alone.
+To disable Flex, set `ARTICLE_SERVICE_TIER=default` in the service environment and restart through the normal deployment procedure.
+Verify the effective setting without printing secrets, then inspect the next naturally created job's `apiUsage.requests` for its requested and reported tiers.
+Do not infer measured savings from configuration alone.
