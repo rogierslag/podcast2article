@@ -10,6 +10,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { requestArticleBackup } from "./article-backups.js";
 import { recordShareEvent } from "./share-analytics.js";
 import { ConcurrencyGate } from "../lib/concurrency.js";
 import { jobError, jobLog } from "../lib/logger.js";
@@ -170,11 +171,14 @@ async function persist(username: string, job: Job): Promise<void> {
       const jobDirectory = path.join(userDirectory(username), "jobs");
       await mkdir(jobDirectory, { recursive: true });
       job.updatedAt = new Date().toISOString();
-      await writeFile(
-        path.join(jobDirectory, `${job.id}.json`),
-        JSON.stringify(job, null, 2),
-      );
+      const destination = path.join(jobDirectory, `${job.id}.json`);
+      const temporary = `${destination}.tmp`;
+      await writeFile(temporary, JSON.stringify(job, null, 2));
+      await rename(temporary, destination);
       memory.set(key, job);
+      if (job.stage === "complete") {
+        requestArticleBackup();
+      }
     });
   pendingWrites.set(key, writing);
   try {

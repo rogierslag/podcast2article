@@ -301,6 +301,7 @@ data/users/<username>/jobs/<uuid>.json   job, transcript, article, read state, s
 data/users/<username>/media/<uuid>.mp3   normalized playback audio
 data/users/<username>/work/<uuid>/       temporary downloads and chunks
 data/users/<username>/subscriptions.json series configuration and scheduling state
+data/article-backups/<username>/<uuid>.sha256 successful S3 upload receipt
 ```
 
 In production, `data` is a symlink to `/var/lib/podcast2article`. This keeps
@@ -308,7 +309,10 @@ mutable data outside immutable application releases.
 
 JSON persistence is simple and inspectable, but it does not provide database
 transactions, multi-process coordination, querying, or horizontal scaling.
-The architecture assumes exactly one application process.
+The architecture assumes exactly one application process. Job writes use an atomic
+rename so the backup worker cannot read a partially written record. Optional S3
+backups select final article fields only; receipts prevent unchanged uploads and
+local completed jobs provide restart recovery. See [article backups](docs/ARTICLE-BACKUPS.md).
 
 ### Podcast subscriptions
 
@@ -512,11 +516,16 @@ document.
 | `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                                                                                     |
 | `LOG_STACKS`                      | Enable full stack traces in logs                                                                                        |
 
+S3 backups use `ARTICLE_BACKUP_BUCKET` (empty disables backups),
+`ARTICLE_BACKUP_REGION` (required when enabled), `ARTICLE_BACKUP_PREFIX`
+(default `articles`) and the standard AWS credential chain.
+
 ## 7. Dependency model
 
 Production dependencies:
 
 - Express for HTTP;
+- AWS SDK for private S3 article backup uploads and operator restores;
 - Zod for input validation;
 - fast-xml-parser for podcast feeds;
 - youtube-dl-exec for YouTube and Fathom acquisition;
@@ -596,7 +605,12 @@ when one exists; a first deployment has no earlier release to restore.
 - Model output must be reviewed before publication.
 - Public availability of a recording does not itself grant republication rights.
 - Retained media and transcripts may contain personal or sensitive information.
-- Offsite backup is an infrastructure concern and is not currently configured.
+- Optional S3 article backups use `src/services/article-backups.ts` and explicit
+  versioned payloads. A worker scans atomically persisted completed jobs after
+  completion, at startup and every minute; destination/content receipts skip
+  unchanged uploads. Failed uploads never change generation status. See
+  [article backups](docs/ARTICLE-BACKUPS.md) for configuration and recovery.
+  Full account, configuration and media backups remain an infrastructure concern.
 
 ## 11. Key architectural decisions
 

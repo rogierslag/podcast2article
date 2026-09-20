@@ -51,6 +51,18 @@ when the run finishes or fails; retained playback audio and job JSON live under
 Sources: [request routes](../src/server.ts), [job processing](../src/services/jobs.ts),
 [source resolution](../src/services/resolver.ts), and [OpenAI processing](../src/services/openai.ts).
 
+## Final article backups
+
+When S3 backups are configured, successful local completion requests a background
+scan, including after an article-only retry. Startup and a one-minute timer also
+scan existing completed articles, including soft-deleted articles. Incomplete and
+failed jobs are skipped. Uploads contain only the final article and identifying
+metadata; destination/content receipts skip unchanged objects. Failed uploads
+leave local jobs complete and retry from persisted files after restart.
+
+See [article backups](ARTICLE-BACKUPS.md) for payload exclusions, access controls,
+backfill, retention, restore limitations and cost estimates.
+
 ## Failures, retries, and server restarts
 
 An explicit article retry and restart recovery take different paths. Only the
