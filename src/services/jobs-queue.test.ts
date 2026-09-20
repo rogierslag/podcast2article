@@ -97,7 +97,8 @@ beforeEach(() => {
     .mockImplementation(async (file: string, content: string) => {
       state.files.set(file, content);
     });
-  // Hold processing at the network boundary. Shutdown must cancel this request.
+  // Hold processing at the network boundary.
+  // Shutdown must cancel this request.
   state.resolveSource.mockReset().mockImplementation(
     (_url: string, signal: AbortSignal) =>
       new Promise((_resolve, reject) => {

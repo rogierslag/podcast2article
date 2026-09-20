@@ -341,18 +341,18 @@ export function validateArticleQuotes(
 }
 
 const ARTICLE_LANGUAGE_NAMES: Record<string, string> = {
-  nl: "Nederlands",
-  en: "Engels",
-  de: "Duits",
-  fr: "Frans",
-  es: "Spaans",
+  nl: "Dutch",
+  en: "English",
+  de: "German",
+  fr: "French",
+  es: "Spanish",
 };
 
 export function articleLanguageInstruction(language: string): string {
   if (language === "auto") {
-    return "Detecteer de dominante taal van het transcript en schrijf het volledige artikel in diezelfde taal. Vertaal de bron niet.";
+    return "Detect the transcript's dominant language and write the entire article in that same language. Do not translate the source.";
   }
-  return `Schrijf het volledige artikel in het ${ARTICLE_LANGUAGE_NAMES[language] ?? language}.`;
+  return `Write the entire article in ${ARTICLE_LANGUAGE_NAMES[language] ?? language}.`;
 }
 
 export async function writeArticle(
@@ -401,15 +401,29 @@ export async function writeArticle(
   let response;
   try {
     const model = process.env.ARTICLE_MODEL ?? "gpt-5.6-terra";
+    // Preserve the coverage wording evaluated in docs/ARTICLE-COVERAGE-EVALUATION.md.
     const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
       model,
       service_tier: serviceTier,
       max_output_tokens: 16_384,
-      instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
-Behoud de herkenbare stijl van de opname: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
-Gebruik verspreid door de secties enkele quote-blokken voor letterlijke, op zichzelf staande en memorabele uitspraken, maar alleen als het transcript zulke uitspraken bevat. Zet dan kind op "quote" en kopieer de gesproken woorden exact uit de gekoppelde, aaneengesloten bronfragmenten; laat omringende aanhalingstekens weg. Gebruik anders kind "paragraph". Forceer geen citaten en gebruik quote-blokken niet voor parafrases.\n
-Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea direct ondersteunen. Kies de nauwkeurigste fragmenten. Vermijd meta-commentaar zoals 'in de podcast' of 'in de opname'. Geef in styleNote in één korte zin aan welke stijleigenschappen je hebt behouden. Schrijf circa ${targetWords} woorden.`,
-      input: `Bron: ${metadata.sourceName}\nTitel: ${metadata.title}\nTaalinstructie: ${articleLanguageInstruction(metadata.language)}\n\nTRANSCRIPT (enige inhoudelijke bron):\n${transcriptText}`,
+      instructions: `You are a careful editor. Write solely from the supplied transcript.
+
+${articleLanguageInstruction(metadata.language)}
+
+Preserve the recording's recognizable style: pace, humor, directness, recurring imagery, and the way arguments and anecdotes are developed. Turn it into a clear, standalone blog article. You may reorganize, shorten, paraphrase, and improve the flow of arguments, but never add facts, examples, motives, conclusions, quotes, or connections. Do not put paraphrases in quotation marks.
+
+Use a few quote blocks throughout the sections for verbatim, self-contained, memorable statements, but only if the transcript contains such statements. Set kind to "quote" and copy the spoken words exactly from the linked, consecutive source segments; omit surrounding quotation marks. Otherwise use kind "paragraph". Do not force quotes or use quote blocks for paraphrases.
+
+Each paragraph must contain 1-5 source IDs that directly support its entire content. Choose the most precise segments. Avoid meta-commentary such as 'in the podcast' or 'in the recording'. In styleNote, describe the stylistic features you preserved in one short sentence. Write approximately ${targetWords} words.
+
+COVERAGE REQUIREMENT: Before writing, survey the complete transcript and choose the main substantive topics across the beginning, middle and end. Preserve each central assertion, its defining example or qualification, important counterarguments, and substantive career or personal stories when these explain the episode. Do not let an attractive opening theme turn the article into a narrower essay that silently loses other major topics. Exclude ads, housekeeping and repetition. Allocate space across the topics before drafting; when space is tight, combine related themes and shorten explanations before dropping a distinct main topic. Internally check the finished article for accidental omissions and unsupported additions. Return only the final article JSON, not a plan or review. The transcript remains the only factual source; publisher writing and external knowledge must not be used.
+`,
+      input: [
+        {
+          role: "user",
+          content: `Source: ${metadata.sourceName}\nTitle: ${metadata.title}\n\nTRANSCRIPT (only factual source):\n${transcriptText}`,
+        },
+      ],
       text: {
         format: {
           type: "json_schema",

@@ -96,8 +96,8 @@ function fathomFailure(error: unknown, fallback: DomainErrorCode): Error {
       ? String(error.stderr)
       : String(error);
   const message = details.replace(/https?:\/\/\S+/gi, "");
-  // yt-dlp wraps FFmpeg failures as postprocessing errors, even when the
-  // underlying crash leaves only a version banner. Do not blame permissions.
+  // yt-dlp wraps FFmpeg failures as postprocessing errors, even when the underlying crash leaves only a version banner.
+  // Do not blame permissions.
   if (
     /(?:^|\n)\s*ERROR:\s*Postprocessing:|ffmpeg (?:exited|failed|not found)|ffmpeg.*(?:SIGSEGV|segmentation fault)/i.test(
       message,

@@ -2,6 +2,18 @@
 
 This file applies to the entire repository.
 
+## Starting work in a worktree
+
+- At the start of a task in a Git worktree, run `git fetch origin` and ensure the worktree includes the latest `origin/main` before making changes.
+  A recently created worktree or a cached remote-tracking reference is not proof that it is up to date.
+- Inspect the working tree first and preserve all uncommitted changes and local commits.
+  Rebase existing task commits onto `origin/main`; start fresh work from that commit.
+  Resolve conflicts and restore any temporarily saved changes before continuing; never discard work to force the checkout to match.
+- Verify that `git merge-base --is-ancestor origin/main HEAD` succeeds after the fetch and update.
+  Read the updated `AGENTS.md` and applicable instructions before starting implementation.
+- If fetching or updating fails, report the blocker and do not claim the worktree is current.
+  Follow an explicit user request to work from a particular older revision instead of updating it.
+
 ## Product and language
 
 - Podcast2Article turns public Spotify episodes, YouTube videos, Fathom recordings, and Google Drive recordings into source-linked articles; followed podcast series use public RSS feeds.
@@ -89,21 +101,41 @@ Readability is the default.
 Some older frontend files are densely formatted; treat that as legacy code, not as the style to imitate.
 Source files must remain pleasant to review without a formatter or minifier.
 
-### General formatting
+### Prose line breaks: one sentence per source line
 
-- Write Markdown and other prose documentation with one sentence per source line, regardless of sentence length.
-  This also applies to plain-text files such as `.txt`, extensionless documents such as `LICENSE`, and prose comments where the file syntax permits it.
-  Do not hard-wrap prose at 80, 120, or any other character limit.
-  Preserve paragraph breaks and indent continuation sentences within list items.
-  Keep code blocks, tables, URLs, and other syntax-sensitive content structurally intact.
-  Keep Prettier's `proseWrap` set to `preserve` so formatting retains these sentence boundaries.
-  Check files outside Prettier's coverage manually; formatter coverage does not limit this preference.
+- Put each complete sentence on its own physical source line, regardless of its length.
+  Do not combine multiple sentences on one line or split a sentence across lines to meet an 80-column, 120-column, or other width limit.
+  Editor soft wrapping is fine because it does not insert line breaks into the file.
+- Apply this rule to Markdown, other prose documentation, plain-text files such as `.txt`, extensionless documents such as `LICENSE`, and prose comments where the file syntax permits it.
+  Formatter coverage does not limit the rule's scope.
+- Preserve blank lines between paragraphs; a new sentence within the same paragraph needs a newline, not a blank line.
+  Within a list item, indent each continuation sentence so it remains part of that item.
+- Preserve code blocks, tables, URLs, and other syntax-sensitive content rather than applying prose sentence splitting to them.
+- Keep Prettier's `proseWrap` set to `preserve`.
+  Do not change it to `always` or `never`, or introduce a prose column limit to fix line breaks.
+  Prettier preserves existing sentence boundaries; it does not create or validate them.
+  Inspect the edited prose even when `yarn run format:check` passes, including files outside Prettier's coverage.
+- Read this rule and the repository's formatter configuration before changing prose formatting.
+  Do not infer the intended convention from formatter defaults or older files.
+  Before changing the formatting policy or configuration, check the latest `main` version of `AGENTS.md` so an older worktree does not replace a newer convention.
+
+Use this source layout:
+
+```markdown
+A paragraph can contain several sentences.
+Each sentence occupies one complete source line, even when it is longer than a conventional editor column width.
+
+- The first sentence belongs to this list item.
+  The next sentence stays in the same item and starts on its own indented line.
+```
+
+### General formatting
 
 - Use Yarn 1.22.22, pinned in `package.json`, for dependency installation and scripts.
   Install with `yarn install --frozen-lockfile`; keep `yarn.lock` as the only dependency lockfile.
   npm may bootstrap Yarn or Corepack, but must not install project dependencies.
 
-- Prettier is the formatting authority for all supported repository files.
+- Use Prettier for supported syntax and layout while preserving the sentence-per-line prose rule above.
   Run `yarn run format` after editing and do not manually fight its output.
 - Run `yarn run format:check` to verify formatting without changing files.
   The full `yarn run check` command includes this verification.

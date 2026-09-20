@@ -75,8 +75,7 @@ function stopNaturalReadingScroll() {
 }
 
 function finishNaturalReadingScroll() {
-  // Save the settled reading location, never sections passed on the way to
-  // the navigation at the top (including a status-bar tap during momentum).
+  // Save the settled reading location, never sections passed on the way to the navigation at the top (including a status-bar tap during momentum).
   if (naturalReadingScrollMoved && window.scrollY > 0) {
     trackReadingPosition(true);
   }
@@ -595,8 +594,7 @@ $("#job-article-retry").addEventListener("click", async (event) => {
 async function poll(id, version = ++routeVersion) {
   clearTimeout(jobPollTimer);
   if (processingJob?.id !== id) {
-    // Drop the previous job's recovery controls while preserving the initial
-    // loading shell until the requested job's state is known.
+    // Drop the previous job's recovery controls while preserving the initial loading shell until the requested job's state is known.
     processingJob = { id, progress: 0, message: t("job.checkingSource") };
     $("#progress-title").textContent = t("job.checkingSource");
     $("#progress-kicker").textContent = "";

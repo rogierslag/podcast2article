@@ -34,9 +34,9 @@ export function normalizeStoredJob(stored: StoredJob): Job {
     };
   }
   if (job.articleRetryAttempts === undefined) {
-    // Older jobs have no counter. Provider retries share an operation ID.
-    // Only complete history proves the initial generation was recorded;
-    // partial histories and restarted generations count conservatively.
+    // Older jobs have no counter.
+    // Provider retries share an operation ID.
+    // Only complete history proves the initial generation was recorded; partial histories and restarted generations count conservatively.
     const operations = new Set(
       (job.apiUsage?.requests ?? [])
         .filter(

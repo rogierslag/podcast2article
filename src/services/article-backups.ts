@@ -25,7 +25,8 @@ const paragraphSchema = z.object({
   text: z.string(),
   sources: z.array(z.string()),
 });
-// Object schemas strip unknown fields at every level. Never serialize a stored Job.
+// Object schemas strip unknown fields at every level.
+// Never serialize a stored Job.
 export const articleBackupSchema = z.object({
   schemaVersion: z.literal(1),
   owner: usernameSchema,

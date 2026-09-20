@@ -174,12 +174,11 @@ async function recordApiUsage(
       if (!spendingLimitExempt(username)) {
         throw new AccountBudgetError();
       }
-      // Continue tracking new attempts for exempt accounts, including unknown
-      // prices. Revoking an exemption must not make those requests historical.
+      // Continue tracking new attempts for exempt accounts, including unknown prices.
+      // Revoking an exemption must not make those requests historical.
       request.reservedCostUsd = accountLimitUsd;
     }
-    // No await between checking and updating the in-memory reservation: parallel
-    // jobs in this server cannot both consume the same remaining allowance.
+    // No await between checking and updating the in-memory reservation: parallel jobs in this server cannot both consume the same remaining allowance.
     checkAccountBudget(username, request.reservedCostUsd);
   }
   const usage = job.apiUsage ?? {
@@ -801,8 +800,8 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
       readingPosition: undefined,
       articleRetryAttempts: attempts + 1,
     };
-    // Persist the allowance before paid work starts; failed writes leave the
-    // original in-memory job intact. The reservation also covers cold reads.
+    // Persist the allowance before paid work starts; failed writes leave the original in-memory job intact.
+    // The reservation also covers cold reads.
     await persist(username, retryJob);
     jobLog(job.id, "writing", "Artikel-only retry gestart", {
       transcriptSegments: job.transcript.length,

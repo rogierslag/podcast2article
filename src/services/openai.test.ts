@@ -102,18 +102,27 @@ describe("literal article quotes", () => {
 describe("article language", () => {
   it("uses the source language by default", () => {
     expect(articleLanguageInstruction("auto")).toContain(
-      "dominante taal van het transcript",
+      "transcript's dominant language",
     );
     expect(articleLanguageInstruction("auto")).toContain(
-      "Vertaal de bron niet",
+      "Do not translate the source",
     );
   });
 
-  it("keeps an explicit language selection as an override", () => {
-    expect(articleLanguageInstruction("en")).toBe(
-      "Schrijf het volledige artikel in het Engels.",
-    );
-  });
+  it.each([
+    ["nl", "Dutch"],
+    ["en", "English"],
+    ["de", "German"],
+    ["fr", "French"],
+    ["es", "Spanish"],
+  ])(
+    "keeps an explicit %s language selection as an override",
+    (language, name) => {
+      expect(articleLanguageInstruction(language)).toBe(
+        `Write the entire article in ${name}.`,
+      );
+    },
+  );
 });
 
 describe("OpenAI region", () => {

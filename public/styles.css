@@ -551,9 +551,8 @@ body.scroll-shell {
   min-width: 0;
 }
 /* WebKit samples below the top edge and ignores backgrounds <= 10px high.
-   Give it an opaque 12px backdrop to extend behind the iOS status bar, while
-   the progress indicator itself stays 4px high. Keep this layer on all views
-   so navigation does not remove the status-bar background. */
+   Give it an opaque 12px backdrop to extend behind the iOS status bar, while the progress indicator itself stays 4px high.
+   Keep this layer on all views so navigation does not remove the status-bar background. */
 .reading-chrome {
   position: fixed;
   inset: 0 0 auto;

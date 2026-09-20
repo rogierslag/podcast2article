@@ -62,8 +62,8 @@ export function createSourcePreview(dialog, audio) {
     cancelPendingPlayback();
     audio.pause();
     dialog.classList.add("is-closing");
-    // Keep the player in place until the exit finishes. Reduced-motion styles
-    // produce no animations, so dismissal completes without a timer.
+    // Keep the player in place until the exit finishes.
+    // Reduced-motion styles produce no animations, so dismissal completes without a timer.
     await Promise.all(
       dialog.getAnimations().map((animation) =>
         animation.finished.catch(() => {
@@ -107,8 +107,8 @@ export function createSourcePreview(dialog, audio) {
       resetClosing();
       opener = trigger;
       metadata.textContent = speaker ? `${label} · ${speaker}` : label;
-      // Only the owner supplies transcript text. Shared pages use their existing
-      // minimal source payload and never request private transcript data.
+      // Only the owner supplies transcript text.
+      // Shared pages use their existing minimal source payload and never request private transcript data.
       transcript.textContent = text || "";
       transcript.hidden = !text;
       status.textContent = t("sourcePreview.loading");

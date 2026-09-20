@@ -187,8 +187,8 @@ export async function installFfmpeg(manifest, paths, run = execute) {
   }
 }
 
-// Preserve systemd's own quoting and EnvironmentFile ordering. Never source
-// environment files as shell code or print their contents in deployment logs.
+// Preserve systemd's own quoting and EnvironmentFile ordering.
+// Never source environment files as shell code or print their contents in deployment logs.
 export function serviceEnvironment(unitText) {
   const directives = [];
   let section = "";
@@ -408,8 +408,8 @@ async function main() {
       );
       process.stdout.write(result.stdout);
     } catch (error) {
-      // This child is this same CLI, whose error boundary already removes raw
-      // subprocess diagnostics. A flock failure also contains no environment.
+      // This child is this same CLI, whose error boundary already removes raw subprocess diagnostics.
+      // A flock failure also contains no environment.
       console.error(
         error.stderr?.trim() ||
           "Could not acquire the deployment lock or complete the FFmpeg operation",

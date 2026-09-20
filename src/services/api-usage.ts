@@ -11,8 +11,8 @@ export type UsageRecorder = (request: ApiRequestUsage) => Promise<void>;
 const pricingDate = "2026-09-19";
 const pricingSource = "https://developers.openai.com/api/docs/pricing";
 
-// Standard short-context rates per million tokens. Sol's promotional rates
-// are published through at least November 21, 2026; recheck before updating.
+// Standard short-context rates per million tokens.
+// Sol's promotional rates are published through at least November 21, 2026; recheck before updating.
 const articlePricing = new Map([
   [
     "gpt-5.6-terra",

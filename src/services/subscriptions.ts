@@ -64,7 +64,8 @@ export class SubscriptionStore {
       );
       try {
         const stored: unknown = JSON.parse(await readFile(file, "utf8"));
-        // Files are written by this service. Refuse malformed state instead of overwriting it.
+        // Files are written by this service.
+        // Refuse malformed state instead of overwriting it.
         if (!Array.isArray(stored) || !stored.every(validSubscription)) {
           throw new Error(`Invalid subscriptions file: ${file}`);
         }
@@ -171,7 +172,8 @@ export class SubscriptionStore {
           if (await this.pauseAtLimit(username, items, subscription)) {
             continue;
           }
-          // Commit the reviewed backlog before fetching again. A feed outage must not lose it.
+          // Commit the reviewed backlog before fetching again.
+          // A feed outage must not lose it.
           const scheduled = await this.drain(username, items, subscription);
           if (subscription.paused || scheduled >= subscriptionLimit) {
             continue;

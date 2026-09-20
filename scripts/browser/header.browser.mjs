@@ -21,8 +21,7 @@ for (const width of [320, 390]) {
         parseFloat(getComputedStyle(element).fontSize),
       );
 
-      // Text-only enlargement reproduces the Safari failure without shrinking
-      // the viewport or concealing overflow behind the page's scroll shell.
+      // Text-only enlargement reproduces the Safari failure without shrinking the viewport or concealing overflow behind the page's scroll shell.
       await page.addStyleTag({
         content: `.brand { font-size: ${fontSize * 3}px; }`,
       });
