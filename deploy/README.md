@@ -249,3 +249,11 @@ from local updater state. Install both the updated host updater and five-minute
 cron schedule; an application push does not replace either host file. Follow the
 [deployment-status runbook](../docs/DEPLOYMENT-STATUS.md) for thresholds, JSON
 fields, compatibility, and the focused installation commands.
+
+## Article backup rollout
+
+Provision a private, encrypted AWS S3 bucket and restricted writer credential, then
+set the article backup variables in the existing application environment file.
+Application startup backfills completed jobs and retries missing uploads. No new
+service definition is required. Follow the [backup runbook](../docs/ARTICLE-BACKUPS.md)
+for IAM scope, explicit backfill, retention, restore verification and costs.

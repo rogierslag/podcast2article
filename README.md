@@ -462,3 +462,12 @@ Read, deleted, and failed jobs do not count. After reading, you resume explicitl
 resuming respects the same limit. Already scheduled jobs are not cancelled, including
 previously confirmed catch-up still awaiting scheduling. The latest-three action
 preserves a manual pause.
+
+## Article backups
+
+Optional private S3 backups retain final articles and source metadata after local
+completion, including article-only retries. Configure `ARTICLE_BACKUP_BUCKET`,
+`ARTICLE_BACKUP_REGION`, optional `ARTICLE_BACKUP_PREFIX` and standard AWS
+credentials. See [article backups](docs/ARTICLE-BACKUPS.md) for bucket security,
+restart recovery, backfill, retention, restore and monthly cost estimates. Audio,
+transcripts and account state need separate backups.

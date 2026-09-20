@@ -7,6 +7,13 @@ const storage = vi.hoisted(() => ({ files: new Map<string, string>() }));
 vi.mock("node:fs/promises", async (importOriginal) => ({
   ...(await importOriginal<typeof import("node:fs/promises")>()),
   mkdir: vi.fn(),
+  rename: vi.fn(async (source: string, destination: string) => {
+    const content = storage.files.get(source);
+    if (content !== undefined) {
+      storage.files.set(destination, content);
+      storage.files.delete(source);
+    }
+  }),
   readFile: vi.fn(async (file: string) => {
     const content = storage.files.get(file);
     if (content === undefined) {

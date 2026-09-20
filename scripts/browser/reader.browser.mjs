@@ -508,3 +508,35 @@ test("share feedback disappears after four seconds and restarts for a new action
   await page.clock.fastForward(3000);
   await expect(statuses).toHaveText(["", ""]);
 });
+
+test("owner: restored article renders without transcript or source audio", async ({
+  page,
+}) => {
+  const { createArticleBackup, restoreArticleBackup } =
+    await import("../../dist/services/article-backups.js");
+  const { mkdtemp, readFile, rm } = await import("node:fs/promises");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const directory = await mkdtemp(path.join(os.tmpdir(), "restored-reader-"));
+  try {
+    const payload = createArticleBackup("regression", articleFixture());
+    const file = await restoreArticleBackup(
+      directory,
+      payload,
+      "regression",
+      articleId,
+    );
+    const restored = JSON.parse(await readFile(file, "utf8"));
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+
+    await owner(page, restored);
+
+    await expect(page.locator("#article .source-link")).toHaveCount(0);
+    await expect(page.locator("#article .takeaways")).toBeVisible();
+    expect(errors).toEqual([]);
+    await noOverflow(page);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

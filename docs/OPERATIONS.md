@@ -638,7 +638,8 @@ API keys, webhook secrets, passwords, and transcript text should not be logged.
 
 Anonymous shared-reader loads and estimated reads are stored in each article's
 job JSON as `shareAnalytics`, alongside a bounded set of recent visit receipts.
-They are covered by the existing jobs backup. No external analytics service,
+They require a full jobs backup; article-only S3 backups exclude these counters.
+No external analytics service,
 scheduled job, new secret, or database migration is required. Existing articles
 start at zero on their first tracked load after deployment; there is no backfill.
 
@@ -779,10 +780,15 @@ HTTPS.
 
 ### Required status
 
-The repository does not configure an offsite backup. Verify an encrypted,
-offsite backup and a successful restore separately. Application code is
+Full offsite backup configuration and production restore verification remain
+operator responsibilities. Application code is
 recoverable from GitHub, but production data under
 `/var/lib/podcast2article` is not recoverable from Git.
+
+Optional [S3 article backups](ARTICLE-BACKUPS.md) cover final articles and selected
+source metadata, including restart recovery, backfill and restore without generation.
+They require production bucket configuration and a restore drill. They do not
+replace the full account/configuration/media backup described below.
 
 ### Essential backup scope
 
@@ -879,7 +885,8 @@ echo | openssl s_client -connect production.example.nl:443 \
 
 ## 20. Known action items
 
-1. Configure and test an encrypted offsite backup.
+1. Configure and restore-test [S3 article backups](ARTICLE-BACKUPS.md), plus a
+   separate encrypted offsite backup for full account state, configuration and media.
 2. Confirm the provider-side TransIP firewall definitions in the control panel.
 3. Keep deployed Caddy, systemd, cron, and hardening files synchronized with
    the reviewed files under `deploy/`.

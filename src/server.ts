@@ -1,7 +1,11 @@
-import express from "express";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import express from "express";
 import { z } from "zod";
+import {
+  startArticleBackups,
+  stopArticleBackups,
+} from "./services/article-backups.js";
 import {
   AccountBudgetError,
   spendingLimitExempt,
@@ -856,6 +860,7 @@ app.use(
 );
 
 await resumeIncompleteJobs(auth.enabled ? auth.usernames : ["local"]);
+startArticleBackups();
 await subscriptions.load(auth.enabled ? auth.usernames : ["local"]);
 subscriptions.start();
 
@@ -896,7 +901,11 @@ async function shutdown(signal: "SIGINT" | "SIGTERM"): Promise<void> {
     process.exit(1);
   }, 15_000);
   forcedExit.unref();
-  await Promise.all([subscriptions.stop(), shutdownJobs(signal)]);
+  await Promise.all([
+    subscriptions.stop(),
+    shutdownJobs(signal),
+    stopArticleBackups(),
+  ]);
   clearTimeout(forcedExit);
   console.log(`${new Date().toISOString()} INFO  Graceful shutdown voltooid`);
   process.exit(0);

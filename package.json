@@ -15,12 +15,14 @@
     "lint": "eslint src public scripts eslint.config.js playwright.config.js",
     "lint:fix": "yarn run lint --fix",
     "check": "yarn run format:check && yarn run lint && yarn run build && yarn test",
-    "test:browser": "yarn run build && playwright test"
+    "test:browser": "yarn run build && playwright test",
+    "backup:articles": "node --env-file-if-exists=.env dist/commands/article-backups.js"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1136.0",
     "entities": "^7.0.0",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.11.1",

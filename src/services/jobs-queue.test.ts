@@ -5,6 +5,7 @@ import type { ApiRequestUsage, Job } from "../types.js";
 const state = vi.hoisted(() => ({
   files: new Map<string, string>(),
   resolveSource: vi.fn(),
+  requestBackup: vi.fn(),
   writeFile: vi.fn(),
   download: vi.fn(),
   normalize: vi.fn(),
@@ -15,7 +16,13 @@ vi.mock("node:fs/promises", async (original) => ({
   ...(await original<typeof import("node:fs/promises")>()),
   mkdir: vi.fn(),
   stat: vi.fn(async () => ({ size: 1024 })),
-  rename: vi.fn(),
+  rename: vi.fn(async (source: string, destination: string) => {
+    const content = state.files.get(source);
+    if (content !== undefined) {
+      state.files.set(destination, content);
+      state.files.delete(source);
+    }
+  }),
   rm: vi.fn().mockResolvedValue(undefined),
   writeFile: state.writeFile,
   readFile: vi.fn(async (file: string) => {
@@ -30,6 +37,9 @@ vi.mock("node:fs/promises", async (original) => ({
       .filter((file) => path.dirname(file) === directory)
       .map((file) => path.basename(file)),
   ),
+}));
+vi.mock("./article-backups.js", () => ({
+  requestArticleBackup: state.requestBackup,
 }));
 vi.mock("./resolver.js", async (original) => ({
   ...(await original<typeof import("./resolver.js")>()),
@@ -60,6 +70,14 @@ beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "");
   state.files.clear();
+  state.requestBackup.mockReset().mockImplementation(() => {
+    expect(
+      [...state.files.entries()].some(
+        ([file, body]) =>
+          file.endsWith(".json") && JSON.parse(body).stage === "complete",
+      ),
+    ).toBe(true);
+  });
   state.writeArticle
     .mockReset()
     .mockResolvedValue({ title: "An article", sections: [] });
@@ -451,6 +469,7 @@ it("allows two article retries total and retains the limit after a restart", asy
   expect(await restarted.getJob("owner", job.id)).toEqual(saved);
   expect(state.writeArticle).toHaveBeenCalledTimes(3);
   expect(state.transcribe).toHaveBeenCalledTimes(1);
+  expect(state.requestBackup).not.toHaveBeenCalled();
   const file = path.resolve("data", "users", "owner", "jobs", `${job.id}.json`);
   expect(JSON.parse(state.files.get(file) ?? "{}").articleRetryAttempts).toBe(
     2,
@@ -548,6 +567,7 @@ it("keeps earlier charges when retrying article generation", async () => {
     2,
   );
   expect(state.transcribe).toHaveBeenCalledTimes(1);
+  expect(state.requestBackup).toHaveBeenCalled();
   expect((await jobs.getJob("owner", job.id))?.articleRetryAttempts).toBe(1);
 });
 
@@ -870,6 +890,7 @@ it("exempt accounts can keep processing above the limit while costs remain track
     expect((await jobs.getJob("owner", job.id))?.stage).toBe("complete"),
   );
 
+  expect(state.requestBackup).toHaveBeenCalled();
   expect(jobs.getAccountBudget("owner")).toMatchObject({
     spentUsd: 8,
     limitUsd: null,
