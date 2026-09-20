@@ -6,6 +6,10 @@ test.use({ video: "on" });
 test("Articles and Series preserve the library layout when switching views", async ({
   page,
 }, testInfo) => {
+  // Keep both navigations on the same fallback fonts, independent of the CDN.
+  await page.route(/^https?:\/\/(?!127\.0\.0\.1:4317)/, (route) =>
+    route.abort(),
+  );
   await page.request.post("/login", {
     form: { username: "regression", password },
   });
@@ -31,6 +35,9 @@ test("Articles and Series preserve the library layout when switching views", asy
   const articlesHeading = await page
     .locator(".collection-heading")
     .boundingBox();
+  const articlesTitleBounds = await page
+    .locator(".collection-heading h1")
+    .boundingBox();
   const articlesTitle = await page
     .locator(".collection-heading h1")
     .evaluate((title) => getComputedStyle(title).font);
@@ -46,11 +53,22 @@ test("Articles and Series preserve the library layout when switching views", asy
   await expect(page.locator(".series-item")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   const seriesHeading = await page.locator(".collection-heading").boundingBox();
-  for (const dimension of ["x", "y", "width", "height"]) {
+  for (const dimension of ["x", "y", "width"]) {
     expect(
       Math.abs(seriesHeading[dimension] - articlesHeading[dimension]),
     ).toBeLessThan(1);
   }
+  const seriesTitleBounds = await page
+    .locator(".collection-heading h1")
+    .boundingBox();
+  // Different title lengths may wrap; the spacing around them must still match.
+  expect(
+    Math.abs(
+      seriesHeading.height -
+        seriesTitleBounds.height -
+        (articlesHeading.height - articlesTitleBounds.height),
+    ),
+  ).toBeLessThan(1);
   expect(
     await page
       .locator(".collection-heading h1")

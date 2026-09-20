@@ -59,6 +59,7 @@
     />
     <link rel="stylesheet" href="/styles.css?v=brand-transition-v1" />
     <script src="/app.js?v=initial-view-v1" type="module"></script>
+    <script src="/article-arrivals.js" type="module"></script>
     <script src="/account-budget.js" type="module"></script>
   </head>
   <body class="native-scroll">
@@ -116,7 +117,10 @@
           data-i18n-aria-label="nav.label"
         >
           <a href="/" data-i18n="nav.newArticle">{{nav.newArticle}}</a>
-          <a href="/articles" data-i18n="nav.articles">{{nav.articles}}</a>
+          <a href="/articles"
+            ><span data-i18n="nav.articles">{{nav.articles}}</span
+            ><span class="article-arrivals" hidden></span
+          ></a>
           <a href="/series" data-i18n="nav.series">{{nav.series}}</a>
         </nav>
       </header>

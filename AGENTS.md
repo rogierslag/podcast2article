@@ -209,6 +209,9 @@ In the pull request description, include a concise verification section with:
 
 ## Pull requests
 
+- When monitoring CI, check every minute because this repository’s CI runs are fast.
+  Use the same one-minute interval for CI-monitoring automations.
+
 - Pull request titles, descriptions, section headings, image/video captions, and reviewer-facing notes must always be written in English, even when the user request or product UI is in Dutch.
 - When the user indicates that a pull request should be created, carry the task through to an actual PR: prepare the branch and commits as needed, push the branch, create the PR, and return the PR link.
   Do not stop after drafting a title or description unless an external blocker or missing authorization prevents creation.
