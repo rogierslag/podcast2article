@@ -531,7 +531,7 @@ app.get("/shortcuts/Add%20to%20Reads.shortcut", (_request, response) => {
 app.use((request, response, next) => {
   // HTML files are templates, never serve their untranslated placeholders as static assets.
   if (request.path.endsWith(".html")) {
-    return sendIndex(request, response);
+    return handleUnknownRoute(request, response);
   }
   next();
 });
@@ -814,7 +814,23 @@ app.post("/api/jobs/:id/retry-article", async (request, response) => {
   }
 });
 
-app.use(sendIndex);
+function handleUnknownRoute(
+  request: express.Request,
+  response: express.Response,
+) {
+  if (
+    (request.method === "GET" || request.method === "HEAD") &&
+    request.path !== "/api" &&
+    !request.path.startsWith("/api/") &&
+    request.path !== "/s" &&
+    !request.path.startsWith("/s/")
+  ) {
+    return response.redirect(302, "/articles");
+  }
+  return response.sendStatus(404);
+}
+
+app.use(handleUnknownRoute);
 
 app.use(
   (

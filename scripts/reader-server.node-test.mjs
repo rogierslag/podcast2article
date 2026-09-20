@@ -974,6 +974,65 @@ test("shared usage is persisted, deduplicated and visible only to its owner", as
   assert.equal(otherStats.reads, 1);
 });
 
+test("unknown pages redirect to the article overview after authentication", async () => {
+  const cookie = await loginAs("owner");
+
+  for (const route of [
+    "/_healthcheck",
+    "/missing/nested?foo=bar",
+    "/missing.html",
+  ]) {
+    for (const method of ["GET", "HEAD"]) {
+      const response = await fetch(origin + route, {
+        method,
+        headers: { cookie },
+        redirect: "manual",
+      });
+
+      assert.equal(response.status, 302, route);
+      assert.equal(response.headers.get("location"), "/articles", route);
+    }
+  }
+  const overview = await fetch(`${origin}/articles`, { headers: { cookie } });
+  assert.equal(overview.status, 200);
+  assert.match(await overview.text(), /id="articles-view"/);
+
+  for (const route of [
+    "/_healthcheck",
+    "/missing/nested",
+    "/missing.html",
+    "/articles",
+  ]) {
+    const anonymous = await fetch(origin + route, {
+      redirect: "manual",
+    });
+
+    assert.equal(anonymous.status, 303, route);
+    assert.equal(anonymous.headers.get("location"), "/login", route);
+  }
+});
+
+test("unknown API routes, shared paths and unsupported methods do not redirect", async () => {
+  const cookie = await loginAs("owner");
+
+  for (const [method, route] of [
+    ["GET", "/api/missing"],
+    ["GET", "/api/missing.html"],
+    ["GET", "/s/invalid/extra"],
+    ["POST", "/missing"],
+    ["POST", "/missing.html"],
+  ]) {
+    const response = await fetch(origin + route, {
+      method,
+      headers: { cookie },
+      redirect: "manual",
+    });
+
+    assert.equal(response.status, 404, route);
+    assert.equal(response.headers.get("location"), null, route);
+  }
+});
+
 test("public health preserves availability and exposes only deployment freshness fields", async () => {
   const statusFile = path.join(directory, "data/deployment-status.json");
   await writeFile(

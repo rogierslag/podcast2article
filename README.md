@@ -11,6 +11,10 @@ You can mark articles as read and undo that choice; the status is stored locally
 Queued and processing jobs appear at the top with their current stage and progress.
 This part of the overview refreshes automatically.
 
+Unknown page URLs redirect to `/articles` after authentication; logged-out visitors still go to `/login`.
+Unknown API routes and invalid shared links remain errors.
+The public health endpoint is `GET /api/health`.
+
 Source references open a dialog alongside the article, showing the relevant transcript passage and audio from the selected timestamp.
 Closing the dialog or pressing Escape pauses the audio and returns you to the same reference.
 Shared articles expose only playback controls; the private transcript remains protected.
