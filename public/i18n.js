@@ -1,6 +1,7 @@
 import { formatArticleWordRange } from "./article-length.js";
 
-// Shared by the browser and server. Article and transcript content is never translated here.
+// Shared by the browser and server.
+// Article and transcript content is never translated here.
 export const messages = {
   "nav.arrivals": {
     nl: "{count} nieuwe artikelen uit gevolgde series",

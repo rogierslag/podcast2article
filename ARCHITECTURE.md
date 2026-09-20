@@ -247,6 +247,16 @@ Each chunk is checked against the OpenAI upload-size constraint before transcrip
 Audio chunks are opened with filesystem read streams rather than loaded fully into application memory.
 Chunks are transcribed sequentially.
 
+Article generation uses one writing stage, with instructions to survey the whole transcript, allocate space across its main topics, preserve defining examples and qualifications, and check for omissions before returning the article.
+The transcript remains the only factual source.
+There is no separate outline request or word-count correction loop.
+The [coverage evaluation](docs/ARTICLE-COVERAGE-EVALUATION.md) records the comparison behind this prompt and its limits.
+Language selection, length targets, source-ID checks, literal-quote validation, and the existing service-tier retry policy still apply.
+
+Editorial instructions and input labels are written in English.
+The Responses API request places editorial and article-language directives in `instructions`; episode metadata and the complete transcript are sent separately as an `input` message with `role: "user"`.
+The requested article language remains independent: `auto` follows the transcript's dominant language, and an explicit selection requests the chosen language.
+
 The selected API region is controlled by `OPENAI_REGION`.
 Configuring `eu` or `us` selects the corresponding endpoint, but actual data-residency eligibility also depends on the OpenAI project, model, and feature configuration.
 

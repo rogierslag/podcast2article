@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { transcribeChunks, writeArticle } from "./openai.js";
-import type { ApiRequestUsage } from "../types.js";
+import type { ApiRequestUsage, Article, TranscriptSegment } from "../types.js";
 
 let directory: string;
 let audio: string;
@@ -377,3 +377,152 @@ it("checks the budget before the standard fallback is sent", async () => {
 
   expect(tiers).toEqual(["flex", "flex", "flex"]);
 });
+
+it.each([
+  [
+    "auto",
+    "Detect the transcript's dominant language and write the entire article in that same language. Do not translate the source.",
+  ],
+  ["en", "Write the entire article in English."],
+  ["nl", "Write the entire article in Dutch."],
+])(
+  "separates instructions from source content in one %s article request",
+  async (language, languageInstruction) => {
+    const transcript: TranscriptSegment[] = [
+      {
+        id: "t-00001",
+        start: 0,
+        end: 10,
+        speaker: "Alice",
+        text: "We reduced latency by caching reads.",
+      },
+      {
+        id: "t-00002",
+        start: 900,
+        end: 910,
+        speaker: "Alice",
+        text: "Invalidation made the cache harder to maintain.",
+      },
+      {
+        id: "t-00003",
+        start: 1800,
+        end: 1810,
+        speaker: "Alice",
+        text: "Owning maintenance changed how I chose projects.",
+      },
+    ];
+    const generated: Article = {
+      title: "The cost of caching",
+      dek: "A faster read path also needs maintenance.",
+      readingTimeMinutes: 1,
+      styleNote: "Direct explanations and a personal lesson.",
+      sections: [
+        {
+          heading: "Speed and maintenance",
+          paragraphs: transcript.slice(0, 2).map(({ id, text }) => ({
+            kind: "paragraph",
+            text,
+            sources: [id],
+          })),
+        },
+        {
+          heading: "Choosing projects",
+          paragraphs: [
+            {
+              kind: "quote",
+              text: "Owning maintenance changed how I chose projects.",
+              sources: ["t-00003"],
+            },
+          ],
+        },
+      ],
+      takeaways: [
+        { text: "Account for cache maintenance.", sources: ["t-00002"] },
+        { text: "Ownership affects project choices.", sources: ["t-00003"] },
+      ],
+    };
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            id: "resp-article",
+            object: "response",
+            status: "completed",
+            model: "gpt-5.6-terra",
+            output: [
+              {
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "output_text",
+                    text: JSON.stringify(generated),
+                    annotations: [],
+                  },
+                ],
+              },
+            ],
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await writeArticle(transcript, {
+      title: "Caching lessons",
+      sourceName: "Engineering conversations",
+      language,
+      length: "standard",
+    });
+
+    expect(result).toEqual(generated);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = vi.mocked(fetch).mock.calls[0]?.[1]?.body;
+    expect(typeof body).toBe("string");
+    if (typeof body !== "string") {
+      throw new Error("Expected a JSON request body");
+    }
+    const payload: unknown = JSON.parse(body);
+    expect(payload).toMatchObject({
+      instructions: expect.stringContaining(languageInstruction),
+    });
+    expect(payload).toMatchObject({
+      model: "gpt-5.6-terra",
+      max_output_tokens: 16_384,
+      instructions: expect.stringContaining(
+        "Write approximately 1100-1700 words.",
+      ),
+      input: [
+        {
+          role: "user",
+          content: `Source: Engineering conversations\nTitle: Caching lessons\n\nTRANSCRIPT (only factual source):\n[t-00001] Alice 0.0-10.0: We reduced latency by caching reads.\n[t-00002] Alice 900.0-910.0: Invalidation made the cache harder to maintain.\n[t-00003] Alice 1800.0-1810.0: Owning maintenance changed how I chose projects.`,
+        },
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "source_linked_article",
+          strict: true,
+          schema: {
+            $defs: {
+              articleBlock: {
+                properties: {
+                  sources: {
+                    items: { enum: ["t-00001", "t-00002", "t-00003"] },
+                  },
+                },
+              },
+              paragraph: {
+                properties: {
+                  sources: {
+                    items: { enum: ["t-00001", "t-00002", "t-00003"] },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  },
+);

@@ -44,7 +44,8 @@ function iconDocument(svg) {
   return `<html><head><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}body>svg{display:block;width:100%;height:100%}</style></head><body>${svg}</body></html>`;
 }
 
-// ICO accepts PNG frames. Keep 16, 32, and 48px frames for browser/platform choice.
+// ICO accepts PNG frames.
+// Keep 16, 32, and 48px frames for browser/platform choice.
 function iconContainer(frames) {
   const header = Buffer.alloc(6 + frames.length * 16);
   header.writeUInt16LE(1, 2);

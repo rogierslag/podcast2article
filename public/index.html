@@ -4,7 +4,8 @@
     <meta charset="utf-8" />
     <!-- SITE_METADATA -->
     <script>
-      // Hash routes never reach the server. Select the loading shell before paint.
+      // Hash routes never reach the server.
+      // Select the loading shell before paint.
       if (
         location.pathname.replace(/\/$/, "") === "/articles" ||
         new URLSearchParams(location.hash.slice(1)).has("job")

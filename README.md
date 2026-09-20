@@ -285,6 +285,9 @@ The same source can be processed again in a different language or length.
 Only an existing or active job with the same source, language setting, and length counts as a duplicate.
 Automatic language detection remains a separate choice from an explicit language.
 
+The article prompt asks the writer to cover the transcript's main topics, including defining examples and qualifications, within the chosen length.
+The [coverage evaluation](docs/ARTICLE-COVERAGE-EVALUATION.md) explains the offline comparison behind these instructions and the remaining quality limits.
+
 ## Limitations
 
 - Public `open.spotify.com/episode/...` links, YouTube video, Shorts, and completed livestream links, public Fathom share links, and Google Drive links to a single public audio or video file are accepted.
