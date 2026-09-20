@@ -539,22 +539,12 @@ app.use(express.static(publicDirectory, { index: false }));
 
 const requestSchema = z
   .object({
-    sourceUrl: z.string().url().max(500).optional(),
-    /** Accepted for API compatibility with clients from before generic sources. */
-    spotifyUrl: z.string().url().max(500).optional(),
+    sourceUrl: z.string().url().max(500),
     language: z.enum(["auto", "nl", "en", "de", "fr", "es"]).default("auto"),
     articleLength: z.enum(["compact", "standard", "long"]).default("standard"),
   })
   .superRefine((value, context) => {
-    const sourceUrl = value.sourceUrl ?? value.spotifyUrl;
-    if (!sourceUrl) {
-      context.addIssue({
-        code: "custom",
-        path: ["sourceUrl"],
-        message: "Plak een publieke Spotify-, YouTube- of Google Drive-link.",
-      });
-      return;
-    }
+    const sourceUrl = value.sourceUrl;
     try {
       validateSourceUrl(sourceUrl);
     } catch (error) {
@@ -564,12 +554,7 @@ const requestSchema = z
         message: error instanceof Error ? error.message : "Ongeldige bronlink",
       });
     }
-  })
-  .transform(({ sourceUrl, spotifyUrl, language, articleLength }) => ({
-    sourceUrl: sourceUrl ?? spotifyUrl!,
-    language,
-    articleLength,
-  }));
+  });
 
 const readingStateSchema = z.object({ read: z.boolean() });
 const readingPositionSchema = z.object({
@@ -878,7 +863,7 @@ const server = app.listen(port, host, () => {
   }
   if (!auth.enabled) {
     console.warn(
-      "APP_USERS en APP_PASSWORD ontbreken; de applicatie is zonder login bereikbaar.",
+      "APP_USERS ontbreekt; de applicatie is zonder login bereikbaar.",
     );
   }
 });

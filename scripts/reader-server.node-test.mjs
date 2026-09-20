@@ -190,6 +190,17 @@ before(async () => {
     await mkdir(path.join(root, "jobs"), { recursive: true });
     await mkdir(path.join(root, "media"), { recursive: true });
     const article = fixture(id, shareToken, title);
+    if (id === articleId) {
+      article.spotifyUrl = article.sourceUrl;
+      article.episode.spotifyUrl = article.episode.sourceUrl;
+      article.episode.podcast = article.episode.sourceName;
+      article.episode.audioUrl = article.episode.mediaUrl;
+      delete article.sourceUrl;
+      delete article.episode.sourceUrl;
+      delete article.episode.sourceName;
+      delete article.episode.mediaUrl;
+    }
+
     if (shareToken === otherToken) {
       article.shareAnalytics = {
         loads: 1,
@@ -248,7 +259,6 @@ before(async () => {
         GIT_SHA: "a".repeat(40),
         HOST: "127.0.0.1",
         OPENAI_API_KEY: "",
-        APP_PASSWORD: "",
         SPENDING_LIMIT_EXEMPT_USERS: "other",
         PUBLIC_BASE_URL: `${publicBaseUrl}/`,
         APP_USERS: JSON.stringify({
@@ -319,6 +329,40 @@ test("shared reader assets are public while owner routes require authentication"
     `/api/jobs/${articleId}/audio`,
   ]) {
     assert.equal((await fetch(origin + route)).status, 401, route);
+  }
+});
+
+test("job creation requires sourceUrl and rejects the removed Spotify-only input", async () => {
+  const cookie = await loginAs("owner");
+  const sourceUrl = "https://open.spotify.com/episode/example";
+  const post = (body) =>
+    fetch(`${origin}/api/jobs`, {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  assert.equal((await post({ spotifyUrl: sourceUrl })).status, 400);
+  assert.equal((await post({})).status, 400);
+  assert.equal((await post({ sourceUrl: "not a URL" })).status, 400);
+  // Valid input reaches the disabled-processing guard without making paid requests.
+  assert.equal((await post({ sourceUrl })).status, 503);
+});
+
+test("owner article responses normalize old source fields without returning aliases", async () => {
+  const cookie = await loginAs("owner");
+  const response = await fetch(`${origin}/api/jobs/${articleId}`, {
+    headers: { Cookie: cookie },
+  });
+  const job = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(job.sourceUrl, "https://example.com/recording");
+  assert.equal(job.episode.sourceName, "Test recording");
+  assert.equal(job.episode.mediaUrl, "https://example.com/private-media");
+  assert.equal(Object.hasOwn(job, "spotifyUrl"), false);
+  for (const name of ["spotifyUrl", "podcast", "audioUrl"]) {
+    assert.equal(Object.hasOwn(job.episode, name), false, name);
   }
 });
 

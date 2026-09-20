@@ -38,10 +38,12 @@ describe("Spotify resolver", () => {
     expect(episode).toMatchObject({
       title: "We're back!",
       sourceName: "Café & society",
-      podcast: "Café & society",
       description: "😀 <script>",
       mediaUrl: "https://example.com/audio?a=1&b=2",
     });
+    expect(episode).not.toHaveProperty("spotifyUrl");
+    expect(episode).not.toHaveProperty("podcast");
+    expect(episode).not.toHaveProperty("audioUrl");
     const searchUrl = String(vi.mocked(safeFetch).mock.calls[1]?.[0]);
     expect(new URL(searchUrl).searchParams.get("term")).toBe("We're back!");
   });

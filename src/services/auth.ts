@@ -20,14 +20,9 @@ function equal(left: string, right: string): boolean {
   return timingSafeEqual(digest(left), digest(right));
 }
 
-function parseUsers(
-  rawUsers: string | undefined,
-  legacyPassword: string | undefined,
-): Map<string, string> {
+function parseUsers(rawUsers: string | undefined): Map<string, string> {
   if (!rawUsers?.trim()) {
-    return legacyPassword?.trim()
-      ? new Map([["rogier", legacyPassword]])
-      : new Map();
+    return new Map();
   }
 
   let parsed: unknown;
@@ -70,11 +65,8 @@ export interface UserAuth {
   sessionUser(token: string | undefined, now?: number): string | undefined;
 }
 
-export function createUserAuth(
-  rawUsers = process.env.APP_USERS,
-  legacyPassword = process.env.APP_PASSWORD,
-): UserAuth {
-  const users = parseUsers(rawUsers, legacyPassword);
+export function createUserAuth(rawUsers = process.env.APP_USERS): UserAuth {
+  const users = parseUsers(rawUsers);
   const credentialFingerprint = [...users.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([username, password]) => `${username}\0${password}`)

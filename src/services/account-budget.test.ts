@@ -208,10 +208,10 @@ it("shows historical and counted spending separately from reservations", () => {
 });
 
 it("only exempts exact operator-configured account names", () => {
-  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "rogier, melvin");
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "rogier, john_appleseed");
 
   expect(spendingLimitExempt("rogier")).toBe(true);
-  expect(spendingLimitExempt("melvin")).toBe(true);
+  expect(spendingLimitExempt("john_appleseed")).toBe(true);
   expect(spendingLimitExempt("rogier-other")).toBe(false);
   expect(spendingLimitExempt("other")).toBe(false);
   vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "*");

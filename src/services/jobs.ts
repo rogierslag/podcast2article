@@ -10,6 +10,11 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import {
+  maxArticleRetries,
+  normalizeStoredJob,
+  type StoredJob,
+} from "./stored-jobs.js";
 import { requestArticleBackup } from "./article-backups.js";
 import { recordShareEvent } from "./share-analytics.js";
 import { ConcurrencyGate } from "../lib/concurrency.js";
@@ -55,7 +60,6 @@ const pendingRuns: Array<{
 }> = [];
 const pendingJobIds = new Set<string>();
 const articleRetryReservations = new Set<string>();
-const maxArticleRetries = 2;
 // Metadata can advance through the whole queue without waiting for OpenAI.
 const metadataSlots = new ConcurrencyGate(3);
 const processingSlots = new ConcurrencyGate(3);
@@ -92,63 +96,12 @@ function mediaLimit(
   const fallback = isRecording ? 1_500 : 500;
   const value = Number(
     isRecording
-      ? (process.env.MAX_RECORDING_MB ?? process.env.MAX_MEDIA_MB ?? fallback)
+      ? (process.env.MAX_RECORDING_MB ?? fallback)
       : sourceType === "youtube"
-        ? (process.env.MAX_YOUTUBE_MB ??
-          process.env.MAX_AUDIO_MB ??
-          process.env.MAX_MEDIA_MB ??
-          fallback)
-        : (process.env.MAX_AUDIO_MB ?? process.env.MAX_MEDIA_MB ?? fallback),
+        ? (process.env.MAX_YOUTUBE_MB ?? fallback)
+        : (process.env.MAX_AUDIO_MB ?? fallback),
   );
   return Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-export function normalizeStoredJob(job: Job): Job {
-  job.sourceUrl ??= job.spotifyUrl ?? "";
-  if (job.articleRetryAttempts === undefined) {
-    // Older jobs have no counter. Provider retries share an operation ID.
-    // Only complete history proves the initial generation was recorded;
-    // partial histories and restarted generations count conservatively.
-    const operations = new Set(
-      (job.apiUsage?.requests ?? [])
-        .filter(
-          (request) =>
-            request.stage === "article" &&
-            typeof request.operationId === "string" &&
-            request.operationId.length > 0,
-        )
-        .map((request) => request.operationId),
-    );
-    const initialGeneration = job.apiUsage?.coverage === "complete" ? 1 : 0;
-    job.articleRetryAttempts = Math.max(0, operations.size - initialGeneration);
-  } else if (
-    !Number.isSafeInteger(job.articleRetryAttempts) ||
-    job.articleRetryAttempts < 0
-  ) {
-    // Invalid persisted limits must not enable additional paid work.
-    job.articleRetryAttempts = maxArticleRetries;
-  }
-  if (job.stage === "complete") {
-    job.completedAt ??= job.updatedAt;
-  }
-  if (job.episode) {
-    job.episode.sourceUrl ??= job.episode.spotifyUrl ?? job.sourceUrl;
-    job.episode.sourceType ??= "spotify";
-    job.episode.sourceName ??= job.episode.podcast ?? "Onbekende podcast";
-    job.episode.mediaUrl ??= job.episode.audioUrl ?? "";
-    job.episode.playbackUrl ??= job.episode.audioUrl;
-  }
-  if (
-    job.readingPosition &&
-    (!Number.isInteger(job.readingPosition.sectionIndex) ||
-      job.readingPosition.sectionIndex < 0 ||
-      !job.article ||
-      job.readingPosition.sectionIndex >= job.article.sections.length ||
-      !Number.isFinite(Date.parse(job.readingPosition.updatedAt)))
-  ) {
-    delete job.readingPosition;
-  }
-  return job;
 }
 
 export function playbackFileForJob(
@@ -256,6 +209,9 @@ async function update(
   job: Job,
   patch: Partial<Job>,
 ): Promise<void> {
+  if (patch.message !== undefined) {
+    delete job.messageValues;
+  }
   Object.assign(job, patch);
   await persist(username, job);
 }
@@ -314,15 +270,9 @@ export async function createJob(
   }
   checkAccountBudget(username);
   const now = new Date().toISOString();
-  const sourceHost = new URL(sourceUrl).hostname.toLowerCase();
   const job: Job = {
     ...input,
     sourceUrl,
-    ...(sourceHost === "open.spotify.com" ||
-    sourceHost === "spotify.com" ||
-    sourceHost === "www.spotify.com"
-      ? { spotifyUrl: sourceUrl }
-      : {}),
     id: randomUUID(),
     articleRetryAttempts: 0,
     apiUsage: {
@@ -334,7 +284,7 @@ export async function createJob(
     },
     stage: "queued",
     progress: 2,
-    message: "Opdracht staat klaar",
+    message: "job.queued",
     createdAt: now,
     updatedAt: now,
   };
@@ -392,7 +342,7 @@ export async function createPodcastJob(
     episode: structuredClone(item.episode),
     stage: "queued",
     progress: 2,
-    message: "Opdracht staat klaar",
+    message: "job.queued",
     createdAt: now,
     updatedAt: now,
   };
@@ -465,7 +415,7 @@ async function getStoredJob(
     const job = normalizeStoredJob(
       JSON.parse(
         await readFile(path.join(jobDirectory, `${id}.json`), "utf8"),
-      ) as Job,
+      ) as StoredJob,
     );
     memory.set(key, job);
     return job;
@@ -562,6 +512,7 @@ export function toProcessingJobSummary(
     stage: job.stage,
     progress: job.progress,
     message: job.message,
+    messageValues: job.messageValues,
     createdAt: job.createdAt,
   };
 }
@@ -759,7 +710,7 @@ async function copySharedArticle(
     articleLength: source.articleLength,
     stage: "complete",
     progress: 100,
-    message: "Klaar",
+    message: "job.complete",
     createdAt: now,
     updatedAt: now,
     completedAt: now,
@@ -846,7 +797,8 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
       ...job,
       stage: "writing",
       progress: 82,
-      message: "Artikel opnieuw genereren met bestaand transcript",
+      message: "job.regenerating",
+      messageValues: undefined,
       error: undefined,
       article: undefined,
       readAt: undefined,
@@ -880,7 +832,7 @@ export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
         const job = normalizeStoredJob(
           JSON.parse(
             await readFile(path.join(jobDirectory, file), "utf8"),
-          ) as Job,
+          ) as StoredJob,
         );
         memory.set(jobKey(username, job.id), job);
         if (
@@ -894,7 +846,7 @@ export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
         await update(username, job, {
           stage: "queued",
           progress: 2,
-          message: "Server herstart; opdracht wordt hervat",
+          message: "job.resuming",
           error: undefined,
         });
         jobLog(job.id, "queued", "Onvoltooide opdracht na serverstart hervat", {
@@ -992,7 +944,7 @@ async function processArticleRetry(
       article,
       stage: "complete",
       progress: 100,
-      message: "Artikel en transcript zijn klaar",
+      message: "job.complete",
       completedAt: new Date().toISOString(),
     });
     jobLog(job.id, "complete", "Artikel-only retry afgerond", {
@@ -1004,7 +956,7 @@ async function processArticleRetry(
       await update(username, job, {
         stage: "queued",
         progress: 82,
-        message: "Server afgesloten; artikelretry kan worden hervat",
+        message: "job.retryPaused",
         error: undefined,
       });
     } else {
@@ -1059,7 +1011,7 @@ async function processJob(
     await update(username, job, {
       stage: "resolving",
       progress: 8,
-      message: "Openbare opnamebron controleren",
+      message: "job.checkingSource",
     });
     let episode: NonNullable<Job["episode"]>;
     if (job.podcastEpisodeKey && job.episode) {
@@ -1083,7 +1035,7 @@ async function processJob(
       episode,
       stage: "queued",
       progress: 18,
-      message: "Opname gevonden",
+      message: "job.sourceFound",
     });
 
     releaseProcessing = await processingSlots.acquire(signal);
@@ -1095,7 +1047,7 @@ async function processJob(
     await update(username, job, {
       stage: "downloading",
       progress: 22,
-      message: "Opname veilig downloaden",
+      message: "job.downloading",
     });
     const maxMegabytes = mediaLimit(episode.sourceType);
     if (episode.sourceType === "youtube") {
@@ -1116,13 +1068,13 @@ async function processJob(
     });
     await update(username, job, {
       progress: 28,
-      message: "Audio uit opname halen",
+      message: "job.extractingAudio",
     });
     const playbackAudio = path.join(workspace, "playback.mp3");
     await normalizeAudio(input, playbackAudio, signal);
     await update(username, job, {
       progress: 32,
-      message: "Audio opdelen voor transcriptie",
+      message: "job.splittingAudio",
     });
     const splitStartedAt = Date.now();
     jobLog(job.id, "downloading", "FFmpeg maakt transcriptiefragmenten", {
@@ -1146,7 +1098,8 @@ async function processJob(
     await update(username, job, {
       stage: "transcribing",
       progress: 36,
-      message: `Transcriptie starten (${chunks.length} ${chunks.length === 1 ? "deel" : "delen"})`,
+      message: "progress.start",
+      messageValues: { parts: chunks.length },
     });
     const transcript = await transcribeChunks(
       chunks,
@@ -1154,7 +1107,8 @@ async function processJob(
       (done, total) => {
         void update(username, job, {
           progress: 36 + Math.round((done / total) * 40),
-          message: `Transcriptie ${done}/${total}`,
+          message: "progress.transcription",
+          messageValues: { done, total },
         });
       },
       (message, data) => {
@@ -1162,7 +1116,11 @@ async function processJob(
         if (message.startsWith("Nog in afwachting")) {
           const waitingSeconds = Number(data.waitingSeconds ?? 0);
           void update(username, job, {
-            message: `${data.chunk}: wacht ${Math.max(1, Math.round(waitingSeconds / 60))} min. op OpenAI`,
+            message: "progress.wait",
+            messageValues: {
+              chunk: String(data.chunk),
+              minutes: Math.max(1, Math.round(waitingSeconds / 60)),
+            },
           });
         }
       },
@@ -1177,7 +1135,7 @@ async function processJob(
     await update(username, job, {
       transcript,
       progress: 78,
-      message: "Transcript compleet",
+      message: "job.transcriptComplete",
     });
 
     const article = await generateArticle(
@@ -1191,7 +1149,7 @@ async function processJob(
       article,
       stage: "complete",
       progress: 100,
-      message: "Artikel en transcript zijn klaar",
+      message: "job.complete",
       completedAt: new Date().toISOString(),
     });
     jobLog(job.id, "complete", "Opdracht afgerond", {
@@ -1209,7 +1167,7 @@ async function processJob(
       await update(username, job, {
         stage: "queued",
         progress: 2,
-        message: "Server afgesloten; opdracht wordt na herstart hervat",
+        message: "job.paused",
         error: undefined,
       });
     } else {
@@ -1241,7 +1199,7 @@ async function generateArticle(
   await update(username, job, {
     stage: "writing",
     progress: 82,
-    message: "Brongebonden blogartikel schrijven",
+    message: "job.writing",
   });
   jobLog(job.id, "writing", "Brongebonden artikel genereren", {
     transcriptSegments: transcript.length,
@@ -1258,7 +1216,13 @@ async function generateArticle(
       jobLog(job.id, "writing", message, data);
       if (message.startsWith("Nog in afwachting")) {
         void update(username, job, {
-          message: `Artikel wordt geschreven · ${Math.max(1, Math.round(Number(data.waitingSeconds ?? 0) / 60))} min. wachten`,
+          message: "progress.writing",
+          messageValues: {
+            minutes: Math.max(
+              1,
+              Math.round(Number(data.waitingSeconds ?? 0) / 60),
+            ),
+          },
         });
       }
     },

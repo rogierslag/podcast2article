@@ -95,11 +95,13 @@ Each password must contain at least 16 characters.
 Sign-in uses a signed `HttpOnly` cookie valid for 30 days, which is automatically invalidated when the account configuration changes:
 
 ```bash
-APP_USERS='{"rogier":"a-long-unique-password","melvin":"another-unique-password"}'
+APP_USERS='{"rogier":"a-long-unique-password","john_appleseed":"another-unique-password"}'
 ```
 
-Leaving both `APP_USERS` and the legacy `APP_PASSWORD` unset disables authentication for local development.
-`APP_PASSWORD` alone enables the legacy `rogier` account; new installations should use `APP_USERS`.
+When upgrading an older installation, configure `APP_USERS` before deployment: the former single-password setting no longer enables authentication.
+
+Leaving `APP_USERS` unset or blank disables authentication for local development.
+The example accounts above are `rogier` and John Appleseed (`john_appleseed`).
 Always put production installations behind HTTPS, for example through Caddy or Nginx.
 After five failed attempts from the same IP address, sign-in blocks new attempts for fifteen minutes.
 
@@ -217,7 +219,7 @@ Refresh the page after changing the browser language.
 | Variable                          | Default                     | Meaning                                                                                                   |
 | --------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`                  | required for processing     | OpenAI API key supplied through the process environment or environment file                               |
-| `APP_USERS`                       | empty                       | JSON account map; empty disables authentication only if legacy `APP_PASSWORD` is also absent              |
+| `APP_USERS`                       | empty                       | JSON account map; unset or blank disables authentication                                                  |
 | `SPENDING_LIMIT_EXEMPT_USERS`     | empty                       | Comma-separated usernames exempt from spending limits; usage stays tracked                                |
 | `OPENAI_REGION`                   | `global`                    | OpenAI API region: `global`, `eu` (EEA + Switzerland), or `us`                                            |
 | `OPENAI_BASE_URL`                 | region-selected endpoint    | Advanced endpoint override; custom endpoints have no verified cost estimate or reservation pricing        |
@@ -237,6 +239,11 @@ Refresh the page after changing the browser language.
 | `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcription chunk (10 minutes)                                                              |
 | `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Article generation timeout (10 minutes)                                                                   |
 | `LOG_STACKS`                      | `false`                     | Show full error stacks in the CLI                                                                         |
+
+Download limits are independent: `MAX_AUDIO_MB` applies to Spotify/RSS, `MAX_YOUTUBE_MB` to YouTube, and `MAX_RECORDING_MB` to Drive and Fathom.
+The former `MAX_MEDIA_MB` setting is ignored, and YouTube no longer inherits `MAX_AUDIO_MB`.
+Set each applicable limit explicitly when upgrading.
+Existing article files remain readable; older source fields are normalized when loaded.
 
 For each job, the CLI reports source resolution, download and FFmpeg duration, chunk sizes, OpenAI start and completion times, and a heartbeat every 30 seconds while an OpenAI request is running.
 API keys and transcript content are not logged.

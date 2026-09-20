@@ -219,6 +219,74 @@ function resolveMetadata() {
   }));
 }
 
+describe("current media limits and stored progress", () => {
+  it.each([
+    ["spotify", "MAX_AUDIO_MB", undefined, 500],
+    ["spotify", "MAX_AUDIO_MB", "700", 700],
+    ["youtube", "MAX_YOUTUBE_MB", undefined, 500],
+    ["youtube", "MAX_YOUTUBE_MB", "800", 800],
+    ["google-drive", "MAX_RECORDING_MB", undefined, 1500],
+    ["google-drive", "MAX_RECORDING_MB", "2000", 2000],
+  ])(
+    "uses %s source limits with %s=%s",
+    async (sourceType, setting, value, expected) => {
+      vi.stubEnv("MAX_MEDIA_MB", "1");
+      vi.stubEnv("MAX_AUDIO_MB", "2");
+      vi.stubEnv(setting, value);
+      state.resolveSource.mockResolvedValue({
+        sourceType,
+        sourceUrl: input.sourceUrl,
+        sourceName: "Source",
+        title: "Recording",
+        mediaUrl: "https://example.com/audio.mp3",
+      });
+      const jobs = await import("./jobs.js");
+
+      await jobs.createJob("owner", input);
+
+      await vi.waitFor(() => expect(state.download).toHaveBeenCalledOnce());
+      expect(state.download.mock.calls[0]?.[3]).toEqual({
+        maxMegabytes: expected,
+      });
+    },
+  );
+
+  it("persists semantic progress and clears interpolation values at completion", async () => {
+    resolveMetadata();
+    const jobs = await import("./jobs.js");
+    let finishTranscription: (segments: []) => void = () => {};
+    state.transcribe.mockImplementation(
+      (_files, _language, progress: (done: number, total: number) => void) => {
+        progress(1, 2);
+        return new Promise<[]>((resolve) => {
+          finishTranscription = resolve;
+        });
+      },
+    );
+
+    const job = await jobs.createJob("owner", input);
+
+    await vi.waitFor(() =>
+      expect(jobs.listProcessingJobs("owner")[0]).toMatchObject({
+        message: "progress.transcription",
+        messageValues: { done: 1, total: 2 },
+      }),
+    );
+    finishTranscription([]);
+    await vi.waitFor(() => expect(job.stage).toBe("complete"));
+    const filename = path.join(
+      jobs.userDirectory("owner"),
+      "jobs",
+      `${job.id}.json`,
+    );
+    await vi.waitFor(() => {
+      const stored = JSON.parse(state.files.get(filename) ?? "{}");
+      expect(stored.message).toBe("job.complete");
+      expect(stored).not.toHaveProperty("messageValues");
+    });
+  });
+});
+
 describe("independent metadata and media processing", () => {
   it("fetches queued titles and artwork while three transcriptions are waiting", async () => {
     resolveMetadata();

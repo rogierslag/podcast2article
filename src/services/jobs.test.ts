@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { normalizeStoredJob, type StoredJob } from "./stored-jobs.js";
 import {
   compareArticleSummaries,
   findDuplicateJob,
-  normalizeStoredJob,
   playbackFileForJob,
   toArticleSummary,
   toProcessingJobSummary,
@@ -97,12 +97,17 @@ describe("stored job compatibility", () => {
         podcast: "Een podcast",
         audioUrl: "https://cdn.example.com/episode.mp3",
       },
-    } as unknown as Job;
+    } satisfies StoredJob;
 
     const job = normalizeStoredJob(legacy);
 
     expect(job.sourceUrl).toBe(legacy.spotifyUrl);
     expect(job.completedAt).toBe(legacy.updatedAt);
+    expect(job).not.toHaveProperty("spotifyUrl");
+    expect(job.episode).not.toHaveProperty("spotifyUrl");
+    expect(job.episode).not.toHaveProperty("podcast");
+    expect(job.episode).not.toHaveProperty("audioUrl");
+    expect(normalizeStoredJob(job)).toEqual(job);
     expect(job.episode).toMatchObject({
       sourceType: "spotify",
       sourceUrl: legacy.spotifyUrl,
@@ -179,9 +184,11 @@ describe("user storage isolation", () => {
   it("uses a different media path for every user", () => {
     const id = "11111111-1111-1111-1111-111111111111";
     expect(playbackFileForJob("rogier", id)).toContain("/users/rogier/media/");
-    expect(playbackFileForJob("melvin", id)).toContain("/users/melvin/media/");
+    expect(playbackFileForJob("john_appleseed", id)).toContain(
+      "/users/john_appleseed/media/",
+    );
     expect(playbackFileForJob("rogier", id)).not.toBe(
-      playbackFileForJob("melvin", id),
+      playbackFileForJob("john_appleseed", id),
     );
   });
 
@@ -196,7 +203,6 @@ describe("duplicate source detection", () => {
   const baseJob = {
     id: "11111111-1111-1111-1111-111111111111",
     sourceUrl: "https://open.spotify.com/episode/abc123",
-    spotifyUrl: "https://open.spotify.com/episode/abc123",
     language: "nl",
     articleLength: "standard",
     stage: "complete",

@@ -68,7 +68,7 @@ At minimum configure:
 
 ```dotenv
 OPENAI_API_KEY=<secret>
-APP_USERS='{"rogier":"<long-random-secret>","melvin":"<different-long-random-secret>"}'
+APP_USERS='{"rogier":"<long-random-secret>","john_appleseed":"<different-long-random-secret>"}'
 OPENAI_REGION=eu
 HOST=127.0.0.1
 PORT=3000
