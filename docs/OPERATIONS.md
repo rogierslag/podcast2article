@@ -880,7 +880,7 @@ Startup loads all account histories before resuming work and fails if a stored j
 
 ### Viewing spending and exempting accounts
 
-The owner-page footer contains an expandable **Usage** summary, refreshed every 30 seconds and when the page regains focus.
+The owner-page footer contains a **Usage** button that opens a modal, refreshed every 30 seconds, when opened and when the page regains focus.
 It shows estimated costs for the last 30 days, historical spending excluded from the limit, counted spending, reserved budget and the remaining allowance.
 **No spending limit** replaces the allowance for exempt accounts.
 These totals reuse the stored request-level usage; historical article totals remain unchanged.

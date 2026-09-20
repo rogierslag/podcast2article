@@ -126,6 +126,7 @@ button.source-link {
 
 :where(.main-nav, .footer-logout, .article-delete-footer, .article-series)
   button,
+.footer-utilities > button,
 button.android-install-button {
   --button-hover-surface: transparent;
   --button-hover-text: var(--accent-text);

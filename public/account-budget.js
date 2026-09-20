@@ -76,8 +76,11 @@ void refreshBudget();
 setInterval(() => void refreshBudget(), 30_000);
 window.addEventListener("focus", refreshBudget);
 document.addEventListener("visibilitychange", refreshBudget);
-panel.addEventListener("toggle", () => {
-  if (panel.open) {
-    void refreshBudget();
-  }
+const openButton = document.querySelector("#account-budget-open");
+const closeButton = document.querySelector("#account-budget-close");
+openButton.addEventListener("click", () => {
+  panel.showModal();
+  void refreshBudget();
 });
+closeButton.addEventListener("click", () => panel.close());
+panel.addEventListener("close", () => openButton.focus());

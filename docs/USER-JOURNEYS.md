@@ -238,13 +238,13 @@ Consistent button feedback supports every journey, while clear labels and predic
 
 ## Account spending visibility
 
-The account footer supports J2, J3 and J7 by showing estimated spending over the preceding 30 days before the reader requests more processing.
+The account footer supports J2, J3 and J7 with a **Usage** button that opens a modal showing estimated spending over the preceding 30 days before the reader requests more processing.
 Historical spending stays visible but is excluded from the new limit; reservations are separate from confirmed estimates.
 Operator-configured exemptions retain cost tracking and show **No spending limit**.
 Readers cannot change their own allowance.
 
 **Value test.**
-Compare the footer with stored request costs for a limited account, an exempt account and a job still processing.
+Compare the usage modal with stored request costs for a limited account, an exempt account and a job still processing.
 Confirm that the remaining allowance includes reservations, another account's costs are inaccessible, and a failed refresh shows unavailable usage rather than a zero balance.
 This is a validation criterion, not a measured product outcome.
 

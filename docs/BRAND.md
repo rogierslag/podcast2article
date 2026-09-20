@@ -182,6 +182,11 @@ Keep their heading, close action, and relevant content easy to find.
 Preserve Escape dismissal, keyboard focus handling, the reader's position, and audio stopping when the preview closes.
 A softer corner must never come at the cost of a visible focus outline or usable hit area.
 
+The owner footer contains four centered rows: side-by-side language controls, Usage, Logout, and side-by-side Source code and Author links.
+Use a smaller 10px font for the final credits row.
+Give every control a tap target of at least 44 × 44px.
+Usage opens a modal with the spending breakdown; omit repeated branding and setup taglines.
+
 ## Product voice
 
 Use direct, concrete language that explains what an action does or what happened.
