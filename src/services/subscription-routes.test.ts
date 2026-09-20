@@ -24,7 +24,7 @@ let base: string;
 let root: string;
 let store: SubscriptionStore;
 const enqueue = vi.fn();
-const feed: PodcastFeed = {
+const feed = {
   url: "https://example.com/feed",
   title: "Public podcast",
   imageUrl: "https://example.com/cover.jpg",
@@ -40,7 +40,7 @@ const feed: PodcastFeed = {
       },
     },
   ],
-};
+} as const satisfies PodcastFeed;
 async function request(
   route: string,
   method = "GET",

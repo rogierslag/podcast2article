@@ -40,7 +40,7 @@ describe("stored job compatibility", () => {
     { operations: [], counter: 0.5, expected: 2 },
   ])(
     "retains the paid retry allowance when loading $operations and counter $counter",
-    ({ operations, counter, expected, coverage = "complete" }) => {
+    ({ operations, counter, expected, coverage }) => {
       const requests = operations.map(
         (operationId, index) =>
           ({
@@ -69,7 +69,7 @@ describe("stored job compatibility", () => {
         articleRetryAttempts: counter,
         apiUsage: {
           trackingStartedAt: "2026-09-19T10:00:00Z",
-          coverage,
+          coverage: coverage ?? "complete",
           requests,
           knownEstimatedCostUsd: 0,
           unknownCostRequests: requests.length,

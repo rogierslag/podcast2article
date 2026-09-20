@@ -298,7 +298,7 @@ Credit and link to the original recording.
 GitHub Actions automatically runs formatting checks, ESLint, the TypeScript build, and all tests on every pull request and push to `main`.
 These checks run as seven independent jobs, so a failure in one check does not prevent the others from reporting results.
 The main-branch ruleset requires all seven checks, including `Browser regressions (Chromium)` and `Browser regressions (WebKit)`, directly.
-The build job also checks browser-code syntax.
+The build job also type-checks application and test code and checks browser-code syntax.
 The workflow can be started manually through **Actions → Tests → Run workflow**.
 It uses the Node.js version from `.nvmrc` and installs dependencies with the existing `yarn.lock`.
 Yarn package downloads are cached by the lockfile; every job still performs a frozen-lockfile install, including package install scripts.
@@ -309,11 +309,16 @@ Runs time out after 15 minutes; a new run on the same branch or pull request can
 
 ```bash
 yarn test
+yarn run typecheck
 yarn run check
 yarn playwright install chromium webkit
 yarn run test:browser
 yarn run check:media
 ```
+
+`yarn run typecheck` checks every TypeScript file in `src/`, including tests, without emitting files.
+`yarn run build` uses `tsconfig.build.json` to compile the application while keeping tests out of `dist/`.
+`yarn run check` runs both commands alongside formatting, lint, and tests.
 
 Desktop Chromium and mobile WebKit run in separate browser jobs, each with one worker and its own disposable application server and data.
 Each installs only its required browser; Chromium uses the headless shell without downloading the headed browser.
