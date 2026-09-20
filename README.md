@@ -161,6 +161,18 @@ and images already appear in the queue. Incomplete jobs restart through the full
 pipeline, even when a transcript already exists. This avoids stuck jobs but can repeat downloads, transcription, and paid
 API work; durable stage recovery remains unfinished.
 
+Article generation requests Flex processing by default, keeping the configured
+article model. Transient failures (including capacity errors and timeouts) receive
+up to three Flex attempts, then up to three standard-processing attempts with
+`service_tier: "default"`. Retries use exponential backoff and respect provider
+retry headers. Cancellation and permanent errors stop immediately. Set
+`ARTICLE_SERVICE_TIER=default` to use standard processing from the first attempt.
+Transcription retains its existing three-attempt policy. Each attempt uses
+`OPENAI_ARTICLE_TIMEOUT_MS` (10 minutes by default), so repeated timeouts can take
+roughly an hour across all six attempts. Budget checks apply before every attempt
+and can stop processing before fallback. Actual reported tiers determine prices;
+unknown outcomes retain unknown costs and their budget reservations.
+
 Each new job stores API usage in `apiUsage` in the same JSON file. For each
 transcription chunk and article request, it records the model, requested and
 reported service tier, request ID, duration, usage figures, and attempts.
@@ -259,6 +271,7 @@ browser language.
 | `PUBLIC_BASE_URL`                 | request origin              | Canonical external origin for permalinks and social previews                                              |
 | `PORT`                            | `3000`                      | HTTP port                                                                                                 |
 | `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Article generation model                                                                                  |
+| `ARTICLE_SERVICE_TIER`            | `flex`                      | Article tier: `flex` (three attempts, then standard fallback) or `default`                                |
 | `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcription model                                                                                       |
 | `MAX_AUDIO_MB`                    | `500`                       | Maximum Spotify/RSS audio download size                                                                   |
 | `MAX_YOUTUBE_MB`                  | `500`                       | Maximum YouTube audio download size                                                                       |

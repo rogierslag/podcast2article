@@ -952,3 +952,24 @@ restores the USD 5 limit, including that account's new spending during the prece
 30 days. Exempt accounts can also use models with unknown pricing; those requests
 retain a conservative USD 5 reservation if their cost cannot be established, so
 removing the exemption cannot turn new unknown spending into free historical work.
+
+## Article service tier
+
+Article generation defaults to `ARTICLE_SERVICE_TIER=flex`; the configured
+`ARTICLE_MODEL` and transcription model remain unchanged. After three transient
+Flex failures, the same operation switches to `service_tier: "default"` for up to
+three standard attempts. Capacity errors, connection failures, timeouts and other
+retryable HTTP failures use the existing backoff and retry-header rules.
+Cancellation and permanent errors stop without fallback.
+
+The existing `OPENAI_ARTICLE_TIMEOUT_MS` applies separately to every attempt
+(default 600000 ms). Six timeouts can therefore take roughly an hour, plus backoff.
+Budget checks run before each attempt; unknown outcomes retain their reservations
+and can block fallback. Requested and actual tiers are saved per attempt, and
+prices follow the actual reported tier. Existing estimates are not repriced.
+
+To disable Flex, set `ARTICLE_SERVICE_TIER=default` in the service environment and
+restart through the normal deployment procedure. Verify the effective setting
+without printing secrets, then inspect the next naturally created job's
+`apiUsage.requests` for its requested and reported tiers. Do not infer measured
+savings from configuration alone.

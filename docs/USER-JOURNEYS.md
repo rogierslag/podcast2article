@@ -109,7 +109,11 @@ meeting a word count alone does not establish usefulness.
 **Implemented.** A job shows its processing stage and progress. Active jobs also
 appear in the library, with source metadata loaded separately. Up to three jobs
 process concurrently while media preparation stays serial. Usage attempts and
-known cost estimates are stored per job. A failure stays in the job context with
+known cost estimates are stored per job. Article generation starts with Flex and
+falls back to standard processing after three transient failures, with at most
+three further attempts. This can trade longer waits for lower API costs; savings
+and quality have not been measured across representative jobs. Budget checks may
+stop retries before fallback. A failure stays in the job context with
 its source and error. If a complete transcript exists, the reader can regenerate
 only the article, with the additional cost stated. The server permits at most two
 accepted regeneration attempts per failed job, excluding the initial generation.
