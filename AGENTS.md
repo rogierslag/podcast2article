@@ -186,6 +186,21 @@ Each sentence occupies one complete source line, even when it is longer than a c
   Prefer typed fixtures with `satisfies` and shared helpers over broad casts or large copied payloads.
 - Cover failure paths and boundary conditions for validation, authentication, storage isolation, public payload shaping, and external-service parsing.
 
+## Processing and deployment recovery
+
+- Preserve chunk manifests, saved chunk responses, and background response IDs during restart recovery.
+  Use the original manifest settings when rebuilding missing chunk audio.
+  Corrupt final checkpoints must fail visibly rather than silently trigger paid work again.
+- Keep the deployment drain capped at 15 minutes.
+  A timeout must cancel activation, keep the current release running, and remove only that deployment's pause marker to resume admission.
+- Count paid HTTP attempts as active until their results and accounting have been persisted.
+  Retries must acquire admission again, and startup must read the pause marker before recovering jobs.
+- Resume a saved background article response instead of submitting a replacement.
+  Persist the final answer and usage before parsing, and do not cancel remote generation when shutting down local polling.
+- Keep `/hooks/openai` signature-verified and limited to waking response polling.
+  Polling must remain sufficient when webhooks are disabled, repeated, or missed.
+- Update [the deployment recovery runbook](docs/DEPLOYMENT-RECOVERY.md) when changing these boundaries, including first-rollout and crash limitations.
+
 ## Implementation guidelines
 
 - Preserve per-user storage isolation.

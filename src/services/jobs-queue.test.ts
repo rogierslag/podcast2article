@@ -16,7 +16,12 @@ const state = vi.hoisted(() => ({
 vi.mock("node:fs/promises", async (original) => ({
   ...(await original<typeof import("node:fs/promises")>()),
   mkdir: vi.fn(),
-  stat: vi.fn(async () => ({ size: 1024 })),
+  stat: vi.fn(async (file: string) => {
+    if (!state.files.has(file)) {
+      throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+    }
+    return { size: 1024 };
+  }),
   rename: vi.fn(async (source: string, destination: string) => {
     const content = state.files.get(source);
     if (content !== undefined) {
@@ -24,12 +29,18 @@ vi.mock("node:fs/promises", async (original) => ({
       state.files.delete(source);
     }
   }),
-  rm: vi.fn().mockResolvedValue(undefined),
+  rm: vi.fn(async (target: string) => {
+    for (const file of state.files.keys()) {
+      if (file === target || file.startsWith(`${target}/`)) {
+        state.files.delete(file);
+      }
+    }
+  }),
   writeFile: state.writeFile,
   readFile: vi.fn(async (file: string) => {
     const content = state.files.get(file);
     if (content === undefined) {
-      throw new Error("ENOENT");
+      throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
     }
     return content;
   }),
@@ -54,7 +65,11 @@ vi.mock("./audio.js", () => ({
   audioChunkSeconds: () => 600,
   downloadMedia: state.download,
   normalizeAudio: state.normalize,
-  splitAudio: vi.fn(async () => ["chunk.mp3"]),
+  splitAudio: vi.fn(async (_input: string, directory: string) => {
+    const file = path.join(directory, "chunk-000.mp3");
+    state.files.set(file, "mock chunk");
+    return [file];
+  }),
 }));
 vi.mock("./openai.js", () => ({
   transcribeChunks: state.transcribe,
@@ -82,8 +97,16 @@ beforeEach(() => {
   state.writeArticle
     .mockReset()
     .mockResolvedValue({ title: "An article", sections: [] });
-  state.download.mockReset().mockResolvedValue(undefined);
-  state.normalize.mockReset().mockResolvedValue(undefined);
+  state.download
+    .mockReset()
+    .mockImplementation(async (_source: string, target: string) => {
+      state.files.set(target, "mock source");
+    });
+  state.normalize
+    .mockReset()
+    .mockImplementation(async (_source: string, target: string) => {
+      state.files.set(target, "mock playback");
+    });
   state.transcribe.mockReset().mockImplementation(
     (_files, _language, _progress, _status, signal: AbortSignal) =>
       new Promise((_resolve, reject) => {
@@ -818,8 +841,9 @@ it("reserves account budget before concurrent paid requests and isolates other a
       true,
     );
   });
-  const reservations = [...state.files.values()]
-    .map((content) => JSON.parse(content) as Job)
+  const reservations = [...state.files.entries()]
+    .filter(([file]) => file.includes("/jobs/") && file.endsWith(".json"))
+    .map(([, content]) => JSON.parse(content) as Job)
     .flatMap((job) => job.apiUsage?.requests ?? []);
   expect(reservations).toHaveLength(2);
   expect(reservations.every((entry) => entry.reservedCostUsd === 3)).toBe(true);
@@ -1064,3 +1088,84 @@ it.each([true, false])(
     });
   },
 );
+
+it("resumes a complete transcript after shutdown without downloading or transcribing again", async () => {
+  resolveMetadata();
+  const transcript = [
+    {
+      id: "t-00001",
+      start: 0,
+      end: 1,
+      text: "Persisted speech",
+      speaker: "Alice",
+    },
+  ];
+  state.transcribe.mockResolvedValue(transcript);
+  state.writeArticle.mockImplementation(
+    (_transcript, _metadata, _events, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      }),
+  );
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+  await vi.waitFor(() => expect(state.writeArticle).toHaveBeenCalledTimes(1));
+
+  await jobs.shutdownJobs();
+  vi.resetModules();
+  state.writeArticle.mockResolvedValue({ title: "Recovered", sections: [] });
+  state.download.mockClear();
+  state.transcribe.mockClear();
+  const restarted = await import("./jobs.js");
+  await restarted.resumeIncompleteJobs(["owner"]);
+  await restarted.resumeIncompleteJobs(["owner"]);
+  await vi.waitFor(async () =>
+    expect((await restarted.getJob("owner", job.id))?.stage).toBe("complete"),
+  );
+
+  expect(state.download).not.toHaveBeenCalled();
+  expect(state.transcribe).not.toHaveBeenCalled();
+  expect(state.writeArticle).toHaveBeenCalledTimes(2);
+});
+
+it("keeps one budget reservation while a background article moves from accepted to completed", async () => {
+  resolveMetadata();
+  state.transcribe.mockResolvedValue([
+    { id: "t-00001", start: 0, end: 1, text: "Hello", speaker: "Alice" },
+  ]);
+  state.writeArticle.mockImplementation(
+    async (_transcript, _metadata, _events, _signal, recordUsage) => {
+      const request = {
+        id: "background-attempt",
+        operationId: "background-operation",
+        attempt: 1,
+        stage: "article",
+        requestedModel: "gpt-5.6-terra",
+        requestedServiceTier: "flex",
+        endpointRegion: "global",
+        startedAt: new Date().toISOString(),
+        status: "pending",
+        reservedCostUsd: 4,
+        cost: { currency: "USD", amount: null },
+      } satisfies ApiRequestUsage;
+      await recordUsage(request);
+      await recordUsage({ ...request, responseStatus: "queued" });
+      await recordUsage({
+        ...request,
+        status: "succeeded",
+        cost: { currency: "USD", amount: 0.1 },
+      });
+      return { title: "Complete", sections: [] };
+    },
+  );
+  const jobs = await import("./jobs.js");
+
+  const job = await jobs.createJob("owner", input);
+  await vi.waitFor(() => expect(job.stage).toBe("complete"));
+
+  expect(job.apiUsage?.requests).toHaveLength(1);
+  expect(job.apiUsage?.knownEstimatedCostUsd).toBe(0.1);
+  expect(jobs.getAccountBudget("owner").reservedUsd).toBe(0);
+});

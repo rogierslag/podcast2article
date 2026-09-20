@@ -173,7 +173,7 @@ export function endpointRegion(
   return "custom";
 }
 
-interface TrackedRequest {
+interface TrackedRequest<T> {
   stage: ApiRequestUsage["stage"];
   model: string;
   region: ApiRequestUsage["endpointRegion"];
@@ -182,6 +182,9 @@ interface TrackedRequest {
   record?: UsageRecorder;
   reservedCostUsd?: number;
   serviceTier?: "flex" | "default";
+  background?: boolean;
+  acquire?: (signal?: AbortSignal) => Promise<() => void>;
+  saveResult?: (data: T, request: ApiRequestUsage) => Promise<void>;
 }
 
 function retryDelay(error: unknown, attempt: number): number {
@@ -201,7 +204,7 @@ function retryDelay(error: unknown, attempt: number): number {
 
 /** SDK retries are disabled at the call site so every HTTP attempt is recorded. */
 export async function trackedRequest<T>(
-  options: TrackedRequest,
+  options: TrackedRequest<T>,
   send: (serviceTier: "auto" | "flex" | "default") => Promise<{
     data: T;
     response: Response;
@@ -215,6 +218,7 @@ export async function trackedRequest<T>(
   const maxAttempts = useFlexFallback ? 6 : 3;
   for (let attempt = 1; ; attempt += 1) {
     options.signal?.throwIfAborted();
+    const release = await options.acquire?.(options.signal);
     const started = Date.now();
     const serviceTier =
       useFlexFallback && attempt > 3 ? "default" : initialTier;
@@ -236,65 +240,87 @@ export async function trackedRequest<T>(
         reason: "Request has no confirmed outcome",
       },
     };
-    await options.record?.(request);
-    let result;
-    let failure: unknown;
+    let retryWait = 0;
     try {
-      options.signal?.throwIfAborted();
-      result = await send(serviceTier);
-    } catch (error) {
-      failure = error;
-    }
-    request.finishedAt = new Date().toISOString();
-    request.elapsedMs = Date.now() - started;
-    if (result) {
-      const data = object(result.data);
-      request.status = "succeeded";
-      request.httpStatus = result.response.status;
-      request.requestId = result.request_id ?? undefined;
-      request.actualModel =
-        typeof data.model === "string" ? data.model : undefined;
-      request.actualServiceTier =
-        typeof data.service_tier === "string"
-          ? data.service_tier
-          : options.stage === "transcription"
-            ? "default"
-            : undefined;
-      request.responseStatus =
-        typeof data.status === "string" ? data.status : undefined;
-      request.usage = usageMetrics(data.usage);
-      request.audioSeconds =
-        count(object(data.usage).seconds) ?? count(data.duration);
-      request.cost = estimateApiCost(request);
-      // Persist before callers parse or validate generated content.
       await options.record?.(request);
-      return result.data;
+      let result;
+      let failure: unknown;
+      try {
+        options.signal?.throwIfAborted();
+        result = await send(serviceTier);
+      } catch (error) {
+        failure = error;
+      }
+      request.finishedAt = new Date().toISOString();
+      request.elapsedMs = Date.now() - started;
+      if (result) {
+        const data = object(result.data);
+        const pending =
+          options.background &&
+          (data.status === "queued" || data.status === "in_progress");
+        request.status = pending
+          ? "pending"
+          : options.background && data.status !== "completed"
+            ? "failed"
+            : "succeeded";
+        if (pending) {
+          request.finishedAt = undefined;
+          request.elapsedMs = undefined;
+        }
+        request.httpStatus = result.response.status;
+        request.requestId = result.request_id ?? undefined;
+        request.actualModel =
+          typeof data.model === "string" ? data.model : undefined;
+        request.actualServiceTier =
+          typeof data.service_tier === "string"
+            ? data.service_tier
+            : options.stage === "transcription"
+              ? "default"
+              : undefined;
+        request.responseStatus =
+          typeof data.status === "string" ? data.status : undefined;
+        request.usage = usageMetrics(data.usage);
+        request.audioSeconds =
+          count(object(data.usage).seconds) ?? count(data.duration);
+        request.cost = estimateApiCost(request);
+        await options.saveResult?.(result.data, request);
+        // Persist before callers parse or validate generated content.
+        await options.record?.(request);
+        return result.data;
+      }
+      request.status = options.signal?.aborted ? "aborted" : "failed";
+      if (failure instanceof OpenAI.APIError) {
+        request.httpStatus = failure.status;
+        request.requestId = failure.requestID ?? undefined;
+        request.errorCode = failure.code ?? undefined;
+      }
+      request.cost = estimateApiCost(request);
+      await options.record?.(request);
+      const status = request.httpStatus;
+      const retryHeader =
+        failure instanceof OpenAI.APIError
+          ? failure.headers?.get("x-should-retry")
+          : null;
+      const retryable =
+        retryHeader === "true" ||
+        (retryHeader !== "false" &&
+          (failure instanceof OpenAI.APIConnectionError ||
+            status === 408 ||
+            status === 409 ||
+            status === 429 ||
+            (status !== undefined && status >= 500)));
+      if (
+        request.status === "aborted" ||
+        attempt >= maxAttempts ||
+        !retryable
+      ) {
+        throw failure;
+      }
+      retryWait = retryDelay(failure, attempt);
+    } finally {
+      release?.();
     }
-    request.status = options.signal?.aborted ? "aborted" : "failed";
-    if (failure instanceof OpenAI.APIError) {
-      request.httpStatus = failure.status;
-      request.requestId = failure.requestID ?? undefined;
-      request.errorCode = failure.code ?? undefined;
-    }
-    request.cost = estimateApiCost(request);
-    await options.record?.(request);
-    const status = request.httpStatus;
-    const retryHeader =
-      failure instanceof OpenAI.APIError
-        ? failure.headers?.get("x-should-retry")
-        : null;
-    const retryable =
-      retryHeader === "true" ||
-      (retryHeader !== "false" &&
-        (failure instanceof OpenAI.APIConnectionError ||
-          status === 408 ||
-          status === 409 ||
-          status === 429 ||
-          (status !== undefined && status >= 500)));
-    if (request.status === "aborted" || attempt >= maxAttempts || !retryable) {
-      throw failure;
-    }
-    await delay(retryDelay(failure, attempt), undefined, {
+    await delay(retryWait, undefined, {
       signal: options.signal,
     });
   }

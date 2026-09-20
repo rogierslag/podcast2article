@@ -526,3 +526,192 @@ it.each([
     });
   },
 );
+
+it("persists a chunk before deployment pauses new requests and resumes with its original offsets", async () => {
+  const { chunkCheckpoint, atomicJson, readManifest } =
+    await import("./processing-artifacts.js");
+  const { paidRequestDrain } = await import("./deployment-drain.js");
+  const manifest = {
+    version: 1 as const,
+    chunkSeconds: 300,
+    model: "gpt-4o-transcribe-diarize",
+    language: "en",
+    files: ["chunk-000.mp3", "chunk-001.mp3"],
+  };
+  await atomicJson(path.join(directory, "chunks.json"), manifest);
+  const checkpoint = chunkCheckpoint(directory, manifest);
+  const controller = new AbortController();
+  const fetchMock = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          text: "Hello",
+          segments: [{ start: 1, end: 2, speaker: "Alice", text: "Hello" }],
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  const interrupted = transcribeChunks(
+    [audio, audio],
+    "auto",
+    () => {},
+    () => {},
+    controller.signal,
+    record,
+    {
+      ...checkpoint,
+      async save(index, response) {
+        await checkpoint.save(index, response);
+        paidRequestDrain.pause();
+      },
+    },
+  );
+  await vi.waitFor(async () => expect(await checkpoint.load(0)).toBeDefined());
+  await vi.waitFor(() => expect(paidRequestDrain.pending).toBe(0));
+  controller.abort();
+  await expect(interrupted).rejects.toThrow();
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  paidRequestDrain.resume();
+  vi.stubEnv("AUDIO_CHUNK_SECONDS", "600");
+  vi.stubEnv("TRANSCRIPTION_MODEL", "a-different-model");
+  const savedManifest = await readManifest(directory);
+  expect(savedManifest).toBeDefined();
+
+  const transcript = await transcribeChunks(
+    [audio, audio],
+    "nl",
+    () => {},
+    () => {},
+    undefined,
+    record,
+    checkpoint,
+  );
+
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(transcript.map(({ id, start }) => ({ id, start }))).toEqual([
+    { id: "t-00001", start: 1 },
+    { id: "t-00002", start: 301 },
+  ]);
+});
+
+it("retrieves a saved background response after restart without another generation request", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { atomicJson } = await import("./processing-artifacts.js");
+  const controller = new AbortController();
+  const savedFile = path.join(directory, "article-response.json");
+  const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      const body = JSON.parse(String(init.body));
+      expect(body.background).toBe(true);
+      expect(body.store).toBe(true);
+      return new Response(
+        JSON.stringify({ id: "resp-persisted", status: "queued", output: [] }),
+        { headers: { "content-type": "application/json" } },
+      );
+    }
+    return articleResponse("flex");
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const transcript = [
+    { id: "t-00001", start: 0, end: 1, text: "Hello", speaker: "Alice" },
+  ];
+  const metadata = {
+    title: "Test",
+    sourceName: "Test",
+    language: "auto",
+    length: "standard",
+  };
+
+  await expect(
+    writeArticle(transcript, metadata, () => {}, controller.signal, record, {
+      async save(state) {
+        await atomicJson(savedFile, state);
+        controller.abort();
+      },
+    }),
+  ).rejects.toThrow();
+  const state = JSON.parse(await readFile(savedFile, "utf8"));
+  const result = await writeArticle(
+    transcript,
+    metadata,
+    () => {},
+    undefined,
+    record,
+    {
+      state,
+      save: (next) => atomicJson(savedFile, next),
+    },
+  );
+
+  expect(result.title).toBe("Hello");
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(records.at(-1)).toMatchObject({
+    status: "succeeded",
+    cost: { amount: 0.004 },
+  });
+  expect(new Set(records.map((entry) => entry.id)).size).toBe(1);
+  const complete = JSON.parse(await readFile(savedFile, "utf8"));
+  await writeArticle(transcript, metadata, () => {}, undefined, record, {
+    state: complete,
+    save: async () => {},
+  });
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+});
+
+it("retains an invalid article answer before local validation fails", async () => {
+  let saved: import("../types.js").BackgroundArticle | undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            id: "resp-invalid",
+            object: "response",
+            status: "completed",
+            output: [
+              {
+                type: "message",
+                role: "assistant",
+                content: [
+                  {
+                    type: "output_text",
+                    text: "invalid JSON",
+                    annotations: [],
+                  },
+                ],
+              },
+            ],
+          }),
+          { headers: { "content-type": "application/json" } },
+        ),
+    ),
+  );
+  const transcript = [
+    { id: "t-00001", start: 0, end: 1, text: "Hello", speaker: "Alice" },
+  ];
+  const metadata = {
+    title: "Test",
+    sourceName: "Test",
+    language: "auto",
+    length: "standard",
+  };
+
+  await expect(
+    writeArticle(transcript, metadata, () => {}, undefined, record, {
+      save: async (state) => {
+        saved = state;
+      },
+    }),
+  ).rejects.toThrow();
+  expect(saved?.answer).toBe("invalid JSON");
+  await expect(
+    writeArticle(transcript, metadata, () => {}, undefined, record, {
+      state: saved,
+      save: async () => {},
+    }),
+  ).rejects.toThrow();
+
+  expect(fetch).toHaveBeenCalledTimes(1);
+});

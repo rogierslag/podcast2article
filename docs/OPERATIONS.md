@@ -402,17 +402,21 @@ The updater lock prevents overlap.
 9. installs locked production dependencies;
 10. links `data` to `/var/lib/podcast2article`;
 11. runs synthetic MPEG-TS remuxing, MP3 normalization, chunking, and decoding as the application user with the service environment and new release code;
-12. atomically changes `/opt/podcast2article/current` only if media checks pass;
-13. restarts the application;
-14. waits up to 30 seconds for systemd and `/api/health`;
-15. keeps the new release on success;
-16. restores the previous symlink and restarts on activation failure when a previous release exists; first deployment has no earlier release to restore;
-17. after success, retains the three newest release directories by modification time.
+12. pauses new paid requests on a running service and waits at most 15 minutes for active results to be saved;
+13. atomically changes `/opt/podcast2article/current` only after successful draining, or when the service was already stopped;
+14. restarts the application;
+15. waits up to 30 seconds for systemd and `/api/health`;
+16. keeps the new release on success;
+17. restores the previous symlink and restarts on activation failure when a previous release exists; first deployment has no earlier release to restore;
+18. after success, retains the three newest release directories by modification time;
     This cleanup does not distinguish successful releases from failed candidates.
+19. removes its own pause marker on exit, resuming admission after success, failure, or rollback.
 
 The application continues serving from the old release while a new release is being downloaded, built, and tested.
 Downtime is limited to the final graceful restart.
-A media preflight failure leaves the existing symlink and process untouched.
+A media preflight failure or drain timeout leaves the existing symlink and process untouched.
+The full updater has a separate 45-minute systemd timeout; draining itself remains capped at 15 minutes.
+An older running release without the drain protocol requires the [first-rollout procedure](DEPLOYMENT-RECOVERY.md#first-rollout-and-limitations).
 Applying this guard to an existing host requires explicitly reinstalling the infrastructure updater; application pushes do not replace it.
 The updater does not wait for GitHub Actions and does not run the Playwright browser suite.
 Those checks run independently in CI; verify them before merging.
@@ -566,7 +570,8 @@ The main Node process starts with:
 ```
 
 A shared media slot prevents concurrent downloads and FFmpeg work.
-Three processing jobs can overlap remote API calls and retain temporary audio at once.
+Three media/transcription jobs can overlap remote API calls and retain temporary audio at once, with three separate article slots.
+Interrupted or failed transcription workspaces remain for recovery, so concurrency does not impose a total disk quota.
 The updater uses a 512 MiB Node heap ceiling during validation and is assigned low CPU and I/O priority by systemd.
 
 Useful diagnostics:
@@ -905,8 +910,10 @@ After three transient Flex failures, the same operation switches to `service_tie
 Capacity errors, connection failures, timeouts and other retryable HTTP failures use the existing backoff and retry-header rules.
 Cancellation and permanent errors stop without fallback.
 
-The existing `OPENAI_ARTICLE_TIMEOUT_MS` applies separately to every attempt (default 600000 ms).
-Six timeouts can therefore take roughly an hour, plus backoff.
+`OPENAI_ARTICLE_TIMEOUT_MS` applies separately to each background submission attempt (default 600000 ms), not to the lifetime of remote generation.
+Six submission timeouts can therefore take roughly an hour, plus backoff, during normal processing.
+During deployment, retries wait for admission to resume; the drain still stops waiting after 15 minutes.
+Retrieval calls use a separate 30-second timeout and poll every five seconds while waiting for completion.
 Budget checks run before each attempt; unknown outcomes retain their reservations and can block fallback.
 Requested and actual tiers are saved per attempt, and prices follow the actual reported tier.
 Existing estimates are not repriced.
@@ -914,3 +921,10 @@ Existing estimates are not repriced.
 To disable Flex, set `ARTICLE_SERVICE_TIER=default` in the service environment and restart through the normal deployment procedure.
 Verify the effective setting without printing secrets, then inspect the next naturally created job's `apiUsage.requests` for its requested and reported tiers.
 Do not infer measured savings from configuration alone.
+
+## Deployment drain and recovery
+
+Use the deployment updater for releases that must preserve active transcription work.
+It pauses new paid requests, drains active transcription and article submission persistence, activates the new release, and resumes pending work.
+Manual restarts and infrastructure installation do not perform that handshake.
+See [deployment recovery](DEPLOYMENT-RECOVERY.md) for first-rollout steps, failed or abandoned drain markers, background article polling and webhook setup, and intermediate-file retention.

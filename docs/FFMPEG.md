@@ -46,6 +46,7 @@ sudo node /usr/local/lib/podcast2article/ffmpeg-runtime.mjs install /usr/local/l
 
 Coordinate maintenance so no new jobs are submitted.
 `activate` and `rollback` refuse active or queued stored jobs, and fail closed if job state is unreadable.
+These infrastructure operations use that idle-job check, not the application updater's [deployment drain handshake](DEPLOYMENT-RECOVERY.md).
 They share the updater lock, but do not lock the application's job submission API.
 
 ```bash
