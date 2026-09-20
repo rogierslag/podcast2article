@@ -1,3 +1,4 @@
+import { DomainError } from "./errors.js";
 import type { Job, ProcessingJobSummary } from "../types.js";
 import {
   translate,
@@ -88,6 +89,7 @@ export function localizeJob(job: Job, language: UiLanguage): Job {
             language,
             job.error,
             "error.processing",
+            job.messageValues,
           ),
         }
       : {}),
@@ -117,8 +119,8 @@ export function localizeProcessingJob(
   };
 }
 
-// Older stored messages and current service errors use Dutch source strings.
-// New progress updates use keys and messageValues. Keep old strings stable when editing copy.
+// Compatibility for persisted messages only; live errors use DomainError codes.
+// These historical strings must remain readable when diagnostic wording changes.
 const legacyMessageKeys = new Map([
   ["Geef een geldige leespositie op.", "error.readingPositionInvalid"],
   [
@@ -365,4 +367,15 @@ export function translateStoredMessage(
     return translate(language, "error.mediaSize", { size: match[1] });
   }
   return translate(language, fallback);
+}
+
+/** Only structured errors may select a live user-facing message. */
+export function translateDomainError(
+  language: UiLanguage,
+  error: unknown,
+  fallback = "error.generic",
+): string {
+  return error instanceof DomainError
+    ? translate(language, error.code, error.values)
+    : translate(language, fallback);
 }

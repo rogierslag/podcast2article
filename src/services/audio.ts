@@ -4,6 +4,7 @@ import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
+import { DomainError } from "../lib/errors.js";
 import { safeFetch } from "../lib/network.js";
 
 const DEFAULT_CHUNK_SECONDS = 300;
@@ -59,9 +60,7 @@ export async function downloadMedia(
     response.headers.get("content-type") ?? ""
   ).toLowerCase();
   if (contentType.includes("text/html")) {
-    throw new Error(
-      "De bron gaf een webpagina terug in plaats van media. Controleer de deel- en downloadrechten.",
-    );
+    throw new DomainError("error.sourceNotMedia");
   }
   const configuredMaximum = options.maxMegabytes;
   const maxMegabytes =
@@ -71,7 +70,7 @@ export async function downloadMedia(
   const maxBytes = maxMegabytes * 1024 * 1024;
   const announcedSize = Number(response.headers.get("content-length") ?? 0);
   if (announcedSize > maxBytes) {
-    throw new Error(`Mediabestand is groter dan ${maxMegabytes} MB.`);
+    throw new DomainError("error.mediaSize", { size: maxMegabytes });
   }
   let received = 0;
   const limited = response.body.pipeThrough(
@@ -79,9 +78,7 @@ export async function downloadMedia(
       transform(chunk, controller) {
         received += chunk.byteLength;
         if (received > maxBytes) {
-          return controller.error(
-            new Error("Mediabestand overschrijdt de ingestelde limiet."),
-          );
+          return controller.error(new DomainError("error.mediaLimit"));
         }
         controller.enqueue(chunk);
       },
@@ -196,11 +193,11 @@ export async function splitAudio(
     .sort()
     .map((name) => `${directory}/${name}`);
   if (!files.length) {
-    throw new Error("Er konden geen bruikbare audiofragmenten worden gemaakt.");
+    throw new DomainError("error.audioSegmentsEmpty");
   }
   for (const file of files) {
     if ((await stat(file)).size > 24 * 1024 * 1024) {
-      throw new Error("Een audiofragment is te groot voor transcriptie.");
+      throw new DomainError("error.audioSegmentTooLarge");
     }
   }
   return files;

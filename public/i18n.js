@@ -682,6 +682,14 @@ export const messages = {
     nl: "Bekijk op Fathom ↗",
     en: "View on Fathom ↗",
   },
+  "error.youtubeVideoRequired": {
+    nl: "Gebruik een YouTube-link naar één video, niet naar een kanaal, zoekopdracht of afspeellijst.",
+    en: "Use a YouTube link to one video, not a channel, search or playlist.",
+  },
+  "error.youtubeLiveUnsupported": {
+    nl: "Live en geplande YouTube-streams worden niet ondersteund. Gebruik de opname nadat de stream is afgelopen.",
+    en: "Live and scheduled YouTube streams are not supported. Use the recording after the stream has ended.",
+  },
   "error.youtubeLinkRequired": {
     nl: "Plak een publieke YouTube-videolink.",
     en: "Paste a public YouTube video link.",

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { DomainError } from "../lib/errors.js";
 import type {
   Backfill,
   Job,
@@ -111,7 +112,7 @@ export class SubscriptionStore {
       const items = this.list(username);
       const existing = items.find((item) => item.feedUrl === feed.url);
       if (existing) {
-        throw new Error("series.errorDuplicate");
+        throw new DomainError("series.errorDuplicate");
       }
       const selected = backfillEpisodes(feed, choice);
       const selectedKeys = new Set(selected.map((item) => item.key));
@@ -145,10 +146,10 @@ export class SubscriptionStore {
       const items = this.list(username);
       const item = items.find((item) => item.id === id);
       if (!item) {
-        throw new Error("series.errorNotFound");
+        throw new DomainError("series.errorNotFound");
       }
       if (!paused && this.outstanding(username, item) >= subscriptionLimit) {
-        throw new Error("series.errorLimit");
+        throw new DomainError("series.errorLimit");
       }
       item.paused = paused;
       item.pauseReason = undefined;
@@ -165,7 +166,7 @@ export class SubscriptionStore {
         }
         try {
           if (!this.dependencies.canProcess()) {
-            throw new Error("error.creationUnavailable");
+            throw new DomainError("error.creationUnavailable");
           }
           if (await this.pauseAtLimit(username, items, subscription)) {
             continue;
@@ -208,11 +209,11 @@ export class SubscriptionStore {
           );
         } catch (error) {
           subscription.error =
-            error instanceof Error &&
+            error instanceof DomainError &&
             ["error.creationUnavailable", "error.accountBudget"].includes(
-              error.message,
+              error.code,
             )
-              ? error.message
+              ? error.code
               : "series.errorCheck";
           await this.save(username, items);
         }
@@ -282,17 +283,17 @@ export class SubscriptionStore {
       const items = this.list(username);
       const subscription = items.find((item) => item.id === id);
       if (!subscription) {
-        throw new Error("series.errorNotFound");
+        throw new DomainError("series.errorNotFound");
       }
       if (!this.dependencies.canProcess()) {
-        throw new Error("error.creationUnavailable");
+        throw new DomainError("error.creationUnavailable");
       }
       const available =
         subscriptionLimit -
         this.outstanding(username, subscription) -
         subscription.pending.length;
       if (available <= 0) {
-        throw new Error("series.errorLimit");
+        throw new DomainError("series.errorLimit");
       }
       const feed = await this.dependencies.fetchFeed(subscription.feedUrl);
       subscription.imageUrl = feed.imageUrl;
@@ -302,7 +303,7 @@ export class SubscriptionStore {
         .filter((item) => archive.has(item.key))
         .slice(0, Math.min(subscriptionLimit, available));
       if (!selected.length) {
-        throw new Error("series.errorNoHistory");
+        throw new DomainError("series.errorNoHistory");
       }
       const selectedKeys = new Set(selected.map((item) => item.key));
       subscription.archiveKeys = [...archive].filter(

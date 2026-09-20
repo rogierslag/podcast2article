@@ -2,6 +2,7 @@ import { rm, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { youtubeDl } from "youtube-dl-exec";
 import { z } from "zod";
+import { DomainError, type DomainErrorCode } from "../lib/errors.js";
 import type { Episode } from "../types.js";
 
 const require = createRequire(import.meta.url);
@@ -26,14 +27,14 @@ export function validateFathomUrl(value: string): URL {
     url.password ||
     url.port
   ) {
-    throw new Error("error.fathomLinkRequired");
+    throw new DomainError("error.fathomLinkRequired");
   }
   if (/^\/calls(?:\/|$)/.test(url.pathname)) {
-    throw new Error("error.fathomShareRequired");
+    throw new DomainError("error.fathomShareRequired");
   }
   const token = url.pathname.match(/^\/share\/([A-Za-z0-9_-]+)\/?$/)?.[1];
   if (!token) {
-    throw new Error("error.fathomLinkRequired");
+    throw new DomainError("error.fathomLinkRequired");
   }
   return new URL(`https://fathom.video/share/${token}`);
 }
@@ -44,14 +45,14 @@ export function fathomEpisodeFromMetadata(
 ): Episode {
   const parsed = metadataSchema.safeParse(value);
   if (!parsed.success) {
-    throw new Error("error.fathomMetadataMissing");
+    throw new DomainError("error.fathomMetadataMissing");
   }
   const metadata = parsed.data;
   if (
     metadata.availability &&
     !["public", "unlisted"].includes(metadata.availability)
   ) {
-    throw new Error("error.fathomPrivate");
+    throw new DomainError("error.fathomPrivate");
   }
   const startedAt =
     metadata.timestamp === undefined
@@ -80,28 +81,15 @@ function positiveSetting(value: unknown, fallback: number): number {
   return Number.isFinite(number) && number > 0 ? number : fallback;
 }
 
-const fathomErrorKeys = new Set([
-  "error.fathomLinkRequired",
-  "error.fathomShareRequired",
-  "error.fathomPrivate",
-  "error.fathomMetadataMissing",
-  "error.fathomUnreadable",
-  "error.fathomTimeout",
-  "error.fathomDownloadEmpty",
-  "error.fathomDownloadLimit",
-  "error.fathomDownloadFailed",
-  "error.fathomProcessingFailed",
-]);
-
 function exceedsDownloadLimit(message: string): boolean {
   return /larger than max-filesize|file is larger than|maximum file size exceeded/i.test(
     message,
   );
 }
 
-function fathomFailure(error: unknown, fallback: string): Error {
-  if (error instanceof Error && fathomErrorKeys.has(error.message)) {
-    return new Error(error.message);
+function fathomFailure(error: unknown, fallback: DomainErrorCode): Error {
+  if (error instanceof DomainError) {
+    return error;
   }
   const details =
     error && typeof error === "object" && "stderr" in error
@@ -115,20 +103,20 @@ function fathomFailure(error: unknown, fallback: string): Error {
       message,
     )
   ) {
-    return new Error("error.fathomProcessingFailed");
+    return new DomainError("error.fathomProcessingFailed");
   }
   if (exceedsDownloadLimit(message)) {
-    return new Error("error.fathomDownloadLimit");
+    return new DomainError("error.fathomDownloadLimit");
   }
   if (
     /sign.?in|log.?in|private (?:recording|video)|(?:recording|video) is private|password(?:[ -]protected| required)|\bHTTP(?: Error)?\s+(?:403|401)\b/i.test(
       message,
     )
   ) {
-    return new Error("error.fathomPrivate");
+    return new DomainError("error.fathomPrivate");
   }
   // Never expose downloader stderr: it can contain signed media URLs.
-  return new Error(fallback);
+  return new DomainError(fallback);
 }
 
 export async function resolveFathomRecording(
@@ -156,7 +144,7 @@ export async function resolveFathomRecording(
   } catch (error) {
     signal?.throwIfAborted();
     if (timeout.aborted) {
-      throw new Error("error.fathomTimeout");
+      throw new DomainError("error.fathomTimeout");
     }
     throw fathomFailure(error, "error.fathomUnreadable");
   }
@@ -207,20 +195,20 @@ export async function downloadFathomRecording(
     // yt-dlp can skip oversized media successfully, writing only a size message.
     // Inspect that explicit signal rather than calling every missing file a limit.
     if (typeof output === "string" && exceedsDownloadLimit(output)) {
-      throw new Error("error.fathomDownloadLimit");
+      throw new DomainError("error.fathomDownloadLimit");
     }
     const file = await stat(target);
     if (!file.size) {
-      throw new Error("error.fathomDownloadEmpty");
+      throw new DomainError("error.fathomDownloadEmpty");
     }
     if (file.size > maxMegabytes * 1024 * 1024) {
-      throw new Error("error.fathomDownloadLimit");
+      throw new DomainError("error.fathomDownloadLimit");
     }
   } catch (error) {
     await rm(target, { force: true });
     signal?.throwIfAborted();
     if (timeout.aborted) {
-      throw new Error("error.fathomTimeout");
+      throw new DomainError("error.fathomTimeout");
     }
     throw fathomFailure(error, "error.fathomDownloadFailed");
   }

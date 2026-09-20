@@ -1,11 +1,12 @@
-import {
-  ArticleVisits,
-  countArticleArrivals,
-} from "./services/article-visits.js";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import express from "express";
 import { z } from "zod";
+import { DomainError, domainErrorStatus } from "./lib/errors.js";
+import {
+  ArticleVisits,
+  countArticleArrivals,
+} from "./services/article-visits.js";
 import {
   startArticleBackups,
   stopArticleBackups,
@@ -18,11 +19,11 @@ import { deploymentFailed, deploymentHealth } from "./services/deployment.js";
 import { resolveGitSha } from "./lib/git.js";
 import { socialMetadata, type SocialImage } from "./lib/social-metadata.js";
 import {
+  translateDomainError,
   localizeJob,
   localizeProcessingJob,
   localizeTemplate,
   requestLanguage,
-  translateStoredMessage,
 } from "./lib/i18n.js";
 import { translate } from "../public/i18n.js";
 import {
@@ -116,7 +117,9 @@ function localizeError(
   message: unknown,
   fallback = "error.generic",
 ): string {
-  return translateStoredMessage(responseLanguage(response), message, fallback);
+  return typeof message === "string"
+    ? translate(responseLanguage(response), message, {})
+    : translateDomainError(responseLanguage(response), message, fallback);
 }
 
 function renderPage(response: express.Response, template: string): string {
@@ -555,7 +558,8 @@ const requestSchema = z
       context.addIssue({
         code: "custom",
         path: ["sourceUrl"],
-        message: error instanceof Error ? error.message : "Ongeldige bronlink",
+        message:
+          error instanceof DomainError ? error.code : "error.sourceLinkInvalid",
       });
     }
   });
@@ -637,13 +641,13 @@ app.patch("/api/articles/:id", async (request, response) => {
       ),
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Leesstatus kon niet worden opgeslagen.";
-    return response
-      .status(message === "Opdracht niet gevonden." ? 404 : 409)
-      .json({ error: localizeError(response, message) });
+    return response.status(domainErrorStatus(error, 409)).json({
+      error: translateDomainError(
+        responseLanguage(response),
+        error,
+        "error.readState",
+      ),
+    });
   }
 });
 
@@ -653,19 +657,12 @@ app.delete("/api/articles/:id", async (request, response) => {
     await deleteArticle(response.locals.username, request.params.id);
     return response.status(204).end();
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (message === "Opdracht niet gevonden.") {
-      return response
-        .status(404)
-        .json({ error: localizeError(response, message) });
-    }
-    if (message === "Dit artikel is nog niet klaar om te verwijderen.") {
-      return response
-        .status(409)
-        .json({ error: localizeError(response, message) });
-    }
-    return response.status(503).json({
-      error: localizeError(response, "error.articleDeleteRetry"),
+    return response.status(domainErrorStatus(error, 503)).json({
+      error: translateDomainError(
+        responseLanguage(response),
+        error,
+        "error.articleDeleteRetry",
+      ),
     });
   }
 });
@@ -686,15 +683,13 @@ app.patch("/api/jobs/:id/reading-position", async (request, response) => {
       ),
     });
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Leespositie kon niet worden opgeslagen.";
-    return response
-      .status(message === "Opdracht niet gevonden." ? 404 : 409)
-      .json({
-        error: localizeError(response, message, "error.readingPositionSave"),
-      });
+    return response.status(domainErrorStatus(error, 409)).json({
+      error: translateDomainError(
+        responseLanguage(response),
+        error,
+        "error.readingPositionSave",
+      ),
+    });
   }
 });
 
@@ -708,13 +703,13 @@ app.post("/api/jobs/:id/share", async (request, response) => {
       .status(201)
       .json({ url: `${publicOrigin(request)}/s/${token}` });
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Permalink kon niet worden aangemaakt.";
-    return response
-      .status(message === "Opdracht niet gevonden." ? 404 : 409)
-      .json({ error: localizeError(response, message) });
+    return response.status(domainErrorStatus(error, 409)).json({
+      error: translateDomainError(
+        responseLanguage(response),
+        error,
+        "error.shareCreate",
+      ),
+    });
   }
 });
 
@@ -724,7 +719,8 @@ app.post("/api/jobs", async (request, response) => {
     return response.status(400).json({
       error: localizeError(
         response,
-        parsed.error.issues[0]?.message,
+        parsed.error.issues.find((issue) => issue.code === "custom")?.message ??
+          "error.input",
         "error.input",
       ),
     });
@@ -743,7 +739,7 @@ app.post("/api/jobs", async (request, response) => {
     if (error instanceof AccountBudgetError) {
       return response
         .status(429)
-        .json({ error: localizeError(response, error.message) });
+        .json({ error: localizeError(response, error) });
     }
     if (error instanceof DuplicateJobError) {
       return response.status(409).json({
@@ -832,17 +828,13 @@ app.post("/api/jobs/:id/retry-article", async (request, response) => {
       .status(202)
       .json(localizeJob(job, responseLanguage(response)));
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Artikelretry kon niet starten.";
-    return response
-      .status(
-        error instanceof AccountBudgetError
-          ? 429
-          : message === "Opdracht niet gevonden."
-            ? 404
-            : 409,
-      )
-      .json({ error: localizeError(response, message) });
+    return response.status(domainErrorStatus(error, 409)).json({
+      error: translateDomainError(
+        responseLanguage(response),
+        error,
+        "error.articleRetry",
+      ),
+    });
   }
 });
 

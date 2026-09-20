@@ -1,5 +1,7 @@
 import { createReadStream } from "node:fs";
 import OpenAI from "openai";
+import type { ProcessingEvent } from "../lib/processing-events.js";
+import { DomainError } from "../lib/errors.js";
 import { endpointRegion, trackedRequest, reserveApiCost } from "./api-usage.js";
 import type { UsageRecorder } from "./api-usage.js";
 import { formatArticleWordRange } from "../../public/article-length.js";
@@ -57,10 +59,7 @@ export async function transcribeChunks(
   files: string[],
   language: string,
   onProgress: (done: number, total: number) => void,
-  onStatus: (
-    message: string,
-    data: Record<string, string | number>,
-  ) => void = () => undefined,
+  onStatus: (event: ProcessingEvent) => void = () => undefined,
   signal?: AbortSignal,
   recordUsage?: UsageRecorder,
 ): Promise<TranscriptSegment[]> {
@@ -74,14 +73,22 @@ export async function transcribeChunks(
     const timeoutMs = Number(
       process.env.OPENAI_TRANSCRIPTION_TIMEOUT_MS ?? 600_000,
     );
-    onStatus("OpenAI-transcriptieverzoek gestart", {
-      chunk: `${chunkNumber}/${files.length}`,
-      timeoutSeconds: Math.round(timeoutMs / 1000),
+    onStatus({
+      type: "transcription.started",
+      message: "OpenAI-transcriptieverzoek gestart",
+      data: {
+        chunk: `${chunkNumber}/${files.length}`,
+        timeoutSeconds: Math.round(timeoutMs / 1000),
+      },
     });
     const heartbeat = setInterval(() => {
-      onStatus("Nog in afwachting van OpenAI-transcriptie", {
-        chunk: `${chunkNumber}/${files.length}`,
-        waitingSeconds: Math.round((Date.now() - startedAt) / 1000),
+      onStatus({
+        type: "transcription.waiting",
+        message: "Nog in afwachting van OpenAI-transcriptie",
+        data: {
+          chunk: `${chunkNumber}/${files.length}`,
+          waitingSeconds: Math.round((Date.now() - startedAt) / 1000),
+        },
       });
     }, 30_000);
     heartbeat.unref();
@@ -144,15 +151,19 @@ export async function transcribeChunks(
         text: segment.text.trim(),
       });
     }
-    onStatus("OpenAI-transcriptiefragment ontvangen", {
-      chunk: `${chunkNumber}/${files.length}`,
-      elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
-      segments: segments.length,
+    onStatus({
+      type: "transcription.completed",
+      message: "OpenAI-transcriptiefragment ontvangen",
+      data: {
+        chunk: `${chunkNumber}/${files.length}`,
+        elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+        segments: segments.length,
+      },
     });
     onProgress(index + 1, files.length);
   }
   if (!all.length) {
-    throw new Error("OpenAI gaf geen transcripttekst terug.");
+    throw new DomainError("error.transcriptMissing");
   }
   return all;
 }
@@ -352,10 +363,7 @@ export async function writeArticle(
     language: string;
     length: string;
   },
-  onStatus: (
-    message: string,
-    data: Record<string, string | number>,
-  ) => void = () => undefined,
+  onStatus: (event: ProcessingEvent) => void = () => undefined,
   signal?: AbortSignal,
   recordUsage?: UsageRecorder,
 ): Promise<Article> {
@@ -372,13 +380,21 @@ export async function writeArticle(
   const targetWords = formatArticleWordRange(metadata.length);
   const startedAt = Date.now();
   const timeoutMs = Number(process.env.OPENAI_ARTICLE_TIMEOUT_MS ?? 600_000);
-  onStatus("OpenAI-artikelverzoek gestart", {
-    transcriptSegments: transcript.length,
-    timeoutSeconds: Math.round(timeoutMs / 1000),
+  onStatus({
+    type: "article.started",
+    message: "OpenAI-artikelverzoek gestart",
+    data: {
+      transcriptSegments: transcript.length,
+      timeoutSeconds: Math.round(timeoutMs / 1000),
+    },
   });
   const heartbeat = setInterval(() => {
-    onStatus("Nog in afwachting van OpenAI-artikel", {
-      waitingSeconds: Math.round((Date.now() - startedAt) / 1000),
+    onStatus({
+      type: "article.waiting",
+      message: "Nog in afwachting van OpenAI-artikel",
+      data: {
+        waitingSeconds: Math.round((Date.now() - startedAt) / 1000),
+      },
     });
   }, 30_000);
   heartbeat.unref();
@@ -433,12 +449,16 @@ Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea
     clearInterval(heartbeat);
   }
   if (!response.output_text) {
-    throw new Error("OpenAI gaf geen artikel terug.");
+    throw new DomainError("error.articleMissing");
   }
   const article = JSON.parse(response.output_text) as Article;
-  onStatus("OpenAI-artikel ontvangen", {
-    elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
-    sections: article.sections.length,
+  onStatus({
+    type: "article.completed",
+    message: "OpenAI-artikel ontvangen",
+    data: {
+      elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
+      sections: article.sections.length,
+    },
   });
   validateArticleSources(article, new Set(validIds));
   return validateArticleQuotes(article, transcript);
