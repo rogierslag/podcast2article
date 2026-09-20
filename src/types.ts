@@ -25,10 +25,6 @@ export interface Episode {
   playbackUrl?: string;
   durationSeconds?: number;
   publishedAt?: string;
-  /** Legacy fields retained while loading jobs created before generic sources. */
-  spotifyUrl?: string;
-  podcast?: string;
-  audioUrl?: string;
 }
 
 export interface TranscriptSegment {
@@ -120,13 +116,13 @@ export interface ShareAnalytics {
 export interface Job {
   id: string;
   sourceUrl: string;
-  /** Legacy field retained while loading jobs created before generic sources. */
-  spotifyUrl?: string;
   language: string;
   articleLength: "compact" | "standard" | "long";
   stage: JobStage;
   progress: number;
   message: string;
+  /** Interpolation values for a stored message key, localized at the API boundary. */
+  messageValues?: Record<string, string | number>;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
@@ -203,6 +199,8 @@ export interface ProcessingJobSummary {
   stage: ProcessingStage;
   progress: number;
   message: string;
+  /** Interpolation values for a stored message key, localized at the API boundary. */
+  messageValues?: Record<string, string | number>;
   createdAt: string;
 }
 

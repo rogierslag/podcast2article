@@ -119,8 +119,8 @@ It exposes no logs, user data, or secrets.
 Authentication is implemented in `src/services/auth.ts`.
 
 - `APP_USERS` is a JSON object containing fixed usernames and passwords.
-- An empty `APP_USERS` disables authentication only when the legacy `APP_PASSWORD` is also absent.
-  Without either, local development uses the `local` account; production must configure accounts.
+- An unset or blank `APP_USERS` disables authentication.
+  Local development then uses the `local` account; production must configure accounts.
 - Password comparison is timing-safe.
 - The complete credential configuration derives the session signing key using `scrypt`.
 - A successful login produces a signed, 30-day `HttpOnly` cookie containing the username.
@@ -280,6 +280,16 @@ data/article-backups/<username>/<uuid>.sha256 successful S3 upload receipt
 In production, `data` is a symlink to `/var/lib/podcast2article`.
 This keeps mutable data outside immutable application releases.
 
+`src/services/stored-jobs.ts` normalizes older job files at the storage boundary.
+It maps Spotify-only source fields to the generic source model and removes the aliases from loaded jobs.
+New jobs and subsequent writes use only the generic fields.
+Completion timestamps and paid-retry allowances are recovered where older records lack them; article content and user reading state are preserved.
+Backup extraction also accepts older files directly, so an offline backup does not require rewriting the library first.
+
+New processing messages store semantic translation keys and separate `messageValues` for progress counts and waiting times.
+API responses translate these for the reader's language.
+Previously stored Dutch messages and current service errors still use the compatibility translator.
+
 JSON persistence is simple and inspectable, but it does not provide database transactions, multi-process coordination, querying, or horizontal scaling.
 The architecture assumes exactly one application process.
 Job writes use an atomic rename so the backup worker cannot read a partially written record.
@@ -432,6 +442,10 @@ Detailed flow:
 “Yes” means the configured owner session is required; without account configuration, local development uses the `local` account.
 “Capability” means a valid high-entropy token, independent of account authentication.
 
+`POST /api/jobs` requires `sourceUrl`, with optional `language` and `articleLength`.
+The former `spotifyUrl` request alias is no longer accepted as a source.
+Owner and public responses use generic source fields only.
+
 Series routes are authenticated and scoped to the current user:
 
 | Method  | Path                              | Purpose                                         |
@@ -456,31 +470,30 @@ See [operations](docs/OPERATIONS.md).
 Production application configuration is stored in `/etc/podcast2article.env`.
 Values must never be committed or copied into this document.
 
-| Variable                          | Role                                                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `OPENAI_API_KEY`                  | OpenAI API credential                                                                                                   |
-| `APP_USERS`                       | JSON object with fixed username/password pairs                                                                          |
-| `APP_PASSWORD`                    | Legacy single-account password for `rogier`, used only without `APP_USERS`; configure `APP_USERS` for new installations |
-| `SPENDING_LIMIT_EXEMPT_USERS`     | Comma-separated exact usernames exempt from spending limits                                                             |
-| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint                                                                                    |
-| `OPENAI_BASE_URL`                 | Advanced endpoint override; custom endpoints have no verified cost estimate or budget reservation pricing               |
-| `HOST`                            | Production bind address; currently loopback                                                                             |
-| `PUBLIC_BASE_URL`                 | Canonical external origin for permalink and social metadata URLs                                                        |
-| `PORT`                            | Production HTTP port; currently 3000                                                                                    |
-| `NODE_ENV`                        | Production runtime mode                                                                                                 |
-| `ARTICLE_MODEL`                   | Article-generation model                                                                                                |
-| `ARTICLE_SERVICE_TIER`            | Article tier: `flex` (default, with standard fallback after three transient failures) or `default`                      |
-| `TRANSCRIPTION_MODEL`             | Diarized transcription model                                                                                            |
-| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                                                                                                |
-| `MAX_YOUTUBE_MB`                  | YouTube source limit                                                                                                    |
-| `MAX_RECORDING_MB`                | Google Drive or Fathom recording limit                                                                                  |
-| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                                                                                                        |
-| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                                                                                                        |
-| `FFMPEG_BIN`                      | Optional absolute path overriding the bundled FFmpeg executable                                                         |
-| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                                                                               |
-| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                                                                                   |
-| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                                                                                     |
-| `LOG_STACKS`                      | Enable full stack traces in logs                                                                                        |
+| Variable                          | Role                                                                                                      |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                  | OpenAI API credential                                                                                     |
+| `APP_USERS`                       | JSON object with fixed username/password pairs                                                            |
+| `SPENDING_LIMIT_EXEMPT_USERS`     | Comma-separated exact usernames exempt from spending limits                                               |
+| `OPENAI_REGION`                   | `global`, `eu`, or `us` API endpoint                                                                      |
+| `OPENAI_BASE_URL`                 | Advanced endpoint override; custom endpoints have no verified cost estimate or budget reservation pricing |
+| `HOST`                            | Production bind address; currently loopback                                                               |
+| `PUBLIC_BASE_URL`                 | Canonical external origin for permalink and social metadata URLs                                          |
+| `PORT`                            | Production HTTP port; currently 3000                                                                      |
+| `NODE_ENV`                        | Production runtime mode                                                                                   |
+| `ARTICLE_MODEL`                   | Article-generation model                                                                                  |
+| `ARTICLE_SERVICE_TIER`            | Article tier: `flex` (default, with standard fallback after three transient failures) or `default`        |
+| `TRANSCRIPTION_MODEL`             | Diarized transcription model                                                                              |
+| `MAX_AUDIO_MB`                    | Spotify/RSS source limit                                                                                  |
+| `MAX_YOUTUBE_MB`                  | YouTube source limit                                                                                      |
+| `MAX_RECORDING_MB`                | Google Drive or Fathom recording limit                                                                    |
+| `YOUTUBE_METADATA_TIMEOUT_MS`     | Metadata timeout                                                                                          |
+| `MEDIA_DOWNLOAD_TIMEOUT_MS`       | Download timeout                                                                                          |
+| `FFMPEG_BIN`                      | Optional absolute path overriding the bundled FFmpeg executable                                           |
+| `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                                                                 |
+| `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                                                                     |
+| `OPENAI_ARTICLE_TIMEOUT_MS`       | Article API timeout                                                                                       |
+| `LOG_STACKS`                      | Enable full stack traces in logs                                                                          |
 
 S3 backups use `ARTICLE_BACKUP_BUCKET` (empty disables backups), `ARTICLE_BACKUP_REGION` (required when enabled), `ARTICLE_BACKUP_PREFIX` (default `articles`) and the standard AWS credential chain.
 

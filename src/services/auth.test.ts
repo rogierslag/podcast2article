@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createUserAuth,
   expiredSessionCookie,
@@ -7,38 +7,44 @@ import {
 } from "./auth.js";
 
 describe("user authentication", () => {
-  it("is disabled without configured users", () => {
-    const auth = createUserAuth(undefined, undefined);
-    expect(auth.enabled).toBe(false);
-    expect(auth.usernames).toEqual([]);
-    expect(auth.authenticate("rogier", "anything")).toBeUndefined();
-    expect(auth.sessionUser(undefined)).toBeUndefined();
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
+
+  it.each([undefined, "", "   "])(
+    "is disabled with APP_USERS=%j",
+    (rawUsers) => {
+      vi.stubEnv("APP_USERS", rawUsers);
+
+      const auth = createUserAuth();
+
+      expect(auth.enabled).toBe(false);
+      expect(auth.usernames).toEqual([]);
+      expect(auth.authenticate("rogier", "anything")).toBeUndefined();
+      expect(auth.sessionUser(undefined)).toBeUndefined();
+    },
+  );
 
   it("authenticates each configured user independently", () => {
     const auth = createUserAuth(
       JSON.stringify({
         rogier: "correct horse battery staple",
-        melvin: "another sufficiently long password",
+        john_appleseed: "another sufficiently long password",
       }),
-      undefined,
     );
     const token = auth.authenticate(
-      "melvin",
+      "john_appleseed",
       "another sufficiently long password",
     );
     expect(
-      auth.authenticate("melvin", "correct horse battery staple"),
+      auth.authenticate("john_appleseed", "correct horse battery staple"),
     ).toBeUndefined();
-    expect(auth.sessionUser(token)).toBe("melvin");
+    expect(auth.sessionUser(token)).toBe("john_appleseed");
   });
 
   it("accepts a signed session until it expires", () => {
     const now = Date.UTC(2026, 7, 22);
-    const auth = createUserAuth(
-      '{"rogier":"a sufficiently long password"}',
-      undefined,
-    );
+    const auth = createUserAuth('{"rogier":"a sufficiently long password"}');
     const token = auth.createSession("rogier", now);
     expect(auth.sessionUser(token, now)).toBe("rogier");
     expect(
@@ -50,34 +56,45 @@ describe("user authentication", () => {
   it("invalidates sessions after credentials change", () => {
     const token = createUserAuth(
       '{"rogier":"old password long enough"}',
-      undefined,
     ).createSession("rogier");
     expect(
-      createUserAuth(
-        '{"rogier":"new password long enough"}',
-        undefined,
-      ).sessionUser(token),
+      createUserAuth('{"rogier":"new password long enough"}').sessionUser(
+        token,
+      ),
     ).toBeUndefined();
   });
 
-  it("supports APP_PASSWORD as a temporary rogier fallback", () => {
-    const auth = createUserAuth(undefined, "legacy password long enough");
-    expect(auth.usernames).toEqual(["rogier"]);
+  it("ignores the removed APP_PASSWORD setting", () => {
+    vi.stubEnv("APP_USERS", undefined);
+    vi.stubEnv("APP_PASSWORD", "legacy password long enough");
+
+    const auth = createUserAuth();
+
+    expect(auth.enabled).toBe(false);
+    expect(auth.usernames).toEqual([]);
     expect(
-      auth.sessionUser(
-        auth.authenticate("rogier", "legacy password long enough"),
-      ),
-    ).toBe("rogier");
+      auth.authenticate("rogier", "legacy password long enough"),
+    ).toBeUndefined();
+    expect(auth.createSession("rogier")).toBeUndefined();
+  });
+
+  it("loads configured users from APP_USERS", () => {
+    vi.stubEnv("APP_USERS", '{"rogier":"a sufficiently long password"}');
+
+    const auth = createUserAuth();
+    const token = auth.authenticate("rogier", "a sufficiently long password");
+
+    expect(auth.enabled).toBe(true);
+    expect(auth.usernames).toEqual(["rogier"]);
+    expect(auth.sessionUser(token)).toBe("rogier");
   });
 
   it("rejects malformed account configuration", () => {
-    expect(() => createUserAuth("not json", undefined)).toThrow(/geldige JSON/);
-    expect(() =>
-      createUserAuth('{"Admin":"long enough password"}', undefined),
-    ).toThrow(/gebruikersnaam/);
-    expect(() => createUserAuth('{"rogier":"short"}', undefined)).toThrow(
-      /minimaal 16/,
+    expect(() => createUserAuth("not json")).toThrow(/geldige JSON/);
+    expect(() => createUserAuth('{"Admin":"long enough password"}')).toThrow(
+      /gebruikersnaam/,
     );
+    expect(() => createUserAuth('{"rogier":"short"}')).toThrow(/minimaal 16/);
   });
 });
 

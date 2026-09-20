@@ -44,7 +44,6 @@ try {
       GIT_SHA: "1234567890123456789012345678901234567890",
       HOST: "127.0.0.1",
       PORT: "4317",
-      APP_PASSWORD: "",
       APP_USERS: JSON.stringify({ regression: password }),
       OPENAI_API_KEY: "",
       PUBLIC_BASE_URL: "",

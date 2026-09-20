@@ -21,15 +21,15 @@ const require = createRequire(import.meta.url);
 const ffmpegPath = require("ffmpeg-static") as string | null;
 
 interface DownloadOptions {
-  maxMegabytes?: number;
+  maxMegabytes: number;
   timeoutMs?: number;
 }
 
 export async function downloadMedia(
   url: string,
   target: string,
-  signal?: AbortSignal,
-  options: DownloadOptions = {},
+  signal: AbortSignal | undefined,
+  options: DownloadOptions,
 ): Promise<void> {
   const configuredTimeout =
     options.timeoutMs ??
@@ -63,9 +63,7 @@ export async function downloadMedia(
       "De bron gaf een webpagina terug in plaats van media. Controleer de deel- en downloadrechten.",
     );
   }
-  const configuredMaximum =
-    options.maxMegabytes ??
-    Number(process.env.MAX_MEDIA_MB ?? process.env.MAX_AUDIO_MB ?? 1_500);
+  const configuredMaximum = options.maxMegabytes;
   const maxMegabytes =
     Number.isFinite(configuredMaximum) && configuredMaximum > 0
       ? configuredMaximum

@@ -223,15 +223,13 @@ export function selectBestEpisode(
     .sort((a, b) => b.score - a.score)[0]?.item;
 }
 
-/** Recover a legacy article's feed using its known audio, not a series-name guess. */
+/** Recover a missing feed using the known audio, not a series-name guess. */
 export async function findEpisodeFeed(
   episode: Episode,
 ): Promise<string | undefined> {
   const candidates = await searchItunes(episode.title, "podcastEpisode");
   return candidates.find(
-    (candidate) =>
-      candidate.episodeUrl === episode.mediaUrl ||
-      (episode.audioUrl && candidate.episodeUrl === episode.audioUrl),
+    (candidate) => candidate.episodeUrl === episode.mediaUrl,
   )?.feedUrl;
 }
 
@@ -263,14 +261,11 @@ export async function resolveSpotifyEpisode(value: string): Promise<Episode> {
     sourceUrl: spotifyUrl,
     feedUrl: match.feedUrl,
     sourceName: match.collectionName ?? "Onbekende podcast",
-    spotifyUrl,
     title: match.trackName ?? spotify.title,
-    podcast: match.collectionName ?? "Onbekende podcast",
     description: match.description ?? match.shortDescription,
     imageUrl:
       match.artworkUrl600 ?? match.artworkUrl100 ?? spotify.thumbnail_url,
     mediaUrl: match.episodeUrl,
-    audioUrl: match.episodeUrl,
     durationSeconds: match.trackTimeMillis
       ? Math.round(match.trackTimeMillis / 1000)
       : undefined,

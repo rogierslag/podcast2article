@@ -716,9 +716,8 @@ function renderResult(job) {
   const episode = job.episode,
     article = job.article,
     transcript = job.transcript;
-  const sourceName =
-    episode.sourceName || episode.podcast || t("source.original");
-  const sourceUrl = episode.sourceUrl || episode.spotifyUrl;
+  const sourceName = episode.sourceName || t("source.original");
+  const sourceUrl = episode.sourceUrl;
   const sourceLinkLabel =
     episode.sourceType === "google-drive"
       ? t("source.viewDrive")
@@ -817,7 +816,7 @@ function renderResult(job) {
       `,
     )
     .join("");
-  $("#audio").src = episode.playbackUrl || episode.audioUrl || episode.mediaUrl;
+  $("#audio").src = episode.playbackUrl || episode.mediaUrl;
   const requestedTime = readArticleLocation(location.hash).time;
   if (Number.isFinite(requestedTime) && requestedTime >= 0) {
     $("#audio").addEventListener(

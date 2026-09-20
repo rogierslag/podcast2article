@@ -145,6 +145,57 @@ describe("localized server messages", () => {
     }
   });
 
+  it.each([
+    [
+      "progress.start",
+      { parts: 1 },
+      "Starting transcription (1 part)",
+      "Transcriptie starten (1 deel)",
+    ],
+    [
+      "progress.start",
+      { parts: 2 },
+      "Starting transcription (2 parts)",
+      "Transcriptie starten (2 delen)",
+    ],
+    [
+      "progress.transcription",
+      { done: 2, total: 4 },
+      "Transcribing 2/4",
+      "Transcriptie 2/4",
+    ],
+    [
+      "progress.wait",
+      { chunk: "2/4", minutes: 3 },
+      "2/4: waiting for transcription (3 min)",
+      "2/4: 3 min. wachten op transcriptie",
+    ],
+    [
+      "progress.writing",
+      { minutes: 3 },
+      "Writing article · waiting 3 min",
+      "Artikel wordt geschreven · 3 min. wachten",
+    ],
+  ])(
+    "localizes structured %s progress in both languages",
+    (message, messageValues, english, dutch) => {
+      const summary: ProcessingJobSummary = {
+        id: "example",
+        title: "Recording",
+        sourceName: "Source",
+        stage: "transcribing",
+        progress: 50,
+        message,
+        messageValues,
+        createdAt: "2026-09-20T00:00:00Z",
+      };
+
+      expect(localizeProcessingJob(summary, "en").message).toBe(english);
+      expect(localizeProcessingJob(summary, "nl").message).toBe(dutch);
+      expect(summary.message).toBe(message);
+    },
+  );
+
   it("translates existing stored progress messages without changing persistence", () => {
     const job = {
       id: "11111111-1111-4111-8111-111111111111",

@@ -80,6 +80,7 @@ export function localizeJob(job: Job, language: UiLanguage): Job {
       language,
       job.message,
       stageLabels[job.stage],
+      job.messageValues,
     ),
     ...(job.error
       ? {
@@ -111,12 +112,13 @@ export function localizeProcessingJob(
       language,
       job.message,
       stageLabels[job.stage],
+      job.messageValues,
     ),
   };
 }
 
-// Compatibility with Dutch messages already persisted by the processing services.
-// These are source data, not translation keys; keep them stable when editing copy.
+// Older stored messages and current service errors use Dutch source strings.
+// New progress updates use keys and messageValues. Keep old strings stable when editing copy.
 const legacyMessageKeys = new Map([
   ["Geef een geldige leespositie op.", "error.readingPositionInvalid"],
   [
@@ -314,10 +316,20 @@ export function translateStoredMessage(
   language: UiLanguage,
   message: unknown,
   fallback = "error.generic",
+  values: Record<string, string | number> = {},
 ): string {
   const key = typeof message === "string" ? message : "";
   if (Object.hasOwn(messages, key)) {
-    return translate(language, key);
+    return translate(
+      language,
+      key,
+      key === "progress.start"
+        ? {
+            ...values,
+            parts: countLabel(language, "parts", Number(values.parts)),
+          }
+        : values,
+    );
   }
   const legacyKey =
     legacyMessageKeys.get(key) ?? legacyMessageKeys.get(`${key}.`);
