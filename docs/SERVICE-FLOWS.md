@@ -211,7 +211,11 @@ Sources: [public and owner routes](../src/server.ts),
 
 Accepting a job does not reserve its entire future cost. Each transcription or
 article API attempt must persist its own reservation before the request is sent.
-This also applies to automatic API retries.
+This also applies to automatic API retries. Article requests default to Flex,
+with three attempts before switching to explicit standard processing for up to
+three more attempts. Both tiers share one operation ID. Only transient failures
+are retried; cancellation and permanent errors stop immediately.
+`ARTICLE_SERVICE_TIER=default` skips Flex and keeps three standard attempts.
 
 ```mermaid
 flowchart TD

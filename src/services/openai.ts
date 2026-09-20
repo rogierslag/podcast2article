@@ -38,6 +38,14 @@ function client(): OpenAI {
   });
 }
 
+export function articleServiceTier(): "flex" | "default" {
+  const tier = process.env.ARTICLE_SERVICE_TIER?.trim().toLowerCase() || "flex";
+  if (tier === "flex" || tier === "default") {
+    return tier;
+  }
+  throw new Error('Invalid ARTICLE_SERVICE_TIER. Use "flex" or "default".');
+}
+
 interface DiarizedSegment {
   start?: number;
   end?: number;
@@ -354,6 +362,7 @@ export async function writeArticle(
   signal?.throwIfAborted();
   const openai = client();
   const validIds = transcript.map(({ id }) => id);
+  const serviceTier = articleServiceTier();
   const transcriptText = transcript
     .map(
       (part) =>
@@ -378,6 +387,7 @@ export async function writeArticle(
     const model = process.env.ARTICLE_MODEL ?? "gpt-5.6-terra";
     const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
       model,
+      service_tier: serviceTier,
       max_output_tokens: 16_384,
       instructions: `Je bent een zorgvuldige redacteur. Schrijf uitsluitend op basis van het aangeleverde transcript.\n
 Behoud de herkenbare stijl van de opname: tempo, humor, directheid, terugkerende beeldspraak en de manier waarop argumenten en anekdotes worden opgebouwd. Maak er wel een helder zelfstandig blogartikel van. Je mag ordenen, inkorten, parafraseren en argumentatie vloeiender maken, maar nooit feiten, voorbeelden, motieven, conclusies, citaten of verbanden toevoegen. Zet parafrases niet tussen aanhalingstekens.\n
@@ -404,15 +414,19 @@ Elke alinea moet 1-5 source-ID's bevatten die de volledige inhoud van die alinea
     response = await trackedRequest(
       {
         stage: "article",
+        serviceTier,
         reservedCostUsd,
         model,
         region: endpointRegion(openai.baseURL),
         signal,
         record: recordUsage,
       },
-      () =>
+      (requestedTier) =>
         openai.responses
-          .create(payload, { timeout: timeoutMs, signal, maxRetries: 0 })
+          .create(
+            { ...payload, service_tier: requestedTier },
+            { timeout: timeoutMs, signal, maxRetries: 0 },
+          )
           .withResponse(),
     );
   } finally {

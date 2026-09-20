@@ -181,6 +181,7 @@ interface TrackedRequest {
   signal?: AbortSignal;
   record?: UsageRecorder;
   reservedCostUsd?: number;
+  serviceTier?: "flex" | "default";
 }
 
 function retryDelay(error: unknown, attempt: number): number {
@@ -201,16 +202,22 @@ function retryDelay(error: unknown, attempt: number): number {
 /** SDK retries are disabled at the call site so every HTTP attempt is recorded. */
 export async function trackedRequest<T>(
   options: TrackedRequest,
-  send: () => Promise<{
+  send: (serviceTier: "auto" | "flex" | "default") => Promise<{
     data: T;
     response: Response;
     request_id: string | null;
   }>,
 ): Promise<T> {
   const operationId = randomUUID();
+  const initialTier =
+    options.serviceTier ?? (options.stage === "article" ? "auto" : "default");
+  const useFlexFallback = options.stage === "article" && initialTier === "flex";
+  const maxAttempts = useFlexFallback ? 6 : 3;
   for (let attempt = 1; ; attempt += 1) {
     options.signal?.throwIfAborted();
     const started = Date.now();
+    const serviceTier =
+      useFlexFallback && attempt > 3 ? "default" : initialTier;
     const request: ApiRequestUsage = {
       id: randomUUID(),
       operationId,
@@ -218,7 +225,7 @@ export async function trackedRequest<T>(
       stage: options.stage,
       chunkNumber: options.chunkNumber,
       requestedModel: options.model,
-      requestedServiceTier: options.stage === "article" ? "auto" : "default",
+      requestedServiceTier: serviceTier,
       endpointRegion: options.region,
       startedAt: new Date(started).toISOString(),
       status: "pending",
@@ -233,7 +240,8 @@ export async function trackedRequest<T>(
     let result;
     let failure: unknown;
     try {
-      result = await send();
+      options.signal?.throwIfAborted();
+      result = await send(serviceTier);
     } catch (error) {
       failure = error;
     }
@@ -283,7 +291,7 @@ export async function trackedRequest<T>(
           status === 409 ||
           status === 429 ||
           (status !== undefined && status >= 500)));
-    if (request.status === "aborted" || attempt >= 3 || !retryable) {
+    if (request.status === "aborted" || attempt >= maxAttempts || !retryable) {
       throw failure;
     }
     await delay(retryDelay(failure, attempt), undefined, {

@@ -307,3 +307,51 @@ it("checks budget again before an automatic provider retry", async () => {
   expect(records.map((entry) => entry.status)).toEqual(["pending", "failed"]);
   expect(records[1]?.reservedCostUsd).toBe(3);
 });
+
+it("falls back after three connection timeouts and retains unknown costs", async () => {
+  const records: ApiRequestUsage[] = [];
+  const send = vi
+    .fn()
+    .mockRejectedValueOnce(new OpenAI.APIConnectionTimeoutError())
+    .mockRejectedValueOnce(new OpenAI.APIConnectionTimeoutError())
+    .mockRejectedValueOnce(new OpenAI.APIConnectionTimeoutError())
+    .mockResolvedValue({
+      data: {
+        service_tier: "default",
+        usage: { input_tokens: 1000, output_tokens: 500 },
+      },
+      response: new Response(),
+      request_id: "fallback",
+    });
+
+  await trackedRequest(
+    {
+      stage: "article",
+      model: "gpt-5.6-terra",
+      region: "global",
+      serviceTier: "flex",
+      record: async (entry) => {
+        records.push(structuredClone(entry));
+      },
+    },
+    send,
+  );
+
+  expect(send.mock.calls.map(([tier]) => tier)).toEqual([
+    "flex",
+    "flex",
+    "flex",
+    "default",
+  ]);
+  expect(
+    records
+      .filter((entry) => entry.status === "failed")
+      .every((entry) => entry.cost.amount === null),
+  ).toBe(true);
+  expect(records.at(-1)).toMatchObject({
+    attempt: 4,
+    requestedServiceTier: "default",
+    actualServiceTier: "default",
+    cost: { amount: 0.008 },
+  });
+});
