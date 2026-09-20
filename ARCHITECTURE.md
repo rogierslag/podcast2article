@@ -62,6 +62,8 @@ The VPS performs source resolution, download, audio normalization, chunking, orc
 
 The browser interface consists of static HTML, CSS, images, and vanilla JavaScript under `public/`.
 Owner pages require authentication when configured; public reader assets and capability routes are registered before that boundary.
+After authentication, unknown page GET and HEAD requests redirect to `/articles`, including unknown HTML paths.
+Logged-out page visitors still go to `/login`; unmatched API or shared paths and unsupported methods do not use the overview redirect.
 
 The interface provides:
 
