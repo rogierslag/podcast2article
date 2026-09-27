@@ -259,6 +259,12 @@ The transcript remains the only factual source.
 There is no separate outline request or word-count correction loop.
 The [coverage evaluation](docs/ARTICLE-COVERAGE-EVALUATION.md) records the comparison behind this prompt and its limits.
 Language selection, length targets, source-ID checks, literal-quote validation, and the existing service-tier retry policy still apply.
+Invalid quote blocks receive up to two quote-only repair rounds using only their cited transcript passages.
+Already valid quotes, prose, headings, takeaways, and source references remain unchanged.
+Every replacement must pass literal-quote validation; optional quotes that remain invalid or cannot be repaired are omitted, along with any sections left empty.
+An article with no supported sections still fails, as do API, accounting, and persistence failures.
+Repair requests use the same model, service-tier fallback, budget reservations, usage ledger, and deployment drain as article generation.
+The original draft and each repair response are persisted separately so restart recovery can replay completed repairs and resume pending responses without another generation.
 
 Editorial instructions and input labels are written in English.
 The Responses API request places editorial and article-language directives in `instructions`; episode metadata and the complete transcript are sent separately as an `input` message with `role: "user"`.

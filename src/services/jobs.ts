@@ -807,6 +807,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
       error: undefined,
       article: undefined,
       backgroundArticle: undefined,
+      articleQuoteRepairs: undefined,
       readAt: undefined,
       readingPosition: undefined,
       articleRetryAttempts: attempts + 1,
@@ -1290,6 +1291,12 @@ async function generateArticle(
     (request) => recordApiUsage(username, job, request),
     {
       state: job.backgroundArticle,
+      repairs: job.articleQuoteRepairs,
+      saveRepair: async (index, state) => {
+        const repairs = [...(job.articleQuoteRepairs ?? [])];
+        repairs[index] = state;
+        await update(username, job, { articleQuoteRepairs: repairs });
+      },
       save: (backgroundArticle) => update(username, job, { backgroundArticle }),
     },
   );

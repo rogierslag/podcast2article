@@ -56,6 +56,12 @@ Transient retrieval failures retry without submitting another generation.
 Completed answers and usage are persisted before JSON parsing and source validation.
 Recovery can reconcile accounting from that saved response if the process stopped between saving the answer and updating the usage ledger.
 Owner-requested article regeneration explicitly starts a new response and retains the prior attempt ledger.
+Invalid quotes trigger at most two automatic quote-only repair rounds before unrepaired optional quote blocks are omitted.
+The job retains its original `backgroundArticle` draft and separate `articleQuoteRepairs` response checkpoints, including response IDs, received answers, and request accounting.
+Recovery replays repair answers against the original draft in order and polls any pending repair response; it does not regenerate valid prose or transcribe audio again.
+Each repair submission acquires drain admission and persists its response ID and usage before release.
+Explicit article regeneration clears both draft and repair checkpoints while retaining the paid-request ledger.
+The existing ambiguous-submission and crash limitations apply to repair requests too.
 
 Optionally set `OPENAI_WEBHOOK_SECRET` and configure the OpenAI project to send response completion, failure, cancellation, and incomplete events to `/hooks/openai` on the public application origin.
 The endpoint verifies the signature against the raw request body and only wakes an existing response poller.
