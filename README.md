@@ -421,3 +421,9 @@ Optional private S3 backups retain final articles and source metadata after loca
 Configure `ARTICLE_BACKUP_BUCKET`, `ARTICLE_BACKUP_REGION`, optional `ARTICLE_BACKUP_PREFIX` and standard AWS credentials.
 See [article backups](docs/ARTICLE-BACKUPS.md) for bucket security, restart recovery, backfill, retention, restore and monthly cost estimates.
 Audio, transcripts and account state need separate backups.
+
+## Admin problem alerts
+
+Optional SES emails notify the installation operator about failed jobs, series checks and deployments.
+Alerts are plain text, batched and deduplicated across restarts.
+See [admin alerts](docs/ADMIN-ALERTS.md) for sender permissions, configuration, privacy boundaries and delivery limitations.

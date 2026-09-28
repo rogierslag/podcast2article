@@ -928,3 +928,10 @@ Use the deployment updater for releases that must preserve active transcription 
 It pauses new paid requests, drains active transcription and article submission persistence, activates the new release, and resumes pending work.
 Manual restarts and infrastructure installation do not perform that handshake.
 See [deployment recovery](DEPLOYMENT-RECOVERY.md) for first-rollout steps, failed or abandoned drain markers, background article polling and webhook setup, and intermediate-file retention.
+
+## Admin problem alerts
+
+Configure [plain-text SES alerts](ADMIN-ALERTS.md) to report failed jobs, active series checks and deployments to the installation operator.
+Retain `data/admin-alerts/state.json` across releases so the same failures are not emailed again on every restart.
+Check the journal for `Admin alert` errors and verify receipt of a setup email before relying on notifications.
+External uptime monitoring remains necessary for an unavailable host or application.

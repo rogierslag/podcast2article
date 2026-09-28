@@ -153,6 +153,8 @@ export interface Job {
   /** Bounded quote-only responses, replayed against the saved article draft after restart. */
   articleQuoteRepairs?: BackgroundArticle[];
   error?: string;
+  /** Processing step that failed, retained for operator alerts. */
+  failedStage?: Job["stage"];
   /** Accepted article-only retries, excluding the initial generation. */
   articleRetryAttempts?: number;
   apiUsage?: JobApiUsage;

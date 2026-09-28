@@ -1,6 +1,10 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import express from "express";
+import {
+  alertConfiguration,
+  startAdminAlerts,
+} from "./services/admin-alerts.js";
 import { startDeploymentDrain } from "./services/deployment-drain.js";
 import { openaiWebhookRouter } from "./services/openai-webhook.js";
 import { z } from "zod";
@@ -89,6 +93,7 @@ const loginTemplate = await readFile(
 const auth = createUserAuth();
 // Validate operator configuration before the server accepts work.
 spendingLimitExempt(auth.usernames[0] ?? "local");
+alertConfiguration();
 const loginAttempts = new Map<
   string,
   { failures: number; blockedUntil: number }
@@ -892,6 +897,9 @@ await resumeIncompleteJobs(auth.enabled ? auth.usernames : ["local"]);
 startArticleBackups();
 await subscriptions.load(auth.enabled ? auth.usernames : ["local"]);
 subscriptions.start();
+const stopAdminAlerts = startAdminAlerts(
+  auth.enabled ? auth.usernames : ["local"],
+);
 
 const server = app.listen(port, host, () => {
   console.log(
@@ -935,6 +943,7 @@ async function shutdown(signal: "SIGINT" | "SIGTERM"): Promise<void> {
     stopDeploymentDrain(),
     shutdownJobs(signal),
     stopArticleBackups(),
+    stopAdminAlerts?.(),
   ]);
   clearTimeout(forcedExit);
   console.log(`${new Date().toISOString()} INFO  Graceful shutdown voltooid`);
