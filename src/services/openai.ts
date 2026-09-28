@@ -5,6 +5,7 @@ import {
   retrieveArticleAnswer,
   type ArticleCheckpoint,
 } from "./background-article.js";
+import { repairArticleQuotes } from "./quote-repair.js";
 import { paidRequestDrain } from "./deployment-drain.js";
 import {
   chunkTranscriptSchema,
@@ -17,6 +18,8 @@ import type { UsageRecorder } from "./api-usage.js";
 import { formatArticleWordRange } from "../../public/article-length.js";
 import { audioChunkSeconds } from "./audio.js";
 import type { Article, TranscriptSegment } from "../types.js";
+
+export { validateArticleQuotes } from "./quote-repair.js";
 
 const OPENAI_REGION_BASE_URLS = {
   eu: "https://eu.api.openai.com/v1",
@@ -326,48 +329,6 @@ export function validateArticleSources(
   return article;
 }
 
-function words(value: string): string[] {
-  return (
-    value
-      .normalize("NFKC")
-      .toLocaleLowerCase()
-      .match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu) ?? []
-  );
-}
-
-export function validateArticleQuotes(
-  article: Article,
-  transcript: TranscriptSegment[],
-): Article {
-  const transcriptById = new Map(
-    transcript.map((segment) => [segment.id, segment.text]),
-  );
-
-  for (const block of article.sections.flatMap(
-    (section) => section.paragraphs,
-  )) {
-    if (block.kind !== "quote") {
-      continue;
-    }
-
-    const quoteWords = words(block.text);
-    const sourceWords = words(
-      block.sources
-        .map((sourceId) => transcriptById.get(sourceId) ?? "")
-        .join(" "),
-    );
-    const sourceText = ` ${sourceWords.join(" ")} `;
-    const quoteText = ` ${quoteWords.join(" ")} `;
-    if (quoteWords.length < 4 || !sourceText.includes(quoteText)) {
-      throw new Error(
-        "Het gegenereerde artikel bevat een citaat dat niet letterlijk in de gekoppelde transcriptbron staat.",
-      );
-    }
-  }
-
-  return article;
-}
-
 const ARTICLE_LANGUAGE_NAMES: Record<string, string> = {
   nl: "Dutch",
   en: "English",
@@ -527,5 +488,13 @@ COVERAGE REQUIREMENT: Before writing, survey the complete transcript and choose 
     },
   });
   validateArticleSources(article, new Set(validIds));
-  return validateArticleQuotes(article, transcript);
+  return repairArticleQuotes(article, transcript, {
+    openai,
+    model: process.env.ARTICLE_MODEL ?? "gpt-5.6-terra",
+    serviceTier,
+    timeoutMs,
+    signal,
+    recordUsage,
+    checkpoint,
+  });
 }

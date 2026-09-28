@@ -154,6 +154,9 @@ Check the destination and focus after each transition, not only whether the butt
 
 **Implemented.**
 Paragraph and quote references open a source dialog at the selected timestamp.
+Before publication, invalid quotes receive at most two repairs against their cited transcript passages.
+Unrepairable optional quotes are omitted rather than presented as literal speech or allowed to fail an otherwise supported article.
+Validation should cover repaired quotes, unchanged valid content, bounded paid attempts, and restart recovery; this is a behavior contract, not a measured reduction in failures.
 Owners see the transcript fragment and audio; public readers receive audio only.
 Dismissal pauses audio and returns focus to the reference.
 Transcript search offers an explicit no-results recovery.

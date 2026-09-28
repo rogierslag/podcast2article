@@ -150,6 +150,8 @@ export interface Job {
   article?: Article;
   /** Provider response and received answer survive deployment and local validation failure. */
   backgroundArticle?: BackgroundArticle;
+  /** Bounded quote-only responses, replayed against the saved article draft after restart. */
+  articleQuoteRepairs?: BackgroundArticle[];
   error?: string;
   /** Accepted article-only retries, excluding the initial generation. */
   articleRetryAttempts?: number;

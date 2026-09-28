@@ -9,6 +9,8 @@ import type { ApiRequestUsage, BackgroundArticle } from "../types.js";
 
 export interface ArticleCheckpoint {
   state?: BackgroundArticle;
+  repairs?: BackgroundArticle[];
+  saveRepair?(index: number, state: BackgroundArticle): Promise<void>;
   save(state: BackgroundArticle): Promise<void>;
 }
 
