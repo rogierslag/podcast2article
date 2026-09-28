@@ -651,3 +651,10 @@ Application releases can be switched or rolled back atomically while jobs and me
 Caddy never executes deployment commands.
 The receiver authenticates GitHub and can only create a fixed trigger file.
 A root-owned systemd service then runs the hard-coded updater.
+
+## Admin problem emails
+
+`src/services/admin-problems.ts` reads a narrow projection of persisted job, subscription and deployment failures for configured accounts.
+`src/services/admin-alerts.ts` batches plain-text messages through SES and persists successful notification fingerprints under `data/admin-alerts/`.
+The worker is independent of paid processing and stops with the server.
+See [admin alerts](docs/ADMIN-ALERTS.md) for configuration, cadence, data boundaries and delivery limitations.

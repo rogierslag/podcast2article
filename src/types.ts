@@ -151,6 +151,8 @@ export interface Job {
   /** Provider response and received answer survive deployment and local validation failure. */
   backgroundArticle?: BackgroundArticle;
   error?: string;
+  /** Processing step that failed, retained for operator alerts. */
+  failedStage?: Job["stage"];
   /** Accepted article-only retries, excluding the initial generation. */
   articleRetryAttempts?: number;
   apiUsage?: JobApiUsage;

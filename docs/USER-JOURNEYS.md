@@ -293,3 +293,10 @@ A future event plan should name the decision each event enables and preserve ano
 
 Update this document when these decisions or journeys change.
 Keep measured results in a dated review with the cohort or scenario definition, environment, evidence, and limitations, rather than turning one test run into a permanent product claim.
+
+## Operator follow-up for J3 and J7
+
+Optional [admin problem emails](ADMIN-ALERTS.md) notify the installation operator when jobs or active series checks fail, and when a deployment fails.
+The alert includes an authenticated destination and a suggested next step; it does not retry paid work or change account isolation.
+Verify the journey by failing a local test job, checking one plain-text alert, restarting the alert worker, and confirming that the unchanged failure is not sent again.
+This is a validation scenario, not a measured reduction in recovery time.

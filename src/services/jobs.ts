@@ -984,6 +984,7 @@ async function processArticleRetry(
     } else {
       jobError(job.id, job.stage, error);
       await update(username, job, {
+        failedStage: job.stage,
         stage: "failed",
         error: message,
         message,
@@ -1243,6 +1244,7 @@ async function processJob(
     } else {
       jobError(job.id, job.stage, error);
       await update(username, job, {
+        failedStage: job.stage,
         stage: "failed",
         error: message,
         message,
