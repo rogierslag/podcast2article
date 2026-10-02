@@ -8,6 +8,10 @@ Podcast2Article is an open-source Node.js app that turns a **public Spotify podc
 
 Completed articles appear automatically on the [`/articles`](http://localhost:3000/articles) page, newest first.
 You can mark articles as read and undo that choice; the status is stored locally with the job.
+Owners can listen with free browser speech, choose a voice and speed, and resume a saved passage from their account.
+Narration pauses when the page is hidden, including app switching or screen locking; it does not mark the article as read.
+Narration is disabled by default; enable `BROWSER_NARRATION_ENABLED=true` and optionally restrict it with `BROWSER_NARRATION_USERS`.
+See [browser narration](docs/BROWSER-NARRATION.md) for voice availability, privacy, and progress behavior.
 Queued and processing jobs appear at the top with their current stage and progress.
 This part of the overview refreshes automatically.
 The Articles menu badge counts newly completed articles from followed series since your last successful overview visit.

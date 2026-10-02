@@ -65,10 +65,12 @@ import {
   retryArticle,
   setArticleRead,
   setArticleReadingPosition,
+  setArticleListeningPosition,
   shutdownJobs,
 } from "./services/jobs.js";
 import { generateArticlePdf, pdfDownloadName } from "./services/pdf.js";
 import { validateSourceUrl } from "./services/resolver.js";
+import { narrationFeature } from "./lib/narration-feature.js";
 
 import { fetchPodcastFeed } from "./services/podcast-feeds.js";
 import { SubscriptionStore } from "./services/subscriptions.js";
@@ -91,6 +93,7 @@ const loginTemplate = await readFile(
   "utf8",
 );
 const auth = createUserAuth();
+const narrationEnabled = narrationFeature(process.env);
 // Validate operator configuration before the server accepts work.
 spendingLimitExempt(auth.usernames[0] ?? "local");
 alertConfiguration();
@@ -155,7 +158,12 @@ async function sendIndex(
   return response.send(
     renderPage(
       response,
-      await readFile(path.join(publicDirectory, "index.html"), "utf8"),
+      (
+        await readFile(path.join(publicDirectory, "index.html"), "utf8")
+      ).replace(
+        'data-browser-narration="false"',
+        `data-browser-narration="${narrationEnabled(response.locals.username)}"`,
+      ),
     ),
   );
 }
@@ -537,6 +545,16 @@ app.get("/series", async (_request, response) => {
   response.type("html").send(renderPage(response, template));
 });
 app.get(["/", "/index.html", "/articles"], sendIndex);
+app.get(["/voice-demo", "/voice-demo.html"], async (request, response) => {
+  if (!narrationEnabled(response.locals.username)) {
+    return handleUnknownRoute(request, response);
+  }
+  const template = await readFile(
+    path.join(publicDirectory, "voice-demo.html"),
+    "utf8",
+  );
+  response.type("html").send(template);
+});
 app.get("/shortcuts/Add%20to%20Reads.shortcut", (_request, response) => {
   response.type("application/x-apple-shortcut");
   return response.download("Add to Reads.shortcut", "Add to Reads.shortcut", {
@@ -576,6 +594,12 @@ const readingStateSchema = z.object({ read: z.boolean() });
 const readingPositionSchema = z.object({
   sectionIndex: z.number().int().nonnegative(),
 });
+const listeningPositionSchema = z
+  .object({
+    version: z.literal(1),
+    passageIndex: z.number().int().nonnegative(),
+  })
+  .strict();
 
 const articleVisits = new ArticleVisits(userDirectory);
 app.get("/api/articles/arrivals", async (_request, response) => {
@@ -696,6 +720,35 @@ app.patch("/api/jobs/:id/reading-position", async (request, response) => {
         responseLanguage(response),
         error,
         "error.readingPositionSave",
+      ),
+    });
+  }
+});
+
+app.patch("/api/jobs/:id/listening-position", async (request, response) => {
+  if (!narrationEnabled(response.locals.username)) {
+    return handleUnknownRoute(request, response);
+  }
+  const parsed = listeningPositionSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return response.status(400).json({
+      error: localizeError(response, "error.listeningPositionInvalid"),
+    });
+  }
+  try {
+    return response.json({
+      listeningPosition: await setArticleListeningPosition(
+        response.locals.username,
+        request.params.id,
+        parsed.data.passageIndex,
+      ),
+    });
+  } catch (error) {
+    return response.status(domainErrorStatus(error, 409)).json({
+      error: translateDomainError(
+        responseLanguage(response),
+        error,
+        "error.listeningPositionSave",
       ),
     });
   }

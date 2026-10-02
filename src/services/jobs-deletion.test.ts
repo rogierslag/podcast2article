@@ -89,6 +89,34 @@ beforeEach(() => {
 });
 
 describe("article soft deletion", () => {
+  it("saves listening independently, survives restart, and rejects another account", async () => {
+    storeArticle("owner", { readAt: "2026-08-02T12:00:00Z" });
+    const jobs = await import("./jobs.js");
+
+    await jobs.setArticleListeningPosition("owner", articleId, 1);
+    vi.resetModules();
+    const restarted = await import("./jobs.js");
+    const restored = await restarted.getJob("owner", articleId);
+
+    expect(restored?.listeningPosition).toMatchObject({
+      version: 1,
+      passageIndex: 1,
+    });
+    expect(restored?.readAt).toBe("2026-08-02T12:00:00Z");
+    expect(restored?.readingPosition).toBeUndefined();
+    await expect(
+      restarted.setArticleListeningPosition("reader", articleId, 1),
+    ).rejects.toThrow("niet gevonden");
+    for (const invalid of [-1, 1.5, 999, NaN]) {
+      await expect(
+        restarted.setArticleListeningPosition("owner", articleId, invalid),
+      ).rejects.toThrow("luisterpositie");
+    }
+    await restarted.deleteArticle("owner", articleId);
+    await expect(
+      restarted.setArticleListeningPosition("owner", articleId, 0),
+    ).rejects.toThrow("niet gevonden");
+  });
   it.each([undefined, "2026-08-02T12:00:00.000Z"])(
     "hides read/unread articles while retaining their content and media (%s)",
     async (readAt) => {
@@ -238,7 +266,14 @@ describe("article soft deletion", () => {
 
 describe("saving shared articles", () => {
   it("persists a personal copy across restart without copying private state", async () => {
-    storeArticle("owner", { readAt: "2026-08-02T12:00:00Z" });
+    storeArticle("owner", {
+      readAt: "2026-08-02T12:00:00Z",
+      listeningPosition: {
+        version: 1,
+        passageIndex: 1,
+        updatedAt: "2026-08-02T12:00:00Z",
+      },
+    });
     const jobs = await import("./jobs.js");
     await jobs.getJob("owner", articleId);
 
@@ -250,6 +285,7 @@ describe("saving shared articles", () => {
     expect(repeated.id).toBe(saved.id);
     expect(saved.id).not.toBe(articleId);
     expect(saved).not.toHaveProperty("readAt");
+    expect(saved).not.toHaveProperty("listeningPosition");
     expect(saved).not.toHaveProperty("shareToken");
     expect(saved.transcript).toEqual([
       { id: "s1", start: 0, end: 0, text: "", speaker: "" },

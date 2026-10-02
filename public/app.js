@@ -8,6 +8,7 @@ import {
   LocalizedError,
 } from "./localize.js";
 
+import { createArticleNarration } from "./article-narration.js";
 import { createSourcePreview } from "./source-preview.js";
 import { articleHash, readArticleLocation } from "./article-location.js";
 import { sourcePrefill, prefillDestination } from "./source-prefill.js";
@@ -371,6 +372,11 @@ localizedFetch("/api/auth")
   .catch(() => undefined);
 
 const sourcePreview = createSourcePreview($("#source-preview"), $("#audio"));
+const narration = createArticleNarration($("#article-narration"), () => {
+  sourcePreview.close();
+  $("#audio").pause();
+});
+$("#audio").addEventListener("play", () => narration.pauseForSource());
 let routeVersion = 0;
 let jobPollTimer;
 let processingJob;
@@ -780,14 +786,15 @@ function renderResult(job) {
   $("#article").innerHTML = html`
     <h1>${escapeHtml(article.title)}</h1>
     <p class="dek">${escapeHtml(article.dek)}</p>
-    <p class="byline">
-      ${escapeHtml(
-        t("article.byline", {
-          reading: countText("reading", article.readingTimeMinutes),
-          sources: countText("sources", transcript.length),
-        }),
-      )}
-    </p>
+    <div class="byline">
+      <span
+        >${escapeHtml(countText("reading", article.readingTimeMinutes))}</span
+      >
+      <span data-article-source-count
+        >·
+        ${escapeHtml(t("article.sourceCount", { sources: countText("sources", transcript.length) }))}</span
+      >
+    </div>
     <p class="style-note">${escapeHtml(article.styleNote)}</p>
     ${sections}
     <div class="takeaways">
@@ -806,6 +813,7 @@ function renderResult(job) {
       </ul>
     </div>
   `;
+  narration.load(job);
   $("#toc").innerHTML = article.sections
     .map(
       (section, index) => html`
@@ -895,6 +903,7 @@ function sourceClick(event) {
     );
     if (segment) {
       stopNaturalReadingScroll();
+      narration.pauseForSource();
       sourcePreview.open({ ...segment, label: time(segment.start) }, source);
     }
     return;
@@ -1161,6 +1170,7 @@ async function deleteCurrentArticle() {
       const body = await response.json();
       throw new LocalizedError(body.error || t("error.articleDelete"));
     }
+    narration.leave();
     $("#audio").pause();
     clearTimeout(readingPositionSaveTimer);
     pendingReadingSectionIndex = undefined;
@@ -1412,6 +1422,7 @@ async function refreshDeploymentAlert() {
 }
 
 async function showArticles(showLoading = true) {
+  narration.leave();
   const version = routeVersion;
   void refreshDeploymentAlert();
   landing.classList.add("hidden");
@@ -1508,9 +1519,11 @@ function showArticleRoute() {
       }
       return;
     }
+    narration.leave();
     poll(jobId);
     return;
   }
+  narration.leave();
   routeVersion += 1;
   clearTimeout(jobPollTimer);
   if (location.pathname.replace(/\/$/, "") === "/articles") {

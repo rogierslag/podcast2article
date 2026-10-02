@@ -25,6 +25,7 @@ function setup(language, confirmed) {
   const audio = { pause: vi.fn() };
   const context = {
     currentJob: { id: "test-article" },
+    narration: { leave: vi.fn() },
     window: { confirm: vi.fn().mockReturnValue(confirmed) },
     t: (key) => translate(language, key),
     $: (selector) =>
@@ -84,6 +85,7 @@ describe("article deletion confirmation", () => {
       );
       expect(context.location.replace).toHaveBeenCalledWith("/articles");
       expect(context.currentJob).toBeUndefined();
+      expect(context.narration.leave).toHaveBeenCalledOnce();
     },
   );
 });

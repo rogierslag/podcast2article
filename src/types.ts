@@ -56,6 +56,12 @@ export interface ArticleReadingPosition {
   updatedAt: string;
 }
 
+export interface ArticleListeningPosition {
+  version: 1;
+  passageIndex: number;
+  updatedAt: string;
+}
+
 export interface ApiUsageMetrics {
   [key: string]: number | ApiUsageMetrics;
 }
@@ -136,6 +142,7 @@ export interface Job {
   completedAt?: string;
   readAt?: string;
   readingPosition?: ArticleReadingPosition;
+  listeningPosition?: ArticleListeningPosition;
   /** Soft deletion hides the article without removing its stored content or media. */
   deletedAt?: string;
   /** High-entropy capability token for the article's anonymous public permalink. */

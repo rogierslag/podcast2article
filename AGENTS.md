@@ -53,7 +53,8 @@ This file applies to the entire repository.
 
 ## Current article-action behavior
 
-- Article pages expose three primary owner reading actions: `Mark as read`, PDF export, and permalink copy.
+- Article pages expose owner actions for `Mark as read`, PDF export, and permalink copy.
+  When enabled for the account, browser narration has one inline Listen/Pause control beside the reading time.
   Podcast following, shared-link statistics, and deletion have their own controls.
 - On mobile, keep the localized `Mark as read` label written out.
   PDF and permalink actions should use recognizable printer and share icons with accessible labels; their visible text may collapse at the mobile breakpoint.
@@ -61,6 +62,18 @@ This file applies to the entire repository.
 
 - Shared-load and estimated-read counts appear only in the owner article footer, never at the top or on anonymous shared pages.
   Keep unavailable counts distinct from zero.
+
+## Browser narration
+
+- Narration is disabled by default; gate the UI and progress endpoint with `BROWSER_NARRATION_ENABLED` and the optional `BROWSER_NARRATION_USERS` allowlist.
+- Keep narration free of paid speech-generation calls.
+  Voices come from the browser; remote voices may send article text to its speech provider.
+- Keep versioned listening progress separate from reading position and explicit read status.
+  Public payloads and saved shared copies must not inherit the owner’s listening progress.
+- Pause on hidden pages, navigation away, and source playback.
+  Resume only after an explicit action, repeating the current bounded passage.
+- The version-1 passage splitting in `public/article-speech-text.js` is shared by server and client.
+  Change its version and migration behavior if segmentation changes.
 
 ## Permalink security invariants
 

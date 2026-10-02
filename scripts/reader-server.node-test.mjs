@@ -259,6 +259,8 @@ before(async () => {
         GIT_SHA: "a".repeat(40),
         HOST: "127.0.0.1",
         OPENAI_API_KEY: "",
+        BROWSER_NARRATION_ENABLED: "true",
+        BROWSER_NARRATION_USERS: "owner",
         SPENDING_LIMIT_EXEMPT_USERS: "other",
         PUBLIC_BASE_URL: `${publicBaseUrl}/`,
         APP_USERS: JSON.stringify({
@@ -1063,4 +1065,75 @@ test("public health preserves availability and exposes only deployment freshness
   ]);
   assert.doesNotMatch(JSON.stringify(body), /private-secret|failed|logs/);
   await rm(statusFile);
+});
+
+test("listening positions stay authenticated, scoped, validated, and out of public payloads", async () => {
+  const endpoint = `${origin}/api/jobs/${articleId}/listening-position`;
+  const patch = (cookie, body) =>
+    fetch(endpoint, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(cookie ? { cookie } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  const position = { version: 1, passageIndex: 1 };
+  assert.equal((await patch(undefined, position)).status, 401);
+  const owner = await loginAs("owner");
+  const other = await loginAs("other");
+  assert.equal((await patch(other, position)).status, 404);
+  for (const invalid of [
+    { version: 2, passageIndex: 0 },
+    { version: 1, passageIndex: -1 },
+    { version: 1, passageIndex: 0.5 },
+    { version: 1, passageIndex: 99999 },
+    { version: 1, passageIndex: 0, username: "other" },
+  ]) {
+    assert.ok([400, 409].includes((await patch(owner, invalid)).status));
+  }
+  const before = await (
+    await fetch(`${origin}/api/jobs/${articleId}`, {
+      headers: { cookie: owner },
+    })
+  ).json();
+  assert.equal((await patch(owner, position)).status, 200);
+  const after = await (
+    await fetch(`${origin}/api/jobs/${articleId}`, {
+      headers: { cookie: owner },
+    })
+  ).json();
+  assert.equal(after.listeningPosition.passageIndex, 1);
+  assert.equal(after.readAt, before.readAt);
+  assert.deepEqual(after.readingPosition, before.readingPosition);
+  const shared = await (await fetch(`${origin}/api/shared/${token}`)).json();
+  assert.equal(shared.listeningPosition, undefined);
+});
+
+test("narration rollout is server-selected per account and does not expose the allowlist", async () => {
+  for (const [username, enabled] of [
+    ["owner", true],
+    ["other", false],
+  ]) {
+    const cookie = await loginAs(username);
+    const response = await fetch(`${origin}/`, { headers: { cookie } });
+    const markup = await response.text();
+
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.ok(markup.includes(`data-browser-narration="${enabled}"`));
+    assert.ok(!markup.includes("BROWSER_NARRATION_USERS"));
+  }
+
+  const cookie = await loginAs("other");
+  const endpoint = `${origin}/api/jobs/00000000-0000-4000-8000-000000000918`;
+  const before = await (await fetch(endpoint, { headers: { cookie } })).json();
+  const rejected = await fetch(`${endpoint}/listening-position`, {
+    method: "PATCH",
+    headers: { cookie, "Content-Type": "application/json" },
+    body: JSON.stringify({ version: 1, passageIndex: 1 }),
+  });
+  const after = await (await fetch(endpoint, { headers: { cookie } })).json();
+
+  assert.equal(rejected.status, 404);
+  assert.deepEqual(after.listeningPosition, before.listeningPosition);
 });

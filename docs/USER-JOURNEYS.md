@@ -136,6 +136,12 @@ The library separates active, unread, and collapsed read items.
 Publication names, dates, and reading estimates support selection.
 The reader offers contents links, progress, and a saved-section continuation action.
 Owner positions are stored per account; anonymous shared-reader positions stay in that browser.
+When the narration feature flag is enabled for their account, owners can also listen using browser speech and resume an independently saved passage.
+Listen appears beside the reading time; during playback it shows Pause and the completed percentage, and while paused it shows Continue.
+Voice, language, speed, and restart controls appear in a secondary menu after listening starts, or when no voice is available.
+Changing apps, hiding the page, leaving the article, or checking source audio pauses narration; returning never starts it automatically.
+A failed position save offers a retry; voice availability and background behavior depend on the device.
+Narration completion leaves explicit read status unchanged.
 The top read toggle stays on the article; marking read from the footer returns to the library after persistence succeeds.
 See [PR 18](https://github.com/rogierslag/podcast2article/pull/18), [PR 20](https://github.com/rogierslag/podcast2article/pull/20), [PR 23](https://github.com/rogierslag/podcast2article/pull/23), and [PR 53](https://github.com/rogierslag/podcast2article/pull/53).
 
