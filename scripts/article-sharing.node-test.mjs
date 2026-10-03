@@ -47,7 +47,7 @@ function setup({
   return { ...context, buttons, copied, statuses, url };
 }
 for (const language of ["nl", "en"]) {
-  test(`native share includes the capability URL exactly once (${language}, PR 7)`, async () => {
+  test(`native sharing keeps the localized message and capability URL in one text item (${language})`, async () => {
     let payload;
     const state = setup({
       language,
@@ -58,10 +58,14 @@ for (const language of ["nl", "en"]) {
 
     await state.shareArticle();
 
-    assert.equal(payload.url, state.url);
-    assert.equal(payload.text.includes(state.url), false);
-    assert.ok(payload.text.includes(state.currentJob.article.title));
-    assert.equal(payload.title, state.currentJob.article.title);
+    assert.deepEqual(Object.keys(payload), ["text"]);
+    assert.equal(
+      payload.text,
+      `${translate(language, "share.message", {
+        title: state.currentJob.article.title,
+      })}\n\n${state.url}`,
+    );
+    assert.equal(payload.text.split(state.url).length - 1, 1);
     assert.deepEqual(state.copied, []);
     assert.ok(state.buttons.every((button) => !button.disabled));
   });

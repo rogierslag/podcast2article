@@ -178,6 +178,7 @@ Citation clicks alone do not measure trust or accuracy.
 **Implemented.**
 Owners can create a stable anonymous permalink and export a PDF from the article's top and footer.
 Mobile sharing uses the system share sheet where available, with copying as a fallback.
+The native share payload keeps the localized message and permalink in one text item because iOS destinations can discard separate text or URL items.
 Signed-in recipients can save a shared article once into their own library, with independent read state and available audio.
 See [PR 3](https://github.com/rogierslag/podcast2article/pull/3), [PR 42](https://github.com/rogierslag/podcast2article/pull/42), and [PR 46](https://github.com/rogierslag/podcast2article/pull/46).
 
@@ -193,6 +194,7 @@ Share with a signed-out browser, check a source, save as another signed-in reade
 With test-only data, delete the original and confirm the recipient's copy still reads correctly.
 Inspect the exported PDF and test its links in the expected access context.
 A cancelled native share must not report delivery.
+On a physical iPhone, verify that Copy, Slack, and WhatsApp retain both the message and exactly one permalink.
 
 Anonymous loads and estimated reads are now counted separately from explicit owner read state.
 A load requires two consecutive visible seconds.
