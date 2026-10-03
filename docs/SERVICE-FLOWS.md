@@ -108,9 +108,14 @@ Operations are serialized per user so overlapping checks cannot overwrite subscr
 flowchart TD
     Follow["Follow feed<br/>with backlog choice"] --> Store["Save subscription<br/>and episode keys"]
     Store --> Check["Startup, hourly or manual check"]
-    Check --> Paused{"Paused or stopping?"}
+    Check --> Paused{"Manually paused or stopping?"}
     Paused -->|Yes| Skip["Skip automatic processing"]
-    Paused -->|No| Available{"Processing available?"}
+    Paused -->|No| AutoLimit{"Limit-paused?"}
+    AutoLimit -->|Yes| Capacity{"Below 5 outstanding?"}
+    Capacity -->|No| Skip
+    Capacity -->|Yes| Resume["Persist resumed subscription"]
+    Resume --> Available
+    AutoLimit -->|No| Available{"Processing available?"}
     Available -->|No| Error["Save error<br/>Keep pending episodes"]
     Available -->|Yes| Limit{"5 outstanding articles?"}
     Limit -->|Yes| Pause["Persist pause with limit reason"]
@@ -130,7 +135,8 @@ flowchart TD
 ```
 
 Outstanding means active jobs plus unread completed articles for the series; failed and deleted jobs do not count.
-Reading enough articles frees capacity, but the owner must resume a paused subscription.
+When capacity drops below five, a series paused at the limit resumes automatically on the next startup, hourly, or API-requested check.
+Manual pauses remain in effect until the owner explicitly resumes.
 Episode identity deduplication prevents a crash between job creation and subscription persistence from creating the same job again.
 New-episode selection checks publication time against the follow date, or feed order relative to known episodes when dates are missing.
 Explicit catch-up can process selected archive entries without clearing a manual pause.

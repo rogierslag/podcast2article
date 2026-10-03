@@ -411,7 +411,8 @@ For undated entries, only entries before a previously seen episode in feed order
 
 A series pauses automatically at five unread, queued, or processing episodes.
 Read, deleted, and failed jobs do not count.
-After reading, you resume explicitly; resuming respects the same limit.
+Once capacity drops below five, a limit-paused series resumes automatically on the next startup, hourly, or API-requested check.
+Manually paused series require explicit resuming; resuming respects the same limit.
 Already scheduled jobs are not cancelled, including previously confirmed catch-up still awaiting scheduling.
 The latest-three action preserves a manual pause.
 
