@@ -176,7 +176,7 @@ describe("podcast subscriptions", () => {
 });
 
 describe("subscription limits", () => {
-  it("pauses at five including processing jobs and resumes only explicitly", async () => {
+  it("automatically fills freed capacity after a limit pause without exceeding five", async () => {
     const read = new Set<string>();
     outstanding.mockImplementation(
       (_username, ids: string[]) => ids.filter((id) => !read.has(id)).length,
@@ -201,15 +201,74 @@ describe("subscription limits", () => {
       "series.errorLimit",
     );
     read.add("episode-12");
-    await store.check("alice");
-    expect(enqueue).toHaveBeenCalledTimes(5);
-    await store.pause("alice", subscription.id, false);
-    await store.check("alice");
+    await Promise.all([store.check("alice"), store.check("alice")]);
     expect(enqueue).toHaveBeenCalledTimes(6);
     const restarted = createStore();
     await restarted.load(["alice"]);
     expect(restarted.list("alice")[0]?.pauseReason).toBe("limit");
+    read.add("episode-11");
+    read.add("episode-10");
+
+    await restarted.check("alice");
+
+    expect(enqueue).toHaveBeenCalledTimes(7);
+    expect(restarted.list("alice")[0]?.paused).toBe(false);
+    expect(restarted.list("alice")[0]?.pauseReason).toBeUndefined();
+    const persisted = createStore();
+    await persisted.load(["alice"]);
+    expect(persisted.list("alice")[0]?.paused).toBe(false);
+    await persisted.stop();
     await restarted.stop();
+  });
+  it("keeps a manual pause when catch-up reaches the limit and capacity later frees", async () => {
+    const subscription = await store.follow("alice", feed(12), "none", options);
+    await store.pause("alice", subscription.id, true);
+    outstanding.mockImplementation(
+      (_username, ids: string[]) => 4 + ids.length,
+    );
+
+    await store.backfill("alice", subscription.id);
+
+    expect(store.list("alice")[0]?.paused).toBe(true);
+    expect(store.list("alice")[0]?.pauseReason).toBeUndefined();
+    outstanding.mockReturnValue(0);
+    fetchFeed.mockClear();
+    await store.check("alice");
+
+    expect(fetchFeed).not.toHaveBeenCalled();
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(store.list("alice")[0]?.paused).toBe(true);
+  });
+  it("resumes only the account with capacity and retains pending work when processing is unavailable", async () => {
+    await store.follow("alice", feed(12), "three", options);
+    await store.follow("bob", feed(12), "three", options);
+    outstanding.mockReturnValue(5);
+    await store.check("alice");
+    await store.check("bob");
+    outstanding.mockImplementation((username: string) =>
+      username === "alice" ? 0 : 5,
+    );
+    enabled = false;
+
+    await store.check("alice");
+    await store.check("bob");
+
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(store.list("alice")[0]).toMatchObject({
+      paused: false,
+      error: "error.creationUnavailable",
+    });
+    expect(store.list("alice")[0]?.pending).toHaveLength(3);
+    expect(store.list("bob")[0]).toMatchObject({
+      paused: true,
+      pauseReason: "limit",
+    });
+    enabled = true;
+    await store.check("alice");
+
+    expect(enqueue).toHaveBeenCalledTimes(3);
+    expect(enqueue.mock.calls.every((call) => call[0] === "alice")).toBe(true);
+    expect(store.list("alice")[0]?.error).toBeUndefined();
   });
   it("offers only the latest three, never successive older batches", async () => {
     const subscription = await store.follow("alice", feed(12), "none", options);

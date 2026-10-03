@@ -212,27 +212,30 @@ Readers follow from a podcast article or discover a Spotify show or public RSS f
 Feed identity and available episodes are previewed before confirmation.
 Following defaults to future episodes only; catch-up is explicit and restricted to the latest three episodes.
 Older archive episodes are not downloaded automatically.
-Active feeds are checked at startup and hourly.
+Active feeds and series paused at the limit are checked at startup and hourly.
 The Articles menu badge counts completed articles from currently followed series since the last successfully loaded Articles overview.
 The checkpoint is stored per account across devices; the first visit establishes a baseline without flagging the existing backlog.
 Opening the overview clears arrivals without marking articles as read; failed loads do not clear them.
 The badge refreshes every 30 seconds while visible and when returning to the app.
 Five unread, queued, or processing episodes in that series trigger an automatic pause.
-Reading frees capacity, but the reader must explicitly resume.
+Reading frees capacity, and a series paused at the limit resumes automatically on the next check.
+Manually paused series remain paused until the reader explicitly resumes.
 Catch-up respects capacity and preserves a manual pause.
 See [PR 51](https://github.com/rogierslag/podcast2article/pull/51) and [PR 52](https://github.com/rogierslag/podcast2article/pull/52).
 
 **Critical states and trust.**
 Confirm the correct feed when discovery is ambiguous.
 Show the catch-up count, paid-processing implication, pause reason, capacity, and failed jobs.
-A pause stops future checks but does not cancel queued work.
+A manual pause stops future feed checks but does not cancel queued work.
+A limit pause stops scheduling until a later check finds capacity.
 Failed jobs do not consume capacity and are not retried hourly; failed feed checks are retried.
 Catch-up offers only skipped episodes still in the feed’s latest three, never successive older batches.
 Previously confirmed pending selections remain queued.
 Following is not a promise that unavailable or private content can be recovered.
 
 **Value test.**
-Follow only new episodes, request catch-up, reach the limit, read some items, and explicitly resume.
+Follow only new episodes, request catch-up, reach the limit, read some items, and verify automatic resuming on the next check.
+Manually pause the series and verify that reading does not resume it.
 The reader should predict which episodes will be processed and why a control is disabled.
 Evaluate whether automatic arrivals become useful reading; counting followed series alone can reward an unwanted backlog.
 

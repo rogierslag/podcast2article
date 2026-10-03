@@ -162,10 +162,21 @@ export class SubscriptionStore {
     await this.exclusive(username, async () => {
       const items = this.list(username);
       for (const subscription of items) {
-        if (this.stopped || subscription.paused) {
+        if (
+          this.stopped ||
+          (subscription.paused && subscription.pauseReason !== "limit")
+        ) {
           continue;
         }
         try {
+          if (subscription.paused) {
+            if (this.outstanding(username, subscription) >= subscriptionLimit) {
+              continue;
+            }
+            subscription.paused = false;
+            subscription.pauseReason = undefined;
+            await this.save(username, items);
+          }
           if (!this.dependencies.canProcess()) {
             throw new DomainError("error.creationUnavailable");
           }
@@ -274,8 +285,11 @@ export class SubscriptionStore {
     if (this.outstanding(username, subscription) < subscriptionLimit) {
       return false;
     }
-    subscription.paused = true;
-    subscription.pauseReason = "limit";
+    // Catch-up must not turn a manual pause into an automatically resumable pause.
+    if (!subscription.paused) {
+      subscription.paused = true;
+      subscription.pauseReason = "limit";
+    }
     await this.save(username, items);
     return true;
   }
