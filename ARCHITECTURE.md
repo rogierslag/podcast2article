@@ -79,6 +79,7 @@ The interface provides:
 - PDF export;
 - anonymous permalinks and saving shared articles;
 - reading progress and continuation;
+- browser-local reading preferences for appearance, text size and typeface;
 - podcast series subscriptions.
 
 The article source links use fragments shaped like:

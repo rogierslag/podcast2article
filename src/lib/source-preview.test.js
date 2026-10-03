@@ -6,7 +6,17 @@ vi.mock("../../public/localize.js", () => ({
   t: (key) => translate("nl", key),
 }));
 
-function setup(readyState = 1) {
+function setup(readyState = 1, desktopMode = false) {
+  const media = Object.assign(new EventTarget(), { matches: desktopMode });
+  const view = Object.assign(new EventTarget(), {
+    innerWidth: 1440,
+    innerHeight: 1000,
+    matchMedia: () => media,
+  });
+  const document = Object.assign(new EventTarget(), {
+    defaultView: view,
+    querySelector: () => ({ getBoundingClientRect: () => ({ right: 1000 }) }),
+  });
   const home = {
     append: vi.fn(),
     style: { minHeight: "" },
@@ -24,9 +34,16 @@ function setup(readyState = 1) {
   ]);
   const dialog = Object.assign(new EventTarget(), {
     open: false,
-    classList: { add: vi.fn(), remove: vi.fn() },
+    classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
+    style: { width: "", top: "" },
+    ownerDocument: document,
+    setAttribute: vi.fn(),
+    getBoundingClientRect: () => ({ height: 260 }),
     getAnimations: vi.fn().mockReturnValue([]),
     querySelector: (selector) => elements.get(selector),
+    show: vi.fn(function () {
+      this.open = true;
+    }),
     showModal() {
       this.open = true;
     },
@@ -43,7 +60,13 @@ function setup(readyState = 1) {
     pause: vi.fn(),
     load: vi.fn(),
   });
-  const opener = { focus: vi.fn() };
+  const paragraph = { classList: { add: vi.fn(), remove: vi.fn() } };
+  const opener = {
+    focus: vi.fn(),
+    setAttribute: vi.fn(),
+    closest: () => paragraph,
+    getBoundingClientRect: () => ({ top: 400 }),
+  };
   return {
     controller: createSourcePreview(dialog, audio),
     dialog,
@@ -51,10 +74,96 @@ function setup(readyState = 1) {
     home,
     elements,
     opener,
+    document,
+    view,
+    media,
+    paragraph,
   };
 }
 
 describe("source preview", () => {
+  it("uses a modal sheet when a wide screen has less than 240px beside the article", () => {
+    const preview = setup(1, true);
+    preview.view.innerWidth = 1280;
+    preview.document.querySelector = () => ({
+      getBoundingClientRect: () => ({ right: 1040 }),
+    });
+
+    preview.controller.open({ start: 12, label: "0:12" }, preview.opener);
+
+    expect(preview.dialog.show).not.toHaveBeenCalled();
+    expect(preview.dialog.setAttribute).toHaveBeenCalledWith(
+      "aria-modal",
+      "true",
+    );
+    expect(preview.dialog.style.width).toBe("");
+  });
+
+  it("opens a nonmodal desktop pane beside the article and returns focus on Escape", async () => {
+    const preview = setup(1, true);
+
+    preview.controller.open({ start: 12, label: "0:12" }, preview.opener);
+
+    expect(preview.dialog.show).toHaveBeenCalledOnce();
+    expect(preview.dialog.setAttribute).toHaveBeenCalledWith(
+      "aria-modal",
+      "false",
+    );
+    expect(preview.dialog.style.width).toBe("320px");
+    expect(preview.dialog.style.top).toBe("400px");
+    expect(preview.paragraph.classList.add).toHaveBeenCalledWith(
+      "source-preview-active",
+    );
+    const escape = new Event("keydown", { cancelable: true });
+    Object.defineProperty(escape, "key", { value: "Escape" });
+
+    preview.document.dispatchEvent(escape);
+    await Promise.resolve();
+
+    expect(escape.defaultPrevented).toBe(true);
+    expect(preview.dialog.open).toBe(false);
+    expect(preview.paragraph.classList.remove).toHaveBeenCalledWith(
+      "source-preview-active",
+    );
+    expect(preview.opener.focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+
+  it("uses a modal sheet on narrow screens and changes mode without stopping the new source", () => {
+    const preview = setup();
+    preview.controller.open({ start: 12, label: "0:12" }, preview.opener);
+
+    expect(preview.dialog.show).not.toHaveBeenCalled();
+    expect(preview.dialog.setAttribute).toHaveBeenCalledWith(
+      "aria-modal",
+      "true",
+    );
+
+    preview.media.matches = true;
+    preview.media.dispatchEvent(new Event("change"));
+
+    expect(preview.dialog.open).toBe(true);
+    expect(preview.dialog.show).toHaveBeenCalledOnce();
+    expect(preview.audio.currentTime).toBe(12);
+  });
+
+  it("ignores a queued close event after another citation has opened", () => {
+    const preview = setup(1, true);
+    preview.controller.open({ start: 12, label: "0:12" }, preview.opener);
+    preview.controller.close();
+    preview.controller.open({ start: 48, label: "0:48" }, preview.opener);
+    const pauseCount = preview.audio.pause.mock.calls.length;
+
+    preview.dialog.dispatchEvent(new Event("close"));
+
+    expect(preview.dialog.open).toBe(true);
+    expect(preview.audio.pause).toHaveBeenCalledTimes(pauseCount);
+    expect(preview.audio.currentTime).toBe(48);
+    expect(preview.opener.setAttribute).toHaveBeenLastCalledWith(
+      "aria-expanded",
+      "true",
+    );
+  });
+
   it("shows the cited text literally and plays from its time without scrolling the article", () => {
     const preview = setup();
 

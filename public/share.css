@@ -18,8 +18,8 @@
 .shared-source {
   display: flex;
   align-items: center;
-  gap: 40px;
-  padding: 24px var(--page-inset);
+  gap: 24px;
+  padding: 18px var(--page-inset);
   background: var(--paper);
   border-bottom: 1px solid var(--line);
 }
@@ -40,7 +40,7 @@
   margin: 0;
 }
 .shared-layout {
-  grid-template-columns: minmax(0, 1fr) 230px;
+  grid-template-columns: 200px minmax(0, 670px);
 }
 .shared-layout > .article {
   min-width: 0;
