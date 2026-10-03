@@ -50,8 +50,6 @@ const diagnostics = {
   "error.articleReadNotReady": "Dit artikel is nog niet klaar om te lezen.",
   "error.readingPositionInvalid":
     "Deze leespositie bestaat niet in het artikel.",
-  "error.listeningPositionInvalid":
-    "Deze luisterpositie bestaat niet in het artikel.",
   "error.articleShareNotReady": "Dit artikel is nog niet klaar om te delen.",
   "error.sharedNotFound": "Gedeeld artikel niet gevonden.",
   "error.jobAlreadyProcessing": "Deze opdracht wordt al verwerkt.",

@@ -46,9 +46,6 @@ try {
       PORT: "4317",
       APP_USERS: JSON.stringify({ regression: password }),
       OPENAI_API_KEY: "",
-      BROWSER_NARRATION_ENABLED:
-        process.env.BROWSER_NARRATION_ENABLED ?? "true",
-      BROWSER_NARRATION_USERS: "regression",
       PUBLIC_BASE_URL: "",
     },
     stdio: "inherit",
