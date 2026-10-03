@@ -143,7 +143,8 @@ See [PR 18](https://github.com/rogierslag/podcast2article/pull/18), [PR 20](http
 Refresh, section links, browser navigation, and returning to the top must preserve orientation.
 Read status is the reader's explicit choice; scrolling to the bottom does not prove comprehension.
 Loading, empty library, long headings, missing covers, narrow screens, and failed read-state saves must remain usable.
-Interface preferences should not alter article content.
+Reading preferences persist in the browser across owner and public pages: System, Day or Evening appearance, three text sizes, and serif or sans text.
+Interface preferences do not alter article content or owner reading state.
 
 **Value test.**
 Find a named publication among several articles, read to a given section, leave, reopen, resume, and mark it read.
@@ -153,7 +154,7 @@ Check the destination and focus after each transition, not only whether the butt
 ## J5. Verify without losing the article
 
 **Implemented.**
-Paragraph and quote references open a source dialog at the selected timestamp.
+Paragraph and quote references open a source pane at the selected timestamp on desktop, or a modal bottom sheet on mobile.
 Before publication, invalid quotes receive at most two repairs against their cited transcript passages.
 Unrepairable optional quotes are omitted rather than presented as literal speech or allowed to fail an otherwise supported article.
 Validation should cover repaired quotes, unchanged valid content, bounded paid attempts, and restart recovery; this is a behavior contract, not a measured reduction in failures.

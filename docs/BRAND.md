@@ -117,7 +117,7 @@ Public image access must not expose account data or owner-only routes.
   Let the source imagery supply variety without adding decorative frames.
 - Use the shared 1440px outer container and horizontal gutter for the landing page, collections, processing states, and owner/public readers.
   Full-width headers and source bars align their contents with those same edges.
-  Keep article text capped at 760px and the sign-in form compact inside its page; a shared outer container does not require stretching text or form fields.
+  Keep article text capped at 670px and the sign-in form compact inside its page; a shared outer container does not require stretching text or form fields.
 - Reserve scrollbar space and avoid late font swaps.
   Loading messages appear only after a short delay, while errors and completed content remain immediate.
 - On smaller screens, adapt spacing and arrangement while preserving hierarchy, readable labels, and usable controls.
@@ -131,7 +131,10 @@ Accent colors should retain a clear purpose rather than spreading across every c
 Use `--accent-text` for smaller orange text and links; reserve `--orange` for decoration, accent surfaces, and large editorial headings.
 Control boundaries use `--control-border` so they remain distinguishable while structural rules retain the quieter `--line`.
 
-The dark theme preserves the same warmth and hierarchy with dark neutral surfaces and adjusted foregrounds.
+The evening theme preserves the same warmth and hierarchy with dark neutral surfaces and adjusted foregrounds.
+Reading preferences offer System, Day, and Evening, plus text size and serif or sans text.
+Preferences are saved in this browser and apply to owner and anonymous reader pages without altering article content.
+The default follows the system appearance and uses Newsreader at 21px on desktop and 19px on mobile, with a 1.65 line height.
 Choose surface and text roles separately: an inverse surface and a text color are not interchangeable.
 Keep the light palette for print and verify contrast in both screen themes.
 
@@ -177,7 +180,10 @@ Keep it brief and subtle; avoid decorative movement around reading content.
 Respect reduced-motion preferences.
 The source-preview dialog's current 150ms entrance and 100ms exit fades provide a reference for a restrained transition, not a duration requirement for every interaction.
 
-Dialogs are temporary reading aids.
+Source previews are temporary reading aids.
+On wide desktop screens with at least 240px of available side space, a nonmodal pane sits beside the article near the selected reference; otherwise, it becomes a modal bottom sheet.
+The article has one main headline and a compact recording attribution strip.
+Keep source metadata distinct from the article title.
 Keep their heading, close action, and relevant content easy to find.
 Preserve Escape dismissal, keyboard focus handling, the reader's position, and audio stopping when the preview closes.
 A softer corner must never come at the cost of a visible focus outline or usable hit area.

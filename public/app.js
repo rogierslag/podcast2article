@@ -742,23 +742,21 @@ function renderResult(job) {
       episode.imageUrl
         ? html`
             <img
+              class="source-attribution-image"
               src="${escapeHtml(episode.imageUrl)}"
               alt="${escapeHtml(t("source.image", { name: sourceName }))}"
             />
           `
         : ""
     }
-    <div>
-      <span class="kicker">${escapeHtml(sourceName)}</span>
-      <h1>${escapeHtml(episode.title)}</h1>
-      <p>
+    <div class="source-attribution-body">
+      <span class="source-attribution-publication"
+        >${escapeHtml(sourceName)}</span
+      >
+      <p class="source-attribution-title">${escapeHtml(episode.title)}</p>
+      <p class="source-attribution-meta">
         ${escapeHtml(details.join(" · "))}${details.length ? " · " : ""}
-        <a
-          href="${escapeHtml(sourceUrl)}"
-          target="_blank"
-          rel="noreferrer"
-          style="color: inherit"
-        >
+        <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">
           ${sourceLinkLabel}
         </a>
       </p>
@@ -788,7 +786,6 @@ function renderResult(job) {
         }),
       )}
     </p>
-    <p class="style-note">${escapeHtml(article.styleNote)}</p>
     ${sections}
     <div class="takeaways">
       <h2>${t("article.takeaways")}</h2>
@@ -1217,10 +1214,11 @@ function articleCard(article) {
         <p class="article-card-dek">${escapeHtml(article.dek)}</p>
         <div class="article-card-footer">
           <div class="article-card-actions">
-            <a href="${articleUrl}">
+            <a class="article-card-read" href="${articleUrl}">
               ${t("article.readAction")} <span aria-hidden="true">→</span>
             </a>
             <button
+              class="article-card-read-toggle"
               type="button"
               data-read-toggle
               data-article-id="${articleId}"

@@ -3,6 +3,18 @@ import { formatArticleWordRange } from "./article-length.js";
 // Shared by the browser and server.
 // Article and transcript content is never translated here.
 export const messages = {
+  "reading.preferences": { nl: "Leesvoorkeuren", en: "Reading preferences" },
+  "reading.theme": { nl: "Weergave", en: "Appearance" },
+  "reading.system": { nl: "Systeem", en: "System" },
+  "reading.day": { nl: "Dag", en: "Day" },
+  "reading.evening": { nl: "Avond", en: "Evening" },
+  "reading.size": { nl: "Tekstgrootte", en: "Text size" },
+  "reading.small": { nl: "Klein", en: "Small" },
+  "reading.standard": { nl: "Standaard", en: "Standard" },
+  "reading.large": { nl: "Groot", en: "Large" },
+  "reading.font": { nl: "Lettertype", en: "Typeface" },
+  "reading.serif": { nl: "Met schreef", en: "Serif" },
+  "reading.sans": { nl: "Zonder schreef", en: "Sans" },
   "nav.arrivals": {
     nl: "{count} nieuwe artikelen uit gevolgde series",
     en: "{count} new articles from followed series",
