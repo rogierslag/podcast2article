@@ -191,11 +191,7 @@ sequenceDiagram
 
 Public payloads omit the username, internal job ID, token, reading state, usage ledger, monitoring statistics, and transcript text.
 Saved copies retain only source IDs and timestamps, not the private transcript, original owner's costs, or analytics.
-Owner-only actions include marking read, saving reading and listening positions, PDF export, and soft deletion.
-Browser narration is disabled by default and can be enabled for selected accounts through `BROWSER_NARRATION_ENABLED` and `BROWSER_NARRATION_USERS`; unavailable accounts receive `404` from the listening-position endpoint.
-Browser narration uses the written article and the device’s speech service; no paid speech-generation request is submitted.
-The authenticated `PATCH /api/jobs/:id/listening-position` endpoint stores a versioned passage index independently of reading position and read status.
-Public responses and saved copies exclude the original owner’s listening position.
+Owner-only actions include marking read, saving reading position, PDF export, and soft deletion.
 Soft deletion hides the original from token lookup; public responses already cached may remain available until their cache lifetime expires.
 The owner footer loads counts when opening or returning to the article.
 A failed request shows a retry action rather than zero.

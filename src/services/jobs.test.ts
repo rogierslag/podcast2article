@@ -496,3 +496,24 @@ describe("processing summaries", () => {
     ).toBeUndefined();
   });
 });
+
+it("discards retired listening progress without changing reading state", () => {
+  const stored = {
+    id: "00000000-0000-4000-8000-000000000001",
+    sourceUrl: "https://example.com/recording",
+    language: "en",
+    articleLength: "standard",
+    stage: "queued",
+    progress: 0,
+    message: "Queued",
+    createdAt: "2026-10-03T10:00:00Z",
+    updatedAt: "2026-10-03T10:00:00Z",
+    readAt: "2026-10-03T10:01:00Z",
+    listeningPosition: { version: 1, passageIndex: 2 },
+  } satisfies StoredJob;
+
+  const job = normalizeStoredJob(stored);
+
+  expect(job).not.toHaveProperty("listeningPosition");
+  expect(job.readAt).toBe(stored.readAt);
+});
