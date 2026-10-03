@@ -1020,12 +1020,12 @@ async function shareArticle() {
     }
     if (matchMedia("(max-width: 600px)").matches && navigator.share) {
       try {
+        // iOS share targets can discard separate URL or text items.
+        // Keep the message and permalink together in a single text item.
         await navigator.share({
-          title: currentJob.article.title,
-          text: t("share.message", {
+          text: `${t("share.message", {
             title: currentJob.article.title,
-          }),
-          url: body.url,
+          })}\n\n${body.url}`,
         });
         setArticleActionStatus(t("share.completed"), true);
         return;
