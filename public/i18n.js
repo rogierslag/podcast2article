@@ -3,6 +3,63 @@ import { formatArticleWordRange } from "./article-length.js";
 // Shared by the browser and server.
 // Article and transcript content is never translated here.
 export const messages = {
+  "narration.listen": { nl: "Luisteren", en: "Listen" },
+  "narration.continue": { nl: "Verder", en: "Continue" },
+  "narration.pause": { nl: "Pauzeren", en: "Pause" },
+  "narration.title": { nl: "Artikel voorlezen", en: "Read article aloud" },
+  "narration.settings": { nl: "Stem en snelheid", en: "Voice and speed" },
+  "narration.language": { nl: "Taal van het artikel", en: "Article language" },
+  "narration.voice": { nl: "Stem", en: "Voice" },
+  "narration.speed": { nl: "Snelheid", en: "Speed" },
+  "narration.privacy": {
+    nl: "Lokale stemmen werken op je apparaat. Externe stemmen kunnen de tekst naar de spraakdienst van je browser sturen. Er wordt geen betaalde voorlees-API gebruikt.",
+    en: "Local voices run on your device. Remote voices may send text to your browser’s speech provider. No paid narration API is used.",
+  },
+  "narration.local": { nl: "Lokaal", en: "Local" },
+  "narration.remote": { nl: "Extern", en: "Remote" },
+  "narration.progressLabel": {
+    nl: "Luistervoortgang",
+    en: "Listening progress",
+  },
+  "narration.restart": { nl: "Vanaf het begin", en: "From the beginning" },
+  "narration.starting": { nl: "De stem starten…", en: "Starting the voice…" },
+  "narration.background": {
+    nl: "Gepauzeerd. Druk op Verder om verder te luisteren.",
+    en: "Paused. Press Continue to resume.",
+  },
+  "narration.sourcePaused": {
+    nl: "Voorlezen gepauzeerd om de bron te beluisteren.",
+    en: "Narration paused to listen to the source.",
+  },
+  "narration.complete": {
+    nl: "Voltooid.",
+    en: "Finished.",
+  },
+  "narration.error": {
+    nl: "De stem is gestopt of kon niet starten. Probeer opnieuw of kies een andere stem.",
+    en: "The voice stopped or could not start. Try again or choose another voice.",
+  },
+  "narration.noVoices": {
+    nl: "Geen stem beschikbaar. Kies een andere taal via het menu.",
+    en: "No voice available. Choose another language in the menu.",
+  },
+  "narration.unsupported": {
+    nl: "Deze browser ondersteunt voorlezen niet. Je kunt het artikel gewoon lezen.",
+    en: "This browser does not support narration. You can still read the article.",
+  },
+  "narration.saveError": {
+    nl: "Je luisterpositie is nog niet opgeslagen in je account. Probeer opnieuw voordat je deze pagina sluit.",
+    en: "Your listening position has not been saved to your account. Retry before closing this page.",
+  },
+  "narration.retry": { nl: "Opnieuw opslaan", en: "Retry saving" },
+  "error.listeningPositionInvalid": {
+    nl: "Deze luisterpositie bestaat niet in het artikel.",
+    en: "This listening position does not exist in the article.",
+  },
+  "error.listeningPositionSave": {
+    nl: "De luisterpositie kon niet worden opgeslagen.",
+    en: "Could not save the listening position.",
+  },
   "nav.arrivals": {
     nl: "{count} nieuwe artikelen uit gevolgde series",
     en: "{count} new articles from followed series",
@@ -1246,6 +1303,10 @@ export const messages = {
   "sources.other": {
     nl: "{count} bronfragmenten",
     en: "{count} source segments",
+  },
+  "article.sourceCount": {
+    nl: "gebaseerd op {sources}",
+    en: "based on {sources}",
   },
   "article.byline": {
     nl: "{reading} · gebaseerd op {sources}",

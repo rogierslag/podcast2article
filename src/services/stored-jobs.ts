@@ -1,4 +1,5 @@
 import type { Episode, Job } from "../types.js";
+import { articleSpeechPassages } from "../../public/article-speech-text.js";
 
 export const maxArticleRetries = 2;
 
@@ -68,6 +69,18 @@ export function normalizeStoredJob(stored: StoredJob): Job {
       !Number.isFinite(Date.parse(job.readingPosition.updatedAt)))
   ) {
     delete job.readingPosition;
+  }
+  if (
+    job.listeningPosition &&
+    (job.listeningPosition.version !== 1 ||
+      !Number.isSafeInteger(job.listeningPosition.passageIndex) ||
+      job.listeningPosition.passageIndex < 0 ||
+      !job.article ||
+      job.listeningPosition.passageIndex >
+        articleSpeechPassages(job.article).length ||
+      !Number.isFinite(Date.parse(job.listeningPosition.updatedAt)))
+  ) {
+    delete job.listeningPosition;
   }
   return job;
 }

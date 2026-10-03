@@ -10,6 +10,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { articleSpeechPassages } from "../../public/article-speech-text.js";
 import { processingProgress } from "../lib/processing-events.js";
 import { DomainError } from "../lib/errors.js";
 import {
@@ -49,6 +50,7 @@ import type {
   AccountBudget,
   ApiRequestUsage,
   ArticleReadingPosition,
+  ArticleListeningPosition,
   ArticleSummary,
   Job,
   ProcessingJobSummary,
@@ -583,6 +585,34 @@ export async function setArticleReadingPosition(
   return readingPosition;
 }
 
+export async function setArticleListeningPosition(
+  username: string,
+  id: string,
+  passageIndex: number,
+): Promise<ArticleListeningPosition> {
+  const job = await getJob(username, id);
+  if (!job) {
+    throw new DomainError("error.jobNotFound");
+  }
+  if (job.stage !== "complete" || !job.article || !job.episode) {
+    throw new DomainError("error.articleReadNotReady");
+  }
+  if (
+    !Number.isSafeInteger(passageIndex) ||
+    passageIndex < 0 ||
+    passageIndex > articleSpeechPassages(job.article).length
+  ) {
+    throw new DomainError("error.listeningPositionInvalid");
+  }
+  const listeningPosition = {
+    version: 1,
+    passageIndex,
+    updatedAt: new Date().toISOString(),
+  } satisfies ArticleListeningPosition;
+  await update(username, job, { listeningPosition });
+  return listeningPosition;
+}
+
 function isShareToken(value: string): boolean {
   return /^[A-Za-z0-9_-]{43}$/.test(value);
 }
@@ -810,6 +840,7 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
       articleQuoteRepairs: undefined,
       readAt: undefined,
       readingPosition: undefined,
+      listeningPosition: undefined,
       articleRetryAttempts: attempts + 1,
     };
     // Persist the allowance before paid work starts; failed writes leave the original in-memory job intact.
