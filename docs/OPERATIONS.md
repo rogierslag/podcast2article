@@ -951,3 +951,11 @@ Configure [plain-text SES alerts](ADMIN-ALERTS.md) to report failed jobs, active
 Retain `data/admin-alerts/state.json` across releases so the same failures are not emailed again on every restart.
 Check the journal for `Admin alert` errors and verify receipt of a setup email before relying on notifications.
 External uptime monitoring remains necessary for an unavailable host or application.
+
+## Core Web Vitals storage
+
+Anonymous performance measurements are appended to `data/web-vitals/YYYY-MM-DD.jsonl` on the persistent local data volume.
+The store caps each UTC day at 10 MiB and prunes expired daily files on the first submission of each day, retaining the current day and preceding 29 days.
+Article-only S3 backups exclude these measurements; full-volume backups need their own retention policy.
+Run `yarn run report:web-vitals` after building for deduplicated sample counts and p75 by page, viewport category, release, navigation type, and metric.
+See [Core Web Vitals monitoring](WEB-VITALS.md) for endpoint limits, privacy, and measurement caveats.

@@ -308,6 +308,7 @@ data/users/<username>/media/<uuid>.mp3   normalized playback audio
 data/users/<username>/work/<uuid>/       source media, chunk manifest, audio chunks and saved responses
 data/users/<username>/subscriptions.json series configuration and scheduling state
 data/article-backups/<username>/<uuid>.sha256 successful S3 upload receipt
+data/web-vitals/YYYY-MM-DD.jsonl        anonymous performance measurements
 data/deployment-drain.json             deployment admission pause request
 data/deployment-drain-status.json      matching active-request acknowledgement
 ```
@@ -673,3 +674,10 @@ A root-owned systemd service then runs the hard-coded updater.
 `src/services/admin-alerts.ts` batches plain-text messages through SES and persists successful notification fingerprints under `data/admin-alerts/`.
 The worker is independent of paid processing and stops with the server.
 See [admin alerts](docs/ADMIN-ALERTS.md) for configuration, cadence, data boundaries and delivery limitations.
+
+## Core Web Vitals
+
+The deferred browser module reports LCP, CLS, and INP using the bundled `web-vitals` dependency.
+`POST /api/web-vitals` is a narrowly registered public ingestion route with strict validation and admission limits; it has no public read counterpart.
+`src/services/web-vitals.ts` serializes daily JSONL appends and enforces storage and retention bounds independently of account data.
+See [Core Web Vitals monitoring](docs/WEB-VITALS.md) for privacy, reporting, and interpretation limits.

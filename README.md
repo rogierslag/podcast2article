@@ -214,6 +214,13 @@ Article generation runs in OpenAI background mode; persisted response IDs allow 
 Direct `SIGINT` or `SIGTERM` still cancels active HTTP connections within a 15-second shutdown deadline; it does not cancel remote background articles.
 See [deployment recovery](docs/DEPLOYMENT-RECOVERY.md) for the first-rollout procedure, failure handling, retention, and remaining crash risks.
 
+## Core Web Vitals
+
+The browser reports LCP, CLS, and INP through the bundled `web-vitals` dependency.
+Measurements are stored locally for later analysis; no third-party analytics service receives them.
+Use `yarn run report:web-vitals` after building to inspect sample counts and p75 by page type, viewport category, release, and navigation type.
+See [Core Web Vitals monitoring](docs/WEB-VITALS.md) for collection, storage, privacy, and measurement limits.
+
 ## Sharing and monitoring
 
 Article actions create a stable anonymous permalink.

@@ -520,8 +520,14 @@ test("shared resume uses device storage and never writes an owner reading positi
     .poll(async () => (await heading.boundingBox()).y)
     .toBeLessThan(100);
   await expect(resume).toBeHidden();
-  await expect.poll(() => writes.length).toBeGreaterThan(0);
-  for (const write of writes) {
+  await expect
+    .poll(
+      () => writes.filter((write) => write.path !== "/api/web-vitals").length,
+    )
+    .toBeGreaterThan(0);
+  for (const write of writes.filter(
+    (write) => write.path !== "/api/web-vitals",
+  )) {
     expect(write).toEqual({
       method: "POST",
       path: `/api/shared/${token}/events`,
