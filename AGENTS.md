@@ -73,6 +73,9 @@ This file applies to the entire repository.
 - Shared monitoring counters and visit receipts remain owner-only.
   Public events must never change owner read state, expose statistics, or copy the original analytics into a saved article.
 - Shared pages are anonymous: do not expose the username, account details, sender identity, internal job ID, share token in the payload, or read state.
+- Keep file-serving route handlers registered directly on the Express application after its global request limiter.
+  Keep asset catalog and transformation helpers free of route registration so CodeQL can see the admission boundary without a nested-router assumption.
+  Verify built asset requests share the application quota in a real-server regression test; do not add a second quota or suppress the alert merely to satisfy static analysis.
 - Keep public routes narrowly registered before the authentication middleware.
   All owner and collection routes remain authenticated when authentication is enabled.
 - Shared pages need server-rendered Open Graph and Twitter metadata because link-preview crawlers do not execute the client application.
@@ -262,6 +265,8 @@ In the pull request description, include a concise verification section with:
 - Write GitHub issue and pull request bodies, comments, and reviewer-facing notes as normal prose paragraphs, including when they use Markdown.
   The repository sentence-per-line convention does not apply to this copy or to temporary Markdown files used to prepare it.
 
+- When fixing failed PR checks, wait for every check on the current head to finish and inventory all failures before making changes.
+  Check the CodeQL alert gate as well as its analysis jobs; successful analysis jobs do not imply that new security alerts passed.
 - When monitoring CI, check every minute because this repository’s CI runs are fast.
   Use the same one-minute interval for CI-monitoring automations.
 

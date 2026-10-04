@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && yarn run build:client",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node --env-file=.env dist/server.js",
     "test": "vitest run && node --test scripts/*.node-test.mjs",
@@ -17,7 +17,8 @@
     "lint:fix": "yarn run lint --fix",
     "check": "yarn run format:check && yarn run lint && yarn run typecheck && yarn run build && yarn test",
     "test:browser": "yarn run build && playwright test",
-    "backup:articles": "node --env-file-if-exists=.env dist/commands/article-backups.js"
+    "backup:articles": "node --env-file-if-exists=.env dist/commands/article-backups.js",
+    "build:client": "node scripts/build-client.mjs"
   },
   "engines": {
     "node": ">=24"
@@ -42,7 +43,9 @@
     "@types/express": "^5.0.6",
     "@types/node": "^24.13.6",
     "@types/pdfkit": "^0.17.6",
+    "esbuild": "0.28.1",
     "eslint": "^10.9.1",
+    "lightningcss": "1.33.0",
     "prettier": "3.9.6",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",

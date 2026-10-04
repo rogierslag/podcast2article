@@ -353,7 +353,18 @@ yarn run check:media
 ```
 
 `yarn run typecheck` checks every TypeScript file in `src/`, including tests, without emitting files.
-`yarn run build` uses `tsconfig.build.json` to compile the application while keeping tests out of `dist/`.
+`yarn run build` uses `tsconfig.build.json` to compile the application while keeping tests out of `dist/`, then builds the browser assets.
+`yarn run build:client` bundles and minifies the frontend JavaScript with esbuild and minifies and prefixes CSS with Lightning CSS.
+The browser baseline is Chrome/Edge 109, Firefox 121, and Safari/iOS 16.4 or newer; the targets cover JavaScript syntax and CSS transformations, without adding runtime API polyfills.
+Firefox 121 is required by the existing `:has()` selectors.
+Generated files live in `dist/client/`, with rewritten HTML templates in `dist/client-templates/`; readable frontend sources remain in `public/`.
+Built pages use content-hashed `/assets/` URLs with one-year immutable caching and precompressed Brotli/gzip variants selected through `Accept-Encoding`.
+Shared HTML revalidates on each request so a deployment does not leave cached pages pointing at old asset hashes.
+Only JavaScript and CSS listed in the build manifest are public under `/assets/`; templates, manifests, and compression sidecars cannot be fetched directly.
+Built assets share the same global request quota as other routes; their handler stays on the main Express app so static analysis can see that boundary.
+Shared assets do not change authentication requirements for owner APIs or article data.
+Development through `yarn run dev` serves the original source assets; the compiled server uses built templates when available and falls back to source templates when no client build exists.
+Rebuild after editing frontend files before running the compiled server.
 `yarn run check` runs both commands alongside formatting, lint, and tests.
 
 Desktop Chromium and mobile WebKit run in separate browser jobs, each with one worker and its own disposable application server and data.

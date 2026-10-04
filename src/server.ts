@@ -11,6 +11,7 @@ import { startDeploymentDrain } from "./services/deployment-drain.js";
 import { openaiWebhookRouter } from "./services/openai-webhook.js";
 import { articleModel } from "./services/article-model.js";
 import { z } from "zod";
+import { clientAssets } from "./lib/client-assets.js";
 import { DomainError, domainErrorStatus } from "./lib/errors.js";
 import {
   ArticleVisits,
@@ -88,9 +89,10 @@ const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST?.trim() || "127.0.0.1";
 const publicDirectory = path.resolve("public");
+const client = await clientAssets(import.meta.dirname, publicDirectory);
 const gitSha = await resolveGitSha();
 const loginTemplate = await readFile(
-  path.join(publicDirectory, "login.html"),
+  path.join(client.templateDirectory, "login.html"),
   "utf8",
 );
 const auth = createUserAuth();
@@ -172,7 +174,7 @@ async function sendIndex(
   return response.send(
     renderPage(
       response,
-      await readFile(path.join(publicDirectory, "index.html"), "utf8"),
+      await readFile(path.join(client.templateDirectory, "index.html"), "utf8"),
     ),
   );
 }
@@ -225,7 +227,7 @@ app.get("/s/:token", async (request, response) => {
         renderPage(
           response,
           await readFile(
-            path.join(publicDirectory, "share-not-found.html"),
+            path.join(client.templateDirectory, "share-not-found.html"),
             "utf8",
           ),
         ),
@@ -251,10 +253,11 @@ app.get("/s/:token", async (request, response) => {
     }),
   ].join("\n  ");
   const template = await readFile(
-    path.join(publicDirectory, "share.html"),
+    path.join(client.templateDirectory, "share.html"),
     "utf8",
   );
-  response.setHeader("Cache-Control", "public, max-age=300");
+  // Revalidate HTML so a deployment cannot leave cached pages pointing at old asset hashes.
+  response.setHeader("Cache-Control", "public, no-cache");
   response.type("html");
   return response.send(
     renderPage(response, template).replace("<!-- SHARE_METADATA -->", metadata),
@@ -375,6 +378,35 @@ app.get(
     return response.sendFile(request.path.slice(1), { root: publicDirectory });
   },
 );
+
+// Keep file-serving admission on the same Express app as the global request limiter.
+app.use("/assets", (request, response) => {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    response.sendStatus(404);
+    return;
+  }
+  const filename = request.path.slice(1);
+  if (!client.filenames.has(filename)) {
+    response.sendStatus(404);
+    return;
+  }
+  response.vary("Accept-Encoding");
+  const encoding = request.acceptsEncodings("br", "gzip", "identity");
+  if (!encoding) {
+    response.sendStatus(406);
+    return;
+  }
+  const suffix = encoding === "br" ? ".br" : encoding === "gzip" ? ".gz" : "";
+  if (encoding !== "identity") {
+    response.setHeader("Content-Encoding", encoding);
+  }
+  response.type(filename.endsWith(".js") ? "text/javascript" : "text/css");
+  response.sendFile(filename + suffix, {
+    root: client.assetDirectory,
+    maxAge: "1y",
+    immutable: true,
+  });
+});
 
 // Incoming shares only prepare form data; authentication and submission stay unchanged.
 app.get("/share-target", (request, response) => {
@@ -529,7 +561,7 @@ app.post("/api/saved-shares/:token", async (request, response) => {
 app.use("/api/subscriptions", subscriptionRouter(subscriptions));
 app.get("/series", async (_request, response) => {
   const template = await readFile(
-    path.join(publicDirectory, "series.html"),
+    path.join(client.templateDirectory, "series.html"),
     "utf8",
   );
   response.type("html").send(renderPage(response, template));
