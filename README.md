@@ -22,6 +22,7 @@ Source references open a dialog alongside the article, showing the relevant tran
 Closing the dialog or pressing Escape pauses the audio and returns you to the same reference.
 Shared articles expose only playback controls; the private transcript remains protected.
 Table-of-contents links preserve both the article and section, including after a refresh.
+On desktop, the contents sidebar highlights the section currently being read in owner and shared articles.
 
 Audio is not downloaded from Spotify.
 The app uses the Spotify link to identify the episode, then finds the same episode through the public Apple Podcasts index and the original public audio source.

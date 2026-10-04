@@ -50,6 +50,64 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const reader of ["owner", "shared"]) {
+  test(`${reader}: contents follows the visible section and clears above the article`, async ({
+    page,
+  }) => {
+    await (reader === "owner" ? owner(page) : shared(page));
+    const currentLink = page.locator('#toc a[aria-current="location"]');
+    const headings = page.locator("#article section > h2");
+    const links = page.locator("#toc a");
+    await expect(currentLink).toHaveCount(0);
+
+    for (const index of [0, 3, 1, 4]) {
+      await headings.nth(index).evaluate((heading) => {
+        heading.scrollIntoView({ behavior: "instant", block: "start" });
+      });
+
+      await expect(currentLink).toHaveCount(1);
+      await expect(currentLink).toHaveText(
+        articleFixture().article.sections[index].heading,
+      );
+    }
+
+    if (await links.first().isVisible()) {
+      await links.nth(2).focus();
+      await page.keyboard.press("Enter");
+    } else {
+      const href = await links.nth(2).getAttribute("href");
+      await page.goto(reader === "owner" ? `/${href}` : `/s/${token}${href}`);
+    }
+    await expect(currentLink).toHaveText(
+      articleFixture().article.sections[2].heading,
+    );
+    await page.reload();
+    await expect(currentLink).toHaveText(
+      articleFixture().article.sections[2].heading,
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator(".side-nav")).toBeHidden();
+    await noOverflow(page);
+    await headings.first().evaluate((heading) => {
+      heading.scrollIntoView({ behavior: "instant", block: "start" });
+    });
+    await expect(currentLink).toHaveText(
+      articleFixture().article.sections[0].heading,
+    );
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await expect(page.locator(".side-nav")).toBeVisible();
+    await expect(currentLink).toHaveCount(1);
+
+    await page.evaluate((reader) => {
+      const surface =
+        reader === "owner"
+          ? document.scrollingElement
+          : document.querySelector(".page-scroll");
+      surface.scrollTo({ top: 0, behavior: "instant" });
+    }, reader);
+    await expect(currentLink).toHaveCount(0);
+  });
+
   test(`${reader}: references flow inline and wrapped rows align with the text`, async ({
     page,
   }, testInfo) => {

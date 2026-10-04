@@ -800,6 +800,7 @@ body.scroll-shell {
 }
 .side-nav a {
   display: block;
+  position: relative;
   color: var(--muted);
   text-decoration: none;
   font-size: 12px;
@@ -808,6 +809,17 @@ body.scroll-shell {
 }
 .side-nav a:hover {
   color: var(--accent-text);
+}
+.side-nav a[aria-current="location"] {
+  color: var(--accent-text);
+}
+.side-nav a[aria-current="location"]::before {
+  content: "";
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-start: -10px;
+  width: 2px;
+  background: currentColor;
 }
 .transcript-wrap {
   background: var(--paper);
