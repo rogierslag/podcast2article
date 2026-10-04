@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createShareTracker } from "../public/share-analytics.js";
+import { createShareTracker } from "../public/share-analytics.ts";
 
 test("reading requires visible active time and the end, and sends only once", async () => {
   let now = 0;

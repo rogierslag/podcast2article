@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { articleFixture, articleId, password, token } from "./fixture.mjs";
+import {
+  articleFixture,
+  articleSummaryFixture,
+  articleId,
+  password,
+  token,
+} from "./fixture.mjs";
 
 async function login(page) {
   const response = await page.request.post("/login", {
@@ -395,7 +401,7 @@ test("footer read action waits for success, returns to overview, and preserves t
       status: fail ? 500 : 200,
       json: fail
         ? { error: "Opslaan mislukt" }
-        : { id: articleId, readAt: new Date().toISOString() },
+        : { ...articleSummaryFixture(), readAt: new Date().toISOString() },
     }),
   );
   const footer = page.locator("[data-return-to-articles]");

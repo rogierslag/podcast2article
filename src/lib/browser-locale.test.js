@@ -52,7 +52,7 @@ describe("browser localization", () => {
       page.cookie = `p2a_ui_language=${chosen}`;
       vi.stubGlobal("navigator", { language: device });
 
-      const locale = await import("../../public/localize.js");
+      const locale = await import("../../public/localize.ts");
       await locale.localizedFetch("/api/articles");
 
       expect(locale.language).toBe(chosen);
@@ -77,7 +77,7 @@ describe("browser localization", () => {
     async (protocol, secure) => {
       vi.stubGlobal("navigator", { language: "nl" });
       location.protocol = protocol;
-      await import("../../public/localize.js");
+      await import("../../public/localize.ts");
       const handleClick = languageButtons[1].addEventListener.mock.calls[0][1];
 
       handleClick();
@@ -88,7 +88,7 @@ describe("browser localization", () => {
       expect(location.reload).toHaveBeenCalledOnce();
       vi.resetModules();
 
-      const restoredLocale = await import("../../public/localize.js");
+      const restoredLocale = await import("../../public/localize.ts");
 
       expect(restoredLocale.language).toBe("en");
     },
@@ -96,7 +96,7 @@ describe("browser localization", () => {
 
   it("remembers an explicit choice of the current language without reloading", async () => {
     vi.stubGlobal("navigator", { language: "nl" });
-    await import("../../public/localize.js");
+    await import("../../public/localize.ts");
     const handleClick = languageButtons[0].addEventListener.mock.calls[0][1];
 
     handleClick();
@@ -116,7 +116,7 @@ describe("browser localization", () => {
     async (primary, languages, expected, text) => {
       vi.stubGlobal("navigator", { language: primary, languages });
 
-      const locale = await import("../../public/localize.js");
+      const locale = await import("../../public/localize.ts");
 
       expect(locale.language).toBe(expected);
       expect(page.documentElement.lang).toBe(expected);
@@ -130,7 +130,7 @@ describe("browser localization", () => {
 
   it("passes the UI language to APIs while preserving request data and headers", async () => {
     vi.stubGlobal("navigator", { language: "nl-BE" });
-    const locale = await import("../../public/localize.js");
+    const locale = await import("../../public/localize.ts");
 
     await locale.localizedFetch("/api/jobs", {
       method: "POST",
@@ -147,7 +147,7 @@ describe("browser localization", () => {
 
   it("shows translated errors without leaking raw browser exception text", async () => {
     vi.stubGlobal("navigator", { language: "nl" });
-    const locale = await import("../../public/localize.js");
+    const locale = await import("../../public/localize.ts");
 
     expect(locale.errorText(new TypeError("Failed to fetch"))).toBe(
       locale.t("error.network"),

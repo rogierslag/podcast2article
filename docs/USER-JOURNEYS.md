@@ -17,7 +17,7 @@ Linked pull requests explain decisions and previous verification; their test res
 - **Stated user intent:** the earlier task “Codex podcast transcriptie” asked for public Spotify links to become text based only on the recording, with minimal input and an open-source solution.
   This review adds the explicit preference for one coherent sound-to-text identity.
   These are product-owner requests, not findings from a representative user study.
-- **Implemented behavior:** grounded in the current [README](../README.md), [server routes](../src/server.ts), [job storage](../src/services/jobs.ts), [owner reader](../public/app.js), [public reader](../public/share.js), and [series implementation](../src/services/subscriptions.ts).
+- **Implemented behavior:** grounded in the current [README](../README.md), [server routes](../src/server.ts), [job storage](../src/services/jobs.ts), [owner reader](../public/app.ts), [public reader](../public/share.ts), and [series implementation](../src/services/subscriptions.ts).
 - **Value hypotheses:** easier capture, less repeated work, better reading continuity, and a manageable backlog are plausible reasons for the features below.
   No usage baseline, conversion lift, time saved, or satisfaction result was supplied or measured for this document.
 

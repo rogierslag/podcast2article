@@ -1,24 +1,33 @@
+import { responseData, budgetSchema } from "../src/shared/api.js";
+import type { AccountBudget } from "../src/types.js";
+import { requiredElement } from "./dom.js";
 import { t, locale, localizedFetch } from "./localize.js";
 
-const panel = document.querySelector("#account-budget");
-const summary = panel.querySelector(".account-budget-summary");
-const status = panel.querySelector(".account-budget-status");
-const breakdown = panel.querySelector(".account-budget-breakdown");
+const panel = requiredElement("#account-budget", HTMLDialogElement);
+const summary = requiredElement(".account-budget-summary", HTMLElement, panel);
+const status = requiredElement(".account-budget-status", HTMLElement, panel);
+const breakdown = requiredElement(
+  ".account-budget-breakdown",
+  HTMLElement,
+  panel,
+);
 const money = new Intl.NumberFormat(locale, {
   style: "currency",
   currency: "USD",
 });
 let refreshing = false;
 
-function renderBudget(budget) {
+function renderBudget(budget: AccountBudget) {
   summary.textContent = t("budget.summary", {
     amount: money.format(budget.spentUsd),
   });
   status.textContent =
     budget.limitUsd === null
       ? t("budget.unlimited")
-      : t("budget.available", { amount: money.format(budget.remainingUsd) });
-  const rows = [
+      : t("budget.available", {
+          amount: money.format(budget.remainingUsd ?? 0),
+        });
+  const rows: [string, string][] = [
     [t("budget.spent"), money.format(budget.spentUsd)],
     [t("budget.historical"), money.format(budget.historicalSpendUsd)],
     [t("budget.counted"), money.format(budget.countedSpendUsd)],
@@ -62,7 +71,7 @@ async function refreshBudget() {
     if (!response.ok) {
       throw new Error("Account budget unavailable");
     }
-    renderBudget(await response.json());
+    renderBudget(await responseData(response, budgetSchema));
   } catch {
     summary.textContent = t("budget.unavailable");
     status.textContent = "";
@@ -76,8 +85,8 @@ void refreshBudget();
 setInterval(() => void refreshBudget(), 30_000);
 window.addEventListener("focus", refreshBudget);
 document.addEventListener("visibilitychange", refreshBudget);
-const openButton = document.querySelector("#account-budget-open");
-const closeButton = document.querySelector("#account-budget-close");
+const openButton = requiredElement("#account-budget-open", HTMLButtonElement);
+const closeButton = requiredElement("#account-budget-close", HTMLButtonElement);
 openButton.addEventListener("click", () => {
   panel.showModal();
   void refreshBudget();

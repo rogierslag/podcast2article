@@ -1,4 +1,4 @@
-import { onCLS, onINP, onLCP } from "/vendor/web-vitals.js";
+import { onCLS, onINP, onLCP } from "web-vitals";
 import {
   createWebVitalsReporter,
   webVitalsPage,
@@ -9,7 +9,8 @@ if (navigator.webdriver !== true) {
     page: webVitalsPage(document, location),
     layout: matchMedia("(max-width: 799px)").matches ? "narrow" : "wide",
     release:
-      document.querySelector('meta[name="app-release"]')?.content || null,
+      document.querySelector<HTMLMetaElement>('meta[name="app-release"]')
+        ?.content || null,
     send: (measurement) => {
       // Telemetry is best-effort and must never interrupt reading or send session cookies.
       void fetch("/api/web-vitals", {

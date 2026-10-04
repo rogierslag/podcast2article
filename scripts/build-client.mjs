@@ -22,7 +22,9 @@ const cssTargets = {
 export async function buildClient(root = ".") {
   const sourceDirectory = path.resolve(root, "public");
   const outputDirectory = path.resolve(root, "dist/client");
+  const legacyDirectory = path.resolve(root, "dist/client-legacy");
   const templateDirectory = path.resolve(root, "dist/client-templates");
+  await rm(legacyDirectory, { recursive: true, force: true });
   await rm(outputDirectory, { recursive: true, force: true });
   await rm(templateDirectory, { recursive: true, force: true });
   await mkdir(outputDirectory, { recursive: true });
@@ -77,6 +79,33 @@ export async function buildClient(root = ".") {
     legalComments: "none",
     logLevel: "silent",
   };
+  const legacyEntries = {};
+  for (const filename of await readdir(sourceDirectory)) {
+    if (filename.endsWith(".ts") && !filename.endsWith(".d.ts")) {
+      legacyEntries[path.basename(filename, ".ts")] = path.join(
+        sourceDirectory,
+        filename,
+      );
+    }
+  }
+  for (const name of ["i18n", "article-length", "source-prefill"]) {
+    const sharedPath = path.resolve(root, "src/shared", `${name}.ts`);
+    try {
+      await readFile(sharedPath);
+      legacyEntries[name] = sharedPath;
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+  await build({
+    ...options,
+    entryPoints: legacyEntries,
+    outdir: legacyDirectory,
+    entryNames: "[name]",
+    format: "esm",
+  });
   for (const [entries, format, splitting] of [
     [moduleEntries, "esm", true],
     [classicEntries, "iife", false],
@@ -84,7 +113,7 @@ export async function buildClient(root = ".") {
     const result = await build({
       ...options,
       entryPoints: [...entries].map((filename) =>
-        path.join(sourceDirectory, filename),
+        path.join(sourceDirectory, filename.replace(/\.js$/, ".ts")),
       ),
       format,
       splitting,
@@ -92,7 +121,7 @@ export async function buildClient(root = ".") {
     for (const [output, metadata] of Object.entries(result.metafile.outputs)) {
       if (metadata.entryPoint) {
         urls.set(
-          path.basename(metadata.entryPoint),
+          path.basename(metadata.entryPoint).replace(/\.ts$/, ".js"),
           `/assets/${path.basename(output)}`,
         );
       }

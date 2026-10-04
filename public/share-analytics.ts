@@ -1,5 +1,11 @@
 /** A read is an engagement estimate, never the owner's explicit read status. */
-export function createShareTracker({ send, now = () => performance.now() }) {
+export function createShareTracker({
+  send,
+  now = () => performance.now(),
+}: {
+  send: (event: "load" | "read") => Promise<boolean>;
+  now?: () => number;
+}) {
   let loaded = false;
   let read = false;
   let sending = false;
@@ -13,7 +19,7 @@ export function createShareTracker({ send, now = () => performance.now() }) {
     activity() {
       lastActivity = now();
     },
-    async tick({ visible, progress }) {
+    async tick({ visible, progress }: { visible: boolean; progress: number }) {
       const current = now();
       const elapsed = current - previousTick;
       previousTick = current;

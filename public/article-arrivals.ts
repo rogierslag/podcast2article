@@ -1,6 +1,8 @@
+import * as z from "zod/mini";
+import { responseData } from "../src/shared/api.js";
 import { localizedFetch, t } from "./localize.js";
 
-const badge = document.querySelector(".article-arrivals");
+const badge = document.querySelector<HTMLElement>(".article-arrivals");
 let revision = 0;
 
 async function refreshArrivals() {
@@ -15,7 +17,10 @@ async function refreshArrivals() {
     if (!response.ok) {
       return;
     }
-    const { count } = await response.json();
+    const { count } = await responseData(
+      response,
+      z.object({ count: z.int().check(z.nonnegative()) }),
+    );
     if (currentRevision !== revision || !Number.isInteger(count) || count < 0) {
       return;
     }
@@ -27,8 +32,7 @@ async function refreshArrivals() {
     // Keep the last known badge when a background refresh is unavailable.
   }
 }
-
-export async function acknowledgeArticleVisit(visitedAt) {
+export async function acknowledgeArticleVisit(visitedAt?: string) {
   if (!visitedAt) {
     return;
   }
@@ -45,8 +49,9 @@ export async function acknowledgeArticleVisit(visitedAt) {
     // A failed acknowledgement leaves arrivals available for the next visit.
   }
 }
-
 void refreshArrivals();
-setInterval(refreshArrivals, 30_000);
+setInterval(refreshArrivals, 30000);
+
 window.addEventListener("focus", refreshArrivals);
+
 document.addEventListener("visibilitychange", refreshArrivals);

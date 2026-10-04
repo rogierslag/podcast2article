@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { browserSource } from "./client-source.mjs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
-import { translate } from "../public/i18n.js";
+import { translate } from "../src/shared/i18n.ts";
 
-const app = readFileSync("public/app.js", "utf8");
+const app = browserSource("public/app.ts");
 const handler = app.slice(
   app.indexOf("async function shareArticle()"),
   app.indexOf('resultView.addEventListener("click", sourceClick)'),
@@ -33,6 +33,8 @@ function setup({
       json: async () => ({ url, error: ok ? undefined : "Share failed" }),
     }),
     LocalizedError: Error,
+    errorSchema: { parse: (value) => value },
+    shareLinkSchema: { parse: (value) => value },
     errorText: (error) => error.message,
     t: (key, values) => translate(language, key, values),
     setArticleActionStatus: (...status) => statuses.push(status),

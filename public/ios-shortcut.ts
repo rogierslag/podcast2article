@@ -2,7 +2,7 @@ export function supportsIOSShortcutInstall({
   userAgent = "",
   platform = "",
   maxTouchPoints = 0,
-} = {}) {
+}: Partial<Pick<Navigator, "userAgent" | "platform" | "maxTouchPoints">> = {}) {
   // iPadOS can identify as a Mac when requesting desktop websites.
   // This controls discoverability, not authorization to download the file.
   return (

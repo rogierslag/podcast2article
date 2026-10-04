@@ -1,10 +1,11 @@
+import { requiredElement } from "./dom.js";
 // Capture the browser's install event before the main application finishes loading.
 (() => {
-  const help = document.querySelector(".android-install");
-  const button = document.querySelector(".android-install-button");
+  const help = requiredElement(".android-install", HTMLElement);
+  const button = requiredElement(".android-install-button", HTMLButtonElement);
   const standalone = window.matchMedia("(display-mode: standalone)");
   const isAndroid = /Android/i.test(navigator.userAgent);
-  let installPrompt;
+  let installPrompt: { prompt: () => Promise<void> } | undefined;
 
   function updateVisibility() {
     help.hidden = !isAndroid || standalone.matches;
@@ -16,7 +17,15 @@
       return;
     }
     event.preventDefault();
-    installPrompt = event;
+    if (!("prompt" in event) || typeof event.prompt !== "function") {
+      return;
+    }
+    const prompt = event.prompt;
+    installPrompt = {
+      prompt: async () => {
+        await prompt.call(event);
+      },
+    };
     updateVisibility();
   });
   window.addEventListener("appinstalled", () => {

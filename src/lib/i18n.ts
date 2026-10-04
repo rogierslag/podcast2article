@@ -7,7 +7,7 @@ import {
   uiLanguage,
   preferredUiLanguage,
   type UiLanguage,
-} from "../../public/i18n.js";
+} from "../shared/i18n.js";
 
 /** Only the primary preference decides: a secondary Dutch preference is not a Dutch device. */
 export function requestLanguage(

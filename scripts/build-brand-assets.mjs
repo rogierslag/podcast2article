@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { chromium } from "@playwright/test";
-import { translate } from "../public/i18n.js";
+import { translate } from "../src/shared/i18n.ts";
 
 // Render checked-in assets explicitly; production builds do not need a browser.
 // The installed Playwright Chromium and Google Fonts access are required here.

@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
 import { buildClient } from "./build-client.mjs";
-import { translate } from "../public/i18n.js";
+import { translate } from "../src/shared/i18n.ts";
 
 const articleId = "00000000-0000-4000-8000-000000000917";
 const exhaustedArticleId = "00000000-0000-4000-8000-000000000919";
@@ -546,6 +546,24 @@ test("shared reader assets are public while owner routes require authentication"
     `/api/jobs/${articleId}/audio`,
   ]) {
     assert.equal((await fetch(origin + route)).status, 401, route);
+  }
+});
+
+test("TypeScript sources cannot be fetched through public or owner asset routes", async () => {
+  const cookie = await loginAs("owner");
+  for (const route of [
+    "/app.ts",
+    "/share.ts",
+    "/dom.ts",
+    "/src/shared/api.ts",
+  ]) {
+    const anonymous = await fetch(origin + route, { redirect: "manual" });
+    assert.notEqual(anonymous.status, 200, route);
+    const owner = await fetch(origin + route, {
+      headers: { cookie },
+      redirect: "manual",
+    });
+    assert.equal(owner.status, 404, route);
   }
 });
 

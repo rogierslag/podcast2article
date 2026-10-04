@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { translate } from "../public/i18n.js";
+import { translate } from "../src/shared/i18n.ts";
 
 const theme = readFileSync("public/theme.css", "utf8");
 function tokens(selector) {

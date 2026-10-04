@@ -1,8 +1,11 @@
-import { formatArticleWordRange } from "./article-length.js";
+import { formatArticleWordRange } from "./article-length.ts";
 
 // Shared by the browser and server.
 // Article and transcript content is never translated here.
-export const messages = {
+export type UiLanguage = "nl" | "en";
+export type TranslationValues = Record<string, string | number>;
+
+export const messages: Record<string, Record<UiLanguage, string>> = {
   "reading.preferences": { nl: "Leesvoorkeuren", en: "Reading preferences" },
   "reading.theme": { nl: "Weergave", en: "Appearance" },
   "reading.system": { nl: "Systeem", en: "System" },
@@ -1450,13 +1453,17 @@ export function preferredUiLanguage(cookieHeader = "") {
   return value === "nl" || value === "en" ? value : undefined;
 }
 
-export function uiLanguage(language) {
+export function uiLanguage(language?: string): UiLanguage {
   return typeof language === "string" && /^nl(?:-|$)/i.test(language.trim())
     ? "nl"
     : "en";
 }
 
-export function translate(language, key, values = {}) {
+export function translate(
+  language: string,
+  key: string,
+  values: TranslationValues = {},
+) {
   const message = messages[key]?.[uiLanguage(language)];
   if (message === undefined) {
     throw new Error(`Unknown translation: ${key}`);
@@ -1466,12 +1473,12 @@ export function translate(language, key, values = {}) {
   );
 }
 
-export function countLabel(language, key, count) {
+export function countLabel(language: string, key: string, count: number) {
   return translate(language, `${key}.${count === 1 ? "one" : "other"}`, {
     count,
   });
 }
 
-export function dateLocale(language) {
+export function dateLocale(language: string) {
   return uiLanguage(language) === "nl" ? "nl-NL" : "en-GB";
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { supportsIOSShortcutInstall } from "../../public/ios-shortcut.js";
+import { supportsIOSShortcutInstall } from "../../public/ios-shortcut.ts";
 
 describe("iOS Shortcut installation visibility", () => {
   it.each([

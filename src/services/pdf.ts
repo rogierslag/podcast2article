@@ -5,7 +5,7 @@ import {
   dateLocale,
   translate,
   type UiLanguage,
-} from "../../public/i18n.js";
+} from "../shared/i18n.js";
 
 const colors = {
   ink: "#1b201d",

@@ -16,7 +16,7 @@ import type { ProcessingEvent } from "../lib/processing-events.js";
 import { DomainError } from "../lib/errors.js";
 import { endpointRegion, trackedRequest, reserveApiCost } from "./api-usage.js";
 import type { UsageRecorder } from "./api-usage.js";
-import { formatArticleWordRange } from "../../public/article-length.js";
+import { formatArticleWordRange } from "../shared/article-length.js";
 import { audioChunkSeconds } from "./audio.js";
 import type { Article, TranscriptSegment } from "../types.js";
 

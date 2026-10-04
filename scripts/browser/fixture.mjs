@@ -61,3 +61,16 @@ export function articleFixture() {
     },
   };
 }
+
+export function articleSummaryFixture() {
+  const job = articleFixture();
+  return {
+    id: job.id,
+    title: job.article.title,
+    dek: job.article.dek,
+    readingTimeMinutes: job.article.readingTimeMinutes,
+    sourceName: job.episode.sourceName,
+    sourceType: job.episode.sourceType,
+    completedAt: job.completedAt,
+  };
+}

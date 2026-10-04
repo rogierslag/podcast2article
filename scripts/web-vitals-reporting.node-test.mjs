@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   createWebVitalsReporter,
   webVitalsPage,
-} from "../public/web-vitals-reporting.js";
+} from "../public/web-vitals-reporting.ts";
 
 test("page classification discards source URLs, article IDs, and share tokens", () => {
   const classify = (templatePage, pathname, hash = "") =>

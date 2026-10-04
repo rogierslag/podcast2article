@@ -10,16 +10,13 @@ interface ClientAssets {
 
 export async function clientAssets(
   serverDirectory: string,
-  sourceDirectory: string,
 ): Promise<ClientAssets> {
   const assetDirectory = path.join(serverDirectory, "client");
   const templateDirectory = path.join(serverDirectory, "client-templates");
   if (!existsSync(templateDirectory)) {
-    return {
-      templateDirectory: sourceDirectory,
-      assetDirectory,
-      filenames: new Set(),
-    };
+    throw new Error(
+      "Client assets are missing; run yarn run build:client before starting the server.",
+    );
   }
   const manifest: unknown = JSON.parse(
     await readFile(path.join(templateDirectory, "assets.json"), "utf8"),

@@ -35,12 +35,12 @@ import {
   localizeTemplate,
   requestLanguage,
 } from "./lib/i18n.js";
-import { translate } from "../public/i18n.js";
+import { translate } from "./shared/i18n.js";
 import {
   prefillDestination,
   sourcePrefill,
   sharedSourcePrefill,
-} from "../public/source-prefill.js";
+} from "./shared/source-prefill.js";
 import {
   createUserAuth,
   expiredSessionCookie,
@@ -94,7 +94,7 @@ const app = express();
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST?.trim() || "127.0.0.1";
 const publicDirectory = path.resolve("public");
-const client = await clientAssets(import.meta.dirname, publicDirectory);
+const client = await clientAssets(path.resolve("dist"));
 const gitSha = await resolveGitSha();
 const webVitals = new WebVitalsStore({
   directory: path.resolve("data/web-vitals"),
@@ -447,7 +447,11 @@ app.get(
     response.type(
       contentTypes[path.extname(request.path)] ?? "application/octet-stream",
     );
-    return response.sendFile(request.path.slice(1), { root: publicDirectory });
+    return response.sendFile(request.path.slice(1), {
+      root: request.path.endsWith(".js")
+        ? path.resolve("dist/client-legacy")
+        : publicDirectory,
+    });
   },
 );
 
@@ -652,6 +656,21 @@ app.use((request, response, next) => {
   // HTML files are templates, never serve their untranslated placeholders as static assets.
   if (request.path.endsWith(".html")) {
     return handleUnknownRoute(request, response);
+  }
+  next();
+});
+app.use(express.static(path.resolve("dist/client-legacy"), { index: false }));
+app.use((request, response, next) => {
+  let assetPath: string;
+  try {
+    assetPath = decodeURIComponent(request.path);
+  } catch {
+    response.sendStatus(400);
+    return;
+  }
+  if (/\.(?:ts|map)$/i.test(assetPath)) {
+    response.sendStatus(404);
+    return;
   }
   next();
 });

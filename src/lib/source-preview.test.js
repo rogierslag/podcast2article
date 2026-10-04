@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { translate } from "../../public/i18n.js";
-import { createSourcePreview } from "../../public/source-preview.js";
+import { translate } from "../shared/i18n.js";
+import { createSourcePreview } from "../../public/source-preview.ts";
 
-vi.mock("../../public/localize.js", () => ({
+vi.mock("../../public/dom.js", () => ({
+  requiredElement: (selector, _constructor, root) =>
+    root.querySelector(selector),
+}));
+vi.stubGlobal("HTMLElement", class {});
+vi.mock("../../public/localize.ts", () => ({
   t: (key) => translate("nl", key),
 }));
 

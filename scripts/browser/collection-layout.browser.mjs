@@ -47,6 +47,7 @@ test("Articles and Series preserve the library layout when switching views", asy
           title: "De wetenschap van alledag",
           paused: false,
           complete: 4,
+          archiveCount: 0,
           processing: 0,
           outstanding: 4,
           pendingCount: 0,

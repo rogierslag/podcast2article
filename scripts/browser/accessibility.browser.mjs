@@ -1,6 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { articleFixture, articleId, password, token } from "./fixture.mjs";
-import { translate } from "../../public/i18n.js";
+import {
+  articleFixture,
+  articleSummaryFixture,
+  articleId,
+  password,
+  token,
+} from "./fixture.mjs";
+import { translate } from "../../src/shared/i18n.ts";
 
 for (const language of ["nl", "en"]) {
   for (const colorScheme of ["light", "dark"]) {
@@ -46,7 +52,7 @@ for (const language of ["nl", "en"]) {
           release = resolve;
         });
         await route.fulfill({
-          json: { id: articleId, readAt: "2026-09-19T10:00:00Z" },
+          json: { ...articleSummaryFixture(), readAt: "2026-09-19T10:00:00Z" },
         });
       });
       await read.first().click();
@@ -75,7 +81,7 @@ for (const language of ["nl", "en"]) {
         t("article.markUnreadLabel"),
       );
       await page.route(`**/api/articles/${articleId}`, (route) =>
-        route.fulfill({ json: { id: articleId } }),
+        route.fulfill({ json: articleSummaryFixture() }),
       );
       await read.first().click();
       await expect(read.first()).toHaveAttribute("aria-pressed", "false");
@@ -87,6 +93,7 @@ for (const language of ["nl", "en"]) {
             {
               id: articleId,
               title: job.article.title,
+              dek: job.article.dek,
               sourceName: job.episode.sourceName,
               sourceType: "google-drive",
               completedAt: job.completedAt,

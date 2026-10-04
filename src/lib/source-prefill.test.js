@@ -3,7 +3,7 @@ import {
   prefillDestination,
   sourcePrefill,
   sharedSourcePrefill,
-} from "../../public/source-prefill.js";
+} from "../shared/source-prefill.js";
 
 describe("incoming source links", () => {
   it("round-trips nested URL parameters through login without treating them as navigation", () => {
