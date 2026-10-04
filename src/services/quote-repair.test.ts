@@ -61,13 +61,14 @@ function providerResponse(
   answer: unknown,
   status = "completed",
   id = "resp-repair",
+  model = "gpt-5.6-terra",
 ) {
   return new Response(
     JSON.stringify({
       id,
       object: "response",
       status,
-      model: "gpt-5.6-terra",
+      model,
       service_tier: "default",
       output:
         status === "completed"
@@ -420,14 +421,22 @@ describe("quote-only repair", () => {
   it("repairs a saved original article through the writing pipeline", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-only");
     vi.stubEnv("OPENAI_BASE_URL", "https://api.openai.com/v1");
+    vi.stubEnv("ARTICLE_MODEL", undefined);
     vi.stubGlobal(
       "fetch",
       vi
         .fn()
         .mockResolvedValueOnce(
-          providerResponse(draft, "completed", "resp-original"),
+          providerResponse(draft, "completed", "resp-original", "gpt-6.1-sol"),
         )
-        .mockResolvedValueOnce(providerResponse(repair(corrected))),
+        .mockResolvedValueOnce(
+          providerResponse(
+            repair(corrected),
+            "completed",
+            "resp-repair",
+            "gpt-6.1-sol",
+          ),
+        ),
     );
     checkpoint.save = async (state) => {
       checkpoint.state = structuredClone(state);
@@ -439,7 +448,7 @@ describe("quote-only repair", () => {
       () => {},
       undefined,
       async (request) => {
-        records.push(request);
+        records.push(structuredClone(request));
       },
       checkpoint,
     );
@@ -448,5 +457,25 @@ describe("quote-only repair", () => {
     expect(checkpoint.state?.answer).toBe(JSON.stringify(draft));
     expect(saved[0]?.answer).toBe(JSON.stringify(repair(corrected)));
     expect(fetch).toHaveBeenCalledTimes(2);
+    for (const [, init] of vi.mocked(fetch).mock.calls) {
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        model: "gpt-6.1-sol",
+        reasoning: { effort: "low" },
+        text: { format: { strict: true } },
+      });
+    }
+    const completed = [
+      ...new Map(
+        records
+          .filter((request) => request.status === "succeeded")
+          .map((request) => [request.id, request]),
+      ).values(),
+    ];
+    expect(completed).toHaveLength(2);
+    for (const request of completed) {
+      expect(request.actualModel).toBe("gpt-6.1-sol");
+      expect(request.reservedCostUsd).toBeGreaterThan(0);
+      expect(request.cost.amount).toBeGreaterThan(0);
+    }
   });
 });

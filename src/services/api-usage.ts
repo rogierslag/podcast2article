@@ -8,17 +8,18 @@ import type {
 } from "../types.js";
 
 export type UsageRecorder = (request: ApiRequestUsage) => Promise<void>;
-const pricingDate = "2026-09-19";
+const pricingDate = "2026-10-04";
 const pricingSource = "https://developers.openai.com/api/docs/pricing";
 
 // Standard short-context rates per million tokens.
-// Sol's promotional rates are published through at least November 21, 2026; recheck before updating.
+// 5.6 Sol's promotional rates are published through at least November 21, 2026; recheck before updating.
 const articlePricing = new Map([
   [
     "gpt-5.6-terra",
     { input: 2, cachedInput: 0.2, cacheWrite: 2.5, output: 12 },
   ],
   ["gpt-5.6-sol", { input: 4, cachedInput: 0.4, cacheWrite: 5, output: 20 }],
+  ["gpt-6.1-sol", { input: 2, cachedInput: 0.1, cacheWrite: 2.5, output: 10 }],
 ]);
 
 /** Conservative allowance using the same verified price table as accounting.

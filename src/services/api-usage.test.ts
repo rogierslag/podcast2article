@@ -41,7 +41,7 @@ describe("saved pricing estimates", () => {
     expect(estimate).toMatchObject({
       currency: "USD",
       basis: "reported_tokens",
-      pricingDate: "2026-09-19",
+      pricingDate: "2026-10-04",
       rates: { inputPerMillion: 2 },
     });
   });
@@ -68,38 +68,93 @@ describe("saved pricing estimates", () => {
     });
   });
 
-  it.each([
-    ["default", 1],
-    ["flex", 0.5],
-    ["priority", 2],
-    ["fast", 2],
+  describe.each([
+    {
+      model: "gpt-5.6-sol",
+      shortCost: 0.01338,
+      thresholdCost: 1.108,
+      longContextCost: 2.206008,
+    },
+    {
+      model: "gpt-6.1-sol",
+      shortCost: 0.00667,
+      thresholdCost: 0.554,
+      longContextCost: 1.103004,
+    },
   ])(
-    "prices Sol cached tokens with the %s tier and regional uplift",
-    (tier, multiplier) => {
-      const estimate = estimateApiCost(
-        request({
-          requestedModel: "gpt-5.6-sol",
-          actualServiceTier: tier,
-          endpointRegion: "eu",
-        }),
+    "$model pricing",
+    ({ model, shortCost, thresholdCost, longContextCost }) => {
+      it.each([
+        ["default", 1],
+        ["flex", 0.5],
+        ["priority", 2],
+        ["fast", 2],
+      ])(
+        "prices cached input and cache writes with the %s tier and regional uplift",
+        (tier, multiplier) => {
+          const estimate = estimateApiCost(
+            request({
+              requestedModel: model,
+              actualServiceTier: tier,
+              endpointRegion: "eu",
+            }),
+          );
+
+          expect(estimate.amount).toBeCloseTo(shortCost * multiplier * 1.1, 10);
+        },
       );
 
-      expect(estimate.amount).toBeCloseTo(0.01338 * multiplier * 1.1, 10);
+      it.each([272000, 272001])(
+        "uses long-context prices only above 272K input tokens (%i)",
+        (input) => {
+          const estimate = estimateApiCost(
+            request({
+              requestedModel: model,
+              usage: { input_tokens: input, output_tokens: 1000 },
+            }),
+          );
+
+          const expected = input === 272000 ? thresholdCost : longContextCost;
+          expect(estimate.amount).toBeCloseTo(expected, 10);
+        },
+      );
     },
   );
 
-  it.each([272000, 272001])(
-    "uses Sol long-context prices only above 272K input tokens (%i)",
-    (input) => {
-      const estimate = estimateApiCost(
-        request({
-          requestedModel: "gpt-5.6-sol",
-          usage: { input_tokens: input, output_tokens: 1000 },
-        }),
+  it("prices 6.1 Sol from the actual model and tier after standard fallback", () => {
+    const estimate = estimateApiCost(
+      request({
+        actualModel: "gpt-6.1-sol",
+        requestedServiceTier: "flex",
+        actualServiceTier: "default",
+      }),
+    );
+
+    expect(estimate.amount).toBeCloseTo(0.00667, 10);
+    expect(estimate).toMatchObject({
+      pricingDate: "2026-10-04",
+      rates: {
+        inputPerMillion: 2,
+        cachedInputPerMillion: 0.1,
+        cacheWritePerMillion: 2.5,
+        outputPerMillion: 10,
+      },
+    });
+  });
+
+  it.each(["default", "flex", "priority", "fast"])(
+    "costs less on 6.1 Sol than 5.6 Sol for the same usage on %s",
+    (tier) => {
+      const previous = estimateApiCost(
+        request({ requestedModel: "gpt-5.6-sol", actualServiceTier: tier }),
+      );
+      const candidate = estimateApiCost(
+        request({ requestedModel: "gpt-6.1-sol", actualServiceTier: tier }),
       );
 
-      const expected = input === 272000 ? 1.108 : 2.206008;
-      expect(estimate.amount).toBeCloseTo(expected, 10);
+      expect(candidate.amount).toBeGreaterThan(0);
+      expect(candidate.amount).toBeLessThan(previous.amount ?? 0);
+      expect(candidate.amount).toBeLessThan((previous.amount ?? 0) * 0.5);
     },
   );
 

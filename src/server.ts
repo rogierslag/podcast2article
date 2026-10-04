@@ -9,6 +9,7 @@ import {
 } from "./services/admin-alerts.js";
 import { startDeploymentDrain } from "./services/deployment-drain.js";
 import { openaiWebhookRouter } from "./services/openai-webhook.js";
+import { articleModel } from "./services/article-model.js";
 import { z } from "zod";
 import { DomainError, domainErrorStatus } from "./lib/errors.js";
 import {
@@ -905,7 +906,7 @@ const server = app.listen(port, host, () => {
     `${new Date().toISOString()} INFO  Podcast2Article luistert op http://${host}:${port}`,
   );
   console.log(
-    `${new Date().toISOString()} INFO  Modellen · transcriptie=${process.env.TRANSCRIPTION_MODEL ?? "gpt-4o-transcribe-diarize"} artikel=${process.env.ARTICLE_MODEL ?? "gpt-5.6-terra"}`,
+    `${new Date().toISOString()} INFO  Modellen · transcriptie=${process.env.TRANSCRIPTION_MODEL ?? "gpt-4o-transcribe-diarize"} artikel=${articleModel()}`,
   );
   if (!process.env.OPENAI_API_KEY) {
     console.warn(

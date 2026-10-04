@@ -49,6 +49,7 @@ This change does not implement the broader independent-stage scheduler proposed 
 Article requests use the Responses API with `background: true` and `store: true`.
 The returned response ID, endpoint, and request accounting identity are saved in the job before submission releases its drain reservation.
 Startup resumes retrieval of that response instead of submitting another generation.
+Changing `ARTICLE_MODEL` applies to new submissions; saved generation and quote-repair responses keep their original response IDs and reported model for accounting.
 The original response endpoint must match the configured endpoint; an endpoint change requires operator investigation.
 
 The application retrieves outstanding responses immediately on recovery and polls every five seconds while waiting.

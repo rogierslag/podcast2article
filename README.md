@@ -152,7 +152,10 @@ Source metadata is fetched separately, with up to three concurrent requests, so 
 Incomplete jobs reuse saved source audio, chunk transcripts, complete transcripts, and background article response IDs.
 A hard crash can still lose an in-flight transcription or an article submission whose response ID was not saved.
 
-Article generation requests Flex processing by default, keeping the configured article model.
+Article generation defaults to `gpt-6.1-sol` with low reasoning effort and Flex processing.
+The same model and effort apply to new quote-repair requests.
+`ARTICLE_MODEL` overrides the default; other models retain their existing reasoning behavior.
+Existing deployments that pin a model must update their environment setting to select 6.1 Sol.
 Transient failures (including capacity errors and timeouts) receive up to three Flex attempts, then up to three standard-processing attempts with `service_tier: "default"`.
 Retries use exponential backoff and respect provider retry headers.
 Cancellation and permanent errors stop immediately.
@@ -171,7 +174,7 @@ Usage from a successful API request is retained even when the resulting article 
 These amounts are not recalculated against the current price table when loaded.
 `unknownCostRequests` counts attempts with unknown costs.
 A missing amount is `null`, not zero.
-Estimates use stored prices dated 19 September 2026: reported audio duration for `gpt-4o-transcribe-diarize`, and tokens, cache breakdown, context length, reported service tier, and any regional surcharge for `gpt-5.6-terra` and `gpt-5.6-sol`.
+New estimates use prices checked on 4 October 2026: reported audio duration for `gpt-4o-transcribe-diarize`, and tokens, cache breakdown, context length, reported service tier, and any regional surcharge for `gpt-5.6-terra`, `gpt-5.6-sol`, and `gpt-6.1-sol`.
 Other models and custom API endpoints still record usage but receive no cost estimate.
 Prices are in `src/services/api-usage.ts`; each estimate stores the prices and source used, so historical amounts do not change when prices are updated.
 According to OpenAI, promotional pricing for `gpt-5.6-sol` applies until at least 21 November 2026.
@@ -182,6 +185,9 @@ Hosting, downloads, and FFmpeg costs are excluded.
 Historical costs remain unchanged in the ledger: missing `apiUsage` means unknown, and a new attempt on such a job sets `coverage` to `partial`.
 After a hard stop, an attempt may remain `pending` with unknown costs.
 Usage data is available through the owner's job and account summary, never through public links or saved copies.
+
+The [4 October cost evaluation](docs/API-COST-EVALUATION.md) supports the 6.1 Sol default with production pricing scenarios, a six-transcript model comparison, and a forty-draft prompt comparison with blinded Ultra grading.
+Applying 6.1 Sol rates to the observed production usage estimates $0.3935 per article, including transcription, versus $0.4813 with 5.6 Sol; the 18.2% reduction is a fixed-usage estimate rather than a measured rollout result.
 
 Each account has a USD 5 processing limit over the preceding 30 days.
 Historical requests made before budget enforcement are excluded from this allowance, including known historical costs.
@@ -244,7 +250,7 @@ Refresh the page after changing the browser language.
 | `HOST`                            | `127.0.0.1`                 | Network interface; consider `0.0.0.0` only inside a container                                               |
 | `PUBLIC_BASE_URL`                 | request origin              | Canonical external origin for permalinks and social previews                                                |
 | `PORT`                            | `3000`                      | HTTP port                                                                                                   |
-| `ARTICLE_MODEL`                   | `gpt-5.6-terra`             | Article generation model                                                                                    |
+| `ARTICLE_MODEL`                   | `gpt-6.1-sol`               | Article generation and quote-repair model; 6.1 Sol uses low reasoning effort                                |
 | `ARTICLE_SERVICE_TIER`            | `flex`                      | Article tier: `flex` (three attempts, then standard fallback) or `default`                                  |
 | `TRANSCRIPTION_MODEL`             | `gpt-4o-transcribe-diarize` | Transcription model                                                                                         |
 | `MAX_AUDIO_MB`                    | `500`                       | Maximum Spotify/RSS audio download size                                                                     |

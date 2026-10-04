@@ -916,7 +916,12 @@ Exempt accounts can also use models with unknown pricing; those requests retain 
 
 ## Article service tier
 
-Article generation defaults to `ARTICLE_SERVICE_TIER=flex`; the configured `ARTICLE_MODEL` and transcription model remain unchanged.
+Article generation defaults to `ARTICLE_MODEL=gpt-6.1-sol` with low reasoning effort and `ARTICLE_SERVICE_TIER=flex`.
+New quote-repair requests use the same model and effort; explicit overrides for other models retain their existing reasoning behavior.
+Transcription remains unchanged.
+The production snapshot in the [cost evaluation](API-COST-EVALUATION.md) uses an explicit `ARTICLE_MODEL=gpt-5.6-sol` setting.
+Change that setting to `ARTICLE_MODEL=gpt-6.1-sol` in `/etc/podcast2article.env` during the normal drained deployment; a code-default change does not override an existing environment value.
+Keep saved response checkpoints: generation and quote repair already submitted to an older model resume their original response IDs and accounting instead of submitting replacements.
 After three transient Flex failures, the same operation switches to `service_tier: "default"` for up to three standard attempts.
 Capacity errors, connection failures, timeouts and other retryable HTTP failures use the existing backoff and retry-header rules.
 Cancellation and permanent errors stop without fallback.

@@ -1,0 +1,1921 @@
+{
+  "title": "Article prompt screen: baseline versus revised instructions",
+  "design": {
+    "frozenUtc": "2026-10-04T12:30:49.768250+00:00",
+    "cases": 5,
+    "developmentCases": 3,
+    "heldOutCases": 2,
+    "generations": 40,
+    "repetitionsPerCell": 2,
+    "models": ["gpt-6-luna", "gpt-6.1-sol"],
+    "effort": "Preserve captured client defaults: Luna medium, 6.1 Sol low; identical within each model across prompts and repeats. Graders 6.1 Sol Ultra.",
+    "grader": "Fresh GPT-6.1 Sol Ultra agent per case; identities and prompt variants withheld.",
+    "promptHashes": {
+      "baseline": "c05c6ce17555731dea9d92796fa3eb5fa8ba5a4bd6c0611437c5a438c5591411",
+      "revised": "d216f91f25148a1030177ca82ac43b50f37b119b942c72d45463399675a6913d"
+    }
+  },
+  "groups": [
+    {
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "drafts": 10,
+      "meanContentScore": 76.1,
+      "lowestContentScore": 69,
+      "fatalDrafts": 6,
+      "meanScores": {
+        "factualSupport": 23.9,
+        "topicCoverage": 17.7,
+        "citationSupport": 14.7,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 8.3,
+        "requestedLength": 3.5
+      },
+      "languagePasses": 10,
+      "jsonPasses": 10,
+      "schemaPasses": 0,
+      "quotePasses": 10,
+      "quoteAssessable": 10,
+      "lengthPasses": 5,
+      "lengthAssessable": 10,
+      "rawGraderUsable": 0,
+      "meanArticleCompletionFlexEquivalentUsd": 0.0015303720000000001,
+      "meanUncachedArticleCompletionFlexEquivalentUsd": 0.00550938,
+      "meanCompleteAgentFlexEquivalentUsd": 0.010213008,
+      "meanArticleUsage": {
+        "input_tokens": 91519.6,
+        "cached_input_tokens": 88422.4,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3733.6,
+        "reasoning_output_tokens": 139.5
+      },
+      "splits": {
+        "development": {
+          "drafts": 6,
+          "meanContentScore": 76.83333333333333,
+          "fatalDrafts": 4
+        },
+        "held-out": {
+          "drafts": 4,
+          "meanContentScore": 75,
+          "fatalDrafts": 2
+        }
+      }
+    },
+    {
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "drafts": 10,
+      "meanContentScore": 73.4,
+      "lowestContentScore": 60,
+      "fatalDrafts": 4,
+      "meanScores": {
+        "factualSupport": 22.9,
+        "topicCoverage": 17.5,
+        "citationSupport": 14.5,
+        "readableArticle": 7.7,
+        "speakerAttributionAndQuotes": 6.9,
+        "requestedLength": 3.9
+      },
+      "languagePasses": 10,
+      "jsonPasses": 10,
+      "schemaPasses": 3,
+      "quotePasses": 10,
+      "quoteAssessable": 10,
+      "lengthPasses": 6,
+      "lengthAssessable": 10,
+      "rawGraderUsable": 1,
+      "meanArticleCompletionFlexEquivalentUsd": 0.00148859,
+      "meanUncachedArticleCompletionFlexEquivalentUsd": 0.0056012300000000004,
+      "meanCompleteAgentFlexEquivalentUsd": 0.010227449,
+      "meanArticleUsage": {
+        "input_tokens": 94351.6,
+        "cached_input_tokens": 91392,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3534.6,
+        "reasoning_output_tokens": 140.5
+      },
+      "splits": {
+        "development": {
+          "drafts": 6,
+          "meanContentScore": 79,
+          "fatalDrafts": 0
+        },
+        "held-out": {
+          "drafts": 4,
+          "meanContentScore": 65,
+          "fatalDrafts": 4
+        }
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "drafts": 10,
+      "meanContentScore": 89.6,
+      "lowestContentScore": 86,
+      "fatalDrafts": 0,
+      "meanScores": {
+        "factualSupport": 29,
+        "topicCoverage": 22,
+        "citationSupport": 15.8,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 9.1,
+        "requestedLength": 4.7
+      },
+      "languagePasses": 10,
+      "jsonPasses": 10,
+      "schemaPasses": 10,
+      "quotePasses": 9,
+      "quoteAssessable": 10,
+      "lengthPasses": 9,
+      "lengthAssessable": 10,
+      "rawGraderUsable": 8,
+      "meanArticleCompletionFlexEquivalentUsd": 0.02430336,
+      "meanUncachedArticleCompletionFlexEquivalentUsd": 0.1055808,
+      "meanCompleteAgentFlexEquivalentUsd": 0.13659382,
+      "meanArticleUsage": {
+        "input_tokens": 87800.3,
+        "cached_input_tokens": 85555.2,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3556.1,
+        "reasoning_output_tokens": 30.5
+      },
+      "splits": {
+        "development": {
+          "drafts": 6,
+          "meanContentScore": 91.16666666666667,
+          "fatalDrafts": 0
+        },
+        "held-out": {
+          "drafts": 4,
+          "meanContentScore": 87.25,
+          "fatalDrafts": 0
+        }
+      }
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "drafts": 10,
+      "meanContentScore": 90.6,
+      "lowestContentScore": 84,
+      "fatalDrafts": 0,
+      "meanScores": {
+        "factualSupport": 29.5,
+        "topicCoverage": 21.2,
+        "citationSupport": 16.4,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 9.6,
+        "requestedLength": 4.9
+      },
+      "languagePasses": 10,
+      "jsonPasses": 10,
+      "schemaPasses": 10,
+      "quotePasses": 10,
+      "quoteAssessable": 10,
+      "lengthPasses": 9,
+      "lengthAssessable": 10,
+      "rawGraderUsable": 9,
+      "meanArticleCompletionFlexEquivalentUsd": 0.02413988,
+      "meanUncachedArticleCompletionFlexEquivalentUsd": 0.1059402,
+      "meanCompleteAgentFlexEquivalentUsd": 0.14063432,
+      "meanArticleUsage": {
+        "input_tokens": 88370.2,
+        "cached_input_tokens": 86105.6,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3514,
+        "reasoning_output_tokens": 59.8
+      },
+      "splits": {
+        "development": {
+          "drafts": 6,
+          "meanContentScore": 92.5,
+          "fatalDrafts": 0
+        },
+        "held-out": {
+          "drafts": 4,
+          "meanContentScore": 87.75,
+          "fatalDrafts": 0
+        }
+      }
+    }
+  ],
+  "pairedPromptChanges": [
+    {
+      "model": "gpt-6-luna",
+      "case": "case-12",
+      "split": "development",
+      "baselineScores": [75, 74],
+      "revisedScores": [75, 72],
+      "meanScoreChange": -1.0
+    },
+    {
+      "model": "gpt-6-luna",
+      "case": "case-18",
+      "split": "development",
+      "baselineScores": [80, 81],
+      "revisedScores": [85, 85],
+      "meanScoreChange": 4.5
+    },
+    {
+      "model": "gpt-6-luna",
+      "case": "case-24",
+      "split": "development",
+      "baselineScores": [74, 77],
+      "revisedScores": [78, 79],
+      "meanScoreChange": 3.0
+    },
+    {
+      "model": "gpt-6-luna",
+      "case": "heldout-01",
+      "split": "held-out",
+      "baselineScores": [79, 77],
+      "revisedScores": [70, 60],
+      "meanScoreChange": -13
+    },
+    {
+      "model": "gpt-6-luna",
+      "case": "heldout-02",
+      "split": "held-out",
+      "baselineScores": [75, 69],
+      "revisedScores": [65, 65],
+      "meanScoreChange": -7
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "case": "case-12",
+      "split": "development",
+      "baselineScores": [92, 89],
+      "revisedScores": [92, 93],
+      "meanScoreChange": 2.0
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "case": "case-18",
+      "split": "development",
+      "baselineScores": [91, 93],
+      "revisedScores": [91, 94],
+      "meanScoreChange": 0.5
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "case": "case-24",
+      "split": "development",
+      "baselineScores": [91, 91],
+      "revisedScores": [92, 93],
+      "meanScoreChange": 1.5
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "case": "heldout-01",
+      "split": "held-out",
+      "baselineScores": [86, 87],
+      "revisedScores": [84, 87],
+      "meanScoreChange": -1.0
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "case": "heldout-02",
+      "split": "held-out",
+      "baselineScores": [88, 88],
+      "revisedScores": [92, 88],
+      "meanScoreChange": 2
+    }
+  ],
+  "candidateBar": {
+    "predeclared": "Exploratory screen only. A Luna production candidate needs zero fatal source errors in revised drafts and mean content score within 3 points of revised Sol, with no material citation regression. Raw usability and repair costs remain separate; no default adoption from this screen.",
+    "revisedLunaFatalDrafts": 4,
+    "revisedSolMinusLunaMeanScore": 17.19999999999999,
+    "zeroFatalErrors": false,
+    "withinThreePoints": false,
+    "revisedCitationScores": {
+      "gpt-6-luna": 14.5,
+      "gpt-6.1-sol": 16.4
+    }
+  },
+  "verification": {
+    "completeGeneratorInputAudits": 40,
+    "truncatedGeneratorToolOutputs": 0,
+    "completeBlindGraderInputAudits": 5,
+    "frozenHashesRetained": true,
+    "gradeArithmeticAndTopicIdsValid": true,
+    "allRawDraftsRetained": true,
+    "deliveryExclusions": [
+      {
+        "case": "heldout-02",
+        "model": "gpt-6-luna",
+        "variant": "revised",
+        "repeat": 2,
+        "reason": "Delivery-only exclusion: did not read input-10.txt, omitting the final four frozen transcript segments. No quality-based exclusion; all original evidence and usage retained.",
+        "omittedSourceIds": ["t-01466", "t-01467", "t-01468", "t-01469"],
+        "originalDraftAndCostRetained": true,
+        "excludedBeforeBlindGrading": true
+      }
+    ]
+  },
+  "accounting": {
+    "completedGeneratorRuns": 40,
+    "completedGeneratorAttempts": 41,
+    "excludedDeliveryAttempts": 1,
+    "includedGeneratorFlexApiEquivalentUsd": 2.97668597,
+    "excludedDeliveryFlexApiEquivalentUsd": 0.01173342,
+    "generatorFlexApiEquivalentUsd": 2.9884193900000002,
+    "sourceChecklistAndGraderFlexApiEquivalentUsd": 2.4509672,
+    "allGeneratorAndGraderFlexApiEquivalentUsd": 5.43938659,
+    "excludes": "Parent/orchestration, prompt-author helper and independent verification helper; includes delivery retry attempt costs. No Codex bill or production cost claim."
+  },
+  "independentAccountingAudit": {
+    "auditedUtc": "2026-10-04T14:25:52.617608+00:00",
+    "pass": true,
+    "complete": true,
+    "counts": {
+      "expectedGenerators": 40,
+      "observedGenerators": 40,
+      "completedGenerators": 40,
+      "expectedGeneratorAttempts": 41,
+      "observedGeneratorAttempts": 41,
+      "completedGeneratorAttempts": 41,
+      "excludedDeliveryAttempts": 1,
+      "expectedGraders": 5,
+      "observedGraders": 5,
+      "completedGraders": 5,
+      "observedSourceCurators": 1,
+      "completedSourceCurators": 1,
+      "includedAgents": 47,
+      "includedResponses": 943,
+      "uniqueResponses": 943,
+      "duplicateTaskSessions": 0,
+      "resultRows": 40,
+      "staleUsageTasks": 0,
+      "longContextResponses": 0,
+      "cacheWriteResponses": 0,
+      "maximumPerResponseInputTokens": 172538
+    },
+    "checks": {
+      "manifest": true,
+      "delivery_exclusions": true,
+      "pricing_snapshot": true,
+      "native_scope": true,
+      "native_metadata": true,
+      "runtime_model_effort": true,
+      "numeric_token_invariants": true,
+      "response_uniqueness": true,
+      "native_cumulative_counters": true,
+      "final_response_selection": true,
+      "recorded_agent_accounting": true,
+      "results_rows": true,
+      "results_row_accounting": true,
+      "results_group_means": true,
+      "results_totals_arithmetic": true,
+      "results_totals_match_current_native": true,
+      "required_completion": true
+    },
+    "recomputedCompletedAgentTotals": {
+      "completedGeneratorRuns": 40,
+      "generatorFlexApiEquivalentUsd": 2.98841939,
+      "sourceChecklistAndGraderFlexApiEquivalentUsd": 2.4509672,
+      "allGeneratorAndGraderFlexApiEquivalentUsd": 5.43938659,
+      "completedGeneratorAttempts": 41,
+      "excludedDeliveryAttempts": 1,
+      "includedGeneratorFlexApiEquivalentUsd": 2.97668597,
+      "excludedDeliveryFlexApiEquivalentUsd": 0.01173342
+    },
+    "recomputedGeneratorFinalResponseTotals": {
+      "recordedCacheFlexApiEquivalentUsd": 0.51462202,
+      "uncachedFlexApiEquivalentUsd": 2.2263161
+    },
+    "pricingMethod": "Independent Decimal calculation from pricing-snapshot.json; ordinary input excludes cache reads and writes, reasoning is already included in output, and the >272000 multiplier is applied per response."
+  },
+  "pricing": {
+    "checkedDate": "2026-10-04",
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "currency": "USD",
+    "units": "per million tokens",
+    "tier": "Flex",
+    "region": "global",
+    "models": {
+      "gpt-5.6-sol": {
+        "input": 2,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5,
+        "output": 10
+      },
+      "gpt-5.6-terra": {
+        "input": 1,
+        "cacheRead": 0.1,
+        "cacheWrite": 1.25,
+        "output": 6
+      },
+      "gpt-6.1-sol": {
+        "input": 1,
+        "cacheRead": 0.05,
+        "cacheWrite": 1.25,
+        "output": 5
+      },
+      "gpt-6-luna": {
+        "input": 0.05,
+        "cacheRead": 0.005,
+        "cacheWrite": 0.0625,
+        "output": 0.25
+      }
+    },
+    "longContextRule": "For each request above 272000 input tokens, double input/cache rates and multiply output rates by 1.5. Do not apply this threshold to cumulative agent usage.",
+    "accounting": "Sum individually priced response token_usage_record.usage records. Ordinary input excludes cache reads/writes. Reasoning output is already included in output_tokens. Cache writes are reported separately.",
+    "limitations": "These are API-equivalent costs for Codex activity, not an API bill, a Codex allowance valuation, or a production forecast."
+  },
+  "sources": [
+    {
+      "case": "case-12",
+      "split": "development",
+      "title": "90 minutes of unfiltered product advice from Snap and Discord’s product chief | Peter Sellis",
+      "url": "https://www.lennysnewsletter.com/p/90-minutes-of-unfiltered-product",
+      "segments": 1006,
+      "words": 18785
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "title": "OpenAI Dev Day 2026: The releases that actually matter",
+      "url": "https://podcasters.spotify.com/pod/show/pen-name/episodes/OpenAI-Dev-Day-2026-The-releases-that-actually-matter-e3pkss3",
+      "segments": 310,
+      "words": 4316
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "title": "Flow Town met Frank Loer",
+      "url": "https://shows.acast.com/rtm-xl-podcast/episodes/flow-town-met-frank-loer",
+      "segments": 1459,
+      "words": 17864
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "title": "The Pragmatic Engineer AMA",
+      "url": "https://newsletter.pragmaticengineer.com/p/the-pragmatic-engineer-ama",
+      "segments": 652,
+      "words": 17052
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "title": "Verkiezingsspecial: Coalitieakkoord Rotterdam",
+      "url": "https://shows.acast.com/rtm-xl-podcast/episodes/coalitieakkoord-rotterdam",
+      "segments": 1469,
+      "words": 11724
+    }
+  ],
+  "limits": [
+    "Two samples per cell and five selected difficult public recordings do not estimate general production failure rates.",
+    "Prompt was developed from earlier failures; held-outs were unseen by its author.",
+    "Codex system/tools/cache differ from production; no server-enforced structured decoding or automatic quote repair.",
+    "No measured production cost per accepted article.",
+    "One grader model; no human adjudication.",
+    "Held-out Rotterdam transcript has substantial mixed-language artifacts; dominant-language assessment is less certain.",
+    "Uncached final-response sensitivity removes recorded cache discounts but retains the Codex system/tool context; it is still not a production forecast."
+  ],
+  "rows": [
+    {
+      "case": "case-12",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 22,
+        "citationSupport": 17,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 92,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1686
+      },
+      "usage": {
+        "input_tokens": 93866,
+        "cached_input_tokens": 91264,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3534,
+        "reasoning_output_tokens": 41,
+        "total_tokens": 97400
+      },
+      "finalResponseFlexEquivalentUsd": 0.0248352,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.111536,
+      "completeAgentFlexEquivalentUsd": 0.15898120000000002
+    },
+    {
+      "case": "case-12",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 22,
+        "citationSupport": 16,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 5
+      },
+      "total": 89,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1516
+      },
+      "usage": {
+        "input_tokens": 93866,
+        "cached_input_tokens": 91264,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3223,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 97089
+      },
+      "finalResponseFlexEquivalentUsd": 0.0232802,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.109981,
+      "completeAgentFlexEquivalentUsd": 0.1543862
+    },
+    {
+      "case": "case-12",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 21,
+        "citationSupport": 18,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 92,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1593
+      },
+      "usage": {
+        "input_tokens": 94374,
+        "cached_input_tokens": 91776,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3442,
+        "reasoning_output_tokens": 51,
+        "total_tokens": 97816
+      },
+      "finalResponseFlexEquivalentUsd": 0.0243968,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.111584,
+      "completeAgentFlexEquivalentUsd": 0.1482834
+    },
+    {
+      "case": "case-12",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 26,
+        "topicCoverage": 15,
+        "citationSupport": 16,
+        "readableArticle": 7,
+        "speakerAttributionAndQuotes": 9,
+        "requestedLength": 2
+      },
+      "total": 75,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 1938
+      },
+      "usage": {
+        "input_tokens": 97482,
+        "cached_input_tokens": 93952,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3851,
+        "reasoning_output_tokens": 89,
+        "total_tokens": 101333
+      },
+      "finalResponseFlexEquivalentUsd": 0.00160901,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.00583685,
+      "completeAgentFlexEquivalentUsd": 0.01248577
+    },
+    {
+      "case": "case-12",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 26,
+        "topicCoverage": 16,
+        "citationSupport": 15,
+        "readableArticle": 7,
+        "speakerAttributionAndQuotes": 9,
+        "requestedLength": 1
+      },
+      "total": 74,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 2208
+      },
+      "usage": {
+        "input_tokens": 97509,
+        "cached_input_tokens": 93952,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4312,
+        "reasoning_output_tokens": 120,
+        "total_tokens": 101821
+      },
+      "finalResponseFlexEquivalentUsd": 0.00172561,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.00595345,
+      "completeAgentFlexEquivalentUsd": 0.01151564
+    },
+    {
+      "case": "case-12",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 27,
+        "topicCoverage": 17,
+        "citationSupport": 14,
+        "readableArticle": 7,
+        "speakerAttributionAndQuotes": 9,
+        "requestedLength": 1
+      },
+      "total": 75,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 2004
+      },
+      "usage": {
+        "input_tokens": 98099,
+        "cached_input_tokens": 94976,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3784,
+        "reasoning_output_tokens": 113,
+        "total_tokens": 101883
+      },
+      "finalResponseFlexEquivalentUsd": 0.0015770299999999999,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.00585095,
+      "completeAgentFlexEquivalentUsd": 0.01141711
+    },
+    {
+      "case": "case-12",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 28,
+        "topicCoverage": 17,
+        "citationSupport": 12,
+        "readableArticle": 7,
+        "speakerAttributionAndQuotes": 6,
+        "requestedLength": 2
+      },
+      "total": 72,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 1913
+      },
+      "usage": {
+        "input_tokens": 98132,
+        "cached_input_tokens": 94976,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3587,
+        "reasoning_output_tokens": 119,
+        "total_tokens": 101719
+      },
+      "finalResponseFlexEquivalentUsd": 0.00152943,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0058033500000000005,
+      "completeAgentFlexEquivalentUsd": 0.01138521
+    },
+    {
+      "case": "case-12",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 22,
+        "citationSupport": 18,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 93,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1610
+      },
+      "usage": {
+        "input_tokens": 94374,
+        "cached_input_tokens": 91776,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3452,
+        "reasoning_output_tokens": 32,
+        "total_tokens": 97826
+      },
+      "finalResponseFlexEquivalentUsd": 0.024446799999999998,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.111634,
+      "completeAgentFlexEquivalentUsd": 0.1506438
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 30,
+        "topicCoverage": 22,
+        "citationSupport": 15,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 91,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1605
+      },
+      "usage": {
+        "input_tokens": 55019,
+        "cached_input_tokens": 52864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3343,
+        "reasoning_output_tokens": 57,
+        "total_tokens": 58362
+      },
+      "finalResponseFlexEquivalentUsd": 0.0215132,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.071734,
+      "completeAgentFlexEquivalentUsd": 0.07019260000000001
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 24,
+        "topicCoverage": 23,
+        "citationSupport": 18,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 7,
+        "requestedLength": 5
+      },
+      "total": 85,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1541
+      },
+      "usage": {
+        "input_tokens": 58608,
+        "cached_input_tokens": 56064,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3620,
+        "reasoning_output_tokens": 74,
+        "total_tokens": 62228
+      },
+      "finalResponseFlexEquivalentUsd": 0.00131252,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0038354,
+      "completeAgentFlexEquivalentUsd": 0.00404236
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 22,
+        "citationSupport": 14,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 7,
+        "requestedLength": 5
+      },
+      "total": 85,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1460
+      },
+      "usage": {
+        "input_tokens": 58649,
+        "cached_input_tokens": 56064,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 2623,
+        "reasoning_output_tokens": 150,
+        "total_tokens": 61272
+      },
+      "finalResponseFlexEquivalentUsd": 0.00106532,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0035882,
+      "completeAgentFlexEquivalentUsd": 0.00380496
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 30,
+        "topicCoverage": 23,
+        "citationSupport": 14,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 91,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1537
+      },
+      "usage": {
+        "input_tokens": 54402,
+        "cached_input_tokens": 52224,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3174,
+        "reasoning_output_tokens": 0,
+        "total_tokens": 57576
+      },
+      "finalResponseFlexEquivalentUsd": 0.0206592,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.070272,
+      "completeAgentFlexEquivalentUsd": 0.0541662
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 30,
+        "topicCoverage": 23,
+        "citationSupport": 16,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 93,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1575
+      },
+      "usage": {
+        "input_tokens": 54402,
+        "cached_input_tokens": 52224,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3308,
+        "reasoning_output_tokens": 21,
+        "total_tokens": 57710
+      },
+      "finalResponseFlexEquivalentUsd": 0.0213292,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.070942,
+      "completeAgentFlexEquivalentUsd": 0.0548362
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 22,
+        "topicCoverage": 21,
+        "citationSupport": 16,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 7,
+        "requestedLength": 5
+      },
+      "total": 80,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1536
+      },
+      "usage": {
+        "input_tokens": 58082,
+        "cached_input_tokens": 55040,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3344,
+        "reasoning_output_tokens": 69,
+        "total_tokens": 61426
+      },
+      "finalResponseFlexEquivalentUsd": 0.0012633,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0037401000000000005,
+      "completeAgentFlexEquivalentUsd": 0.00483247
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 30,
+        "topicCoverage": 24,
+        "citationSupport": 16,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 94,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1619
+      },
+      "usage": {
+        "input_tokens": 54991,
+        "cached_input_tokens": 52864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3253,
+        "reasoning_output_tokens": 80,
+        "total_tokens": 58244
+      },
+      "finalResponseFlexEquivalentUsd": 0.0210352,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.071256,
+      "completeAgentFlexEquivalentUsd": 0.091893
+    },
+    {
+      "case": "case-18",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 22,
+        "topicCoverage": 23,
+        "citationSupport": 12,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 81,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1582
+      },
+      "usage": {
+        "input_tokens": 57989,
+        "cached_input_tokens": 55040,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3259,
+        "reasoning_output_tokens": 202,
+        "total_tokens": 61248
+      },
+      "finalResponseFlexEquivalentUsd": 0.0012374,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0037142000000000004,
+      "completeAgentFlexEquivalentUsd": 0.00398816
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 30,
+        "topicCoverage": 21,
+        "citationSupport": 17,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 92,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1587
+      },
+      "usage": {
+        "input_tokens": 109089,
+        "cached_input_tokens": 106240,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3595,
+        "reasoning_output_tokens": 77,
+        "total_tokens": 112684
+      },
+      "finalResponseFlexEquivalentUsd": 0.026136,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.127064,
+      "completeAgentFlexEquivalentUsd": 0.180418
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 24,
+        "topicCoverage": 16,
+        "citationSupport": 14,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 7,
+        "requestedLength": 5
+      },
+      "total": 74,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1564
+      },
+      "usage": {
+        "input_tokens": 112164,
+        "cached_input_tokens": 109312,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3610,
+        "reasoning_output_tokens": 143,
+        "total_tokens": 115774
+      },
+      "finalResponseFlexEquivalentUsd": 0.0015916600000000002,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0065107,
+      "completeAgentFlexEquivalentUsd": 0.013435190000000001
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 26,
+        "topicCoverage": 18,
+        "citationSupport": 17,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 6,
+        "requestedLength": 3
+      },
+      "total": 78,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 1813
+      },
+      "usage": {
+        "input_tokens": 112903,
+        "cached_input_tokens": 109312,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4214,
+        "reasoning_output_tokens": 187,
+        "total_tokens": 117117
+      },
+      "finalResponseFlexEquivalentUsd": 0.00177961,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0066986500000000004,
+      "completeAgentFlexEquivalentUsd": 0.013642290000000001
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 26,
+        "topicCoverage": 15,
+        "citationSupport": 17,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 5
+      },
+      "total": 79,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1524
+      },
+      "usage": {
+        "input_tokens": 112961,
+        "cached_input_tokens": 109312,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3371,
+        "reasoning_output_tokens": 331,
+        "total_tokens": 116332
+      },
+      "finalResponseFlexEquivalentUsd": 0.0015717600000000002,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0064908000000000006,
+      "completeAgentFlexEquivalentUsd": 0.0134213
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 30,
+        "topicCoverage": 23,
+        "citationSupport": 17,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 4
+      },
+      "total": 93,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 1772
+      },
+      "usage": {
+        "input_tokens": 109089,
+        "cached_input_tokens": 106240,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3975,
+        "reasoning_output_tokens": 67,
+        "total_tokens": 113064
+      },
+      "finalResponseFlexEquivalentUsd": 0.028036,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.128964,
+      "completeAgentFlexEquivalentUsd": 0.1980044
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 24,
+        "citationSupport": 17,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 2
+      },
+      "total": 91,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 1873
+      },
+      "usage": {
+        "input_tokens": 108499,
+        "cached_input_tokens": 105728,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4132,
+        "reasoning_output_tokens": 29,
+        "total_tokens": 112631
+      },
+      "finalResponseFlexEquivalentUsd": 0.0287174,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.129159,
+      "completeAgentFlexEquivalentUsd": 0.187116
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 21,
+        "citationSupport": 17,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 91,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1575
+      },
+      "usage": {
+        "input_tokens": 108499,
+        "cached_input_tokens": 105728,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3623,
+        "reasoning_output_tokens": 44,
+        "total_tokens": 112122
+      },
+      "finalResponseFlexEquivalentUsd": 0.026172400000000002,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.126614,
+      "completeAgentFlexEquivalentUsd": 0.1883406
+    },
+    {
+      "case": "case-24",
+      "split": "development",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 24,
+        "topicCoverage": 18,
+        "citationSupport": 16,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 3
+      },
+      "total": 77,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 1834
+      },
+      "usage": {
+        "input_tokens": 112336,
+        "cached_input_tokens": 108288,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3690,
+        "reasoning_output_tokens": 134,
+        "total_tokens": 116026
+      },
+      "finalResponseFlexEquivalentUsd": 0.00166634,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0065393000000000005,
+      "completeAgentFlexEquivalentUsd": 0.01344771
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 19,
+        "citationSupport": 14,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 5
+      },
+      "total": 84,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1541
+      },
+      "usage": {
+        "input_tokens": 80767,
+        "cached_input_tokens": 80000,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3454,
+        "reasoning_output_tokens": 37,
+        "total_tokens": 84221
+      },
+      "finalResponseFlexEquivalentUsd": 0.022037,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.098037,
+      "completeAgentFlexEquivalentUsd": 0.1181616
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 16,
+        "citationSupport": 15,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 3
+      },
+      "total": 79,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 1868
+      },
+      "usage": {
+        "input_tokens": 83961,
+        "cached_input_tokens": 80640,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3350,
+        "reasoning_output_tokens": 160,
+        "total_tokens": 87311
+      },
+      "finalResponseFlexEquivalentUsd": 0.00140675,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.00503555,
+      "completeAgentFlexEquivalentUsd": 0.00892733
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 20,
+        "citationSupport": 15,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 9,
+        "requestedLength": 5
+      },
+      "total": 87,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1609
+      },
+      "usage": {
+        "input_tokens": 80767,
+        "cached_input_tokens": 80000,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3440,
+        "reasoning_output_tokens": 45,
+        "total_tokens": 84207
+      },
+      "finalResponseFlexEquivalentUsd": 0.021967,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.097967,
+      "completeAgentFlexEquivalentUsd": 0.12392840000000001
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 21,
+        "topicCoverage": 17,
+        "citationSupport": 17,
+        "readableArticle": 7,
+        "speakerAttributionAndQuotes": 5,
+        "requestedLength": 3
+      },
+      "total": 70,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 1804
+      },
+      "usage": {
+        "input_tokens": 84491,
+        "cached_input_tokens": 83712,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3534,
+        "reasoning_output_tokens": 33,
+        "total_tokens": 88025
+      },
+      "finalResponseFlexEquivalentUsd": 0.00134101,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.00510805,
+      "completeAgentFlexEquivalentUsd": 0.00899338
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 21,
+        "citationSupport": 14,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 5
+      },
+      "total": 86,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1656
+      },
+      "usage": {
+        "input_tokens": 80209,
+        "cached_input_tokens": 79488,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3601,
+        "reasoning_output_tokens": 30,
+        "total_tokens": 83810
+      },
+      "finalResponseFlexEquivalentUsd": 0.022700400000000003,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.098214,
+      "completeAgentFlexEquivalentUsd": 0.11838760000000001
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 21,
+        "citationSupport": 14,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 9,
+        "requestedLength": 5
+      },
+      "total": 87,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1658
+      },
+      "usage": {
+        "input_tokens": 80209,
+        "cached_input_tokens": 79488,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3495,
+        "reasoning_output_tokens": 25,
+        "total_tokens": 83704
+      },
+      "finalResponseFlexEquivalentUsd": 0.0221704,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.097684,
+      "completeAgentFlexEquivalentUsd": 0.12564
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 28,
+        "topicCoverage": 18,
+        "citationSupport": 15,
+        "readableArticle": 7,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 1
+      },
+      "total": 77,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": false,
+        "words": 2184
+      },
+      "usage": {
+        "input_tokens": 83900,
+        "cached_input_tokens": 80640,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4683,
+        "reasoning_output_tokens": 221,
+        "total_tokens": 88583
+      },
+      "finalResponseFlexEquivalentUsd": 0.0017369500000000001,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.00536575,
+      "completeAgentFlexEquivalentUsd": 0.009205080000000001
+    },
+    {
+      "case": "heldout-01",
+      "split": "held-out",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 16,
+        "topicCoverage": 13,
+        "citationSupport": 13,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 5,
+        "requestedLength": 5
+      },
+      "total": 60,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1652
+      },
+      "usage": {
+        "input_tokens": 84645,
+        "cached_input_tokens": 81664,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3716,
+        "reasoning_output_tokens": 119,
+        "total_tokens": 88361
+      },
+      "finalResponseFlexEquivalentUsd": 0.0014863699999999999,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.00516125,
+      "completeAgentFlexEquivalentUsd": 0.00892099
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 22,
+        "citationSupport": 16,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 7,
+        "requestedLength": 5
+      },
+      "total": 88,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": false,
+        "withinTarget": true,
+        "words": 1613
+      },
+      "usage": {
+        "input_tokens": 102007,
+        "cached_input_tokens": 99072,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3722,
+        "reasoning_output_tokens": 62,
+        "total_tokens": 105729
+      },
+      "finalResponseFlexEquivalentUsd": 0.026498599999999997,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.120617,
+      "completeAgentFlexEquivalentUsd": 0.1617604
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 20,
+        "topicCoverage": 18,
+        "citationSupport": 14,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 9,
+        "requestedLength": 5
+      },
+      "total": 75,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1679
+      },
+      "usage": {
+        "input_tokens": 105934,
+        "cached_input_tokens": 102144,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3801,
+        "reasoning_output_tokens": 146,
+        "total_tokens": 109735
+      },
+      "finalResponseFlexEquivalentUsd": 0.00165047,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.006246950000000001,
+      "completeAgentFlexEquivalentUsd": 0.01242742
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 30,
+        "topicCoverage": 20,
+        "citationSupport": 18,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "total": 92,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1509
+      },
+      "usage": {
+        "input_tokens": 102635,
+        "cached_input_tokens": 99712,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3662,
+        "reasoning_output_tokens": 82,
+        "total_tokens": 106297
+      },
+      "finalResponseFlexEquivalentUsd": 0.026218599999999998,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.120945,
+      "completeAgentFlexEquivalentUsd": 0.1627958
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "model": "gpt-6-luna",
+      "variant": "baseline",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 18,
+        "topicCoverage": 16,
+        "citationSupport": 14,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 5
+      },
+      "total": 69,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1493
+      },
+      "usage": {
+        "input_tokens": 105839,
+        "cached_input_tokens": 105216,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3436,
+        "reasoning_output_tokens": 111,
+        "total_tokens": 109275
+      },
+      "finalResponseFlexEquivalentUsd": 0.00141623,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0061509500000000005,
+      "completeAgentFlexEquivalentUsd": 0.01186531
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "model": "gpt-6.1-sol",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 29,
+        "topicCoverage": 20,
+        "citationSupport": 16,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 9,
+        "requestedLength": 5
+      },
+      "total": 88,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1500
+      },
+      "usage": {
+        "input_tokens": 102597,
+        "cached_input_tokens": 99584,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3524,
+        "reasoning_output_tokens": 70,
+        "total_tokens": 106121
+      },
+      "finalResponseFlexEquivalentUsd": 0.0256122,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.120217,
+      "completeAgentFlexEquivalentUsd": 0.1620222
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 2,
+      "scores": {
+        "factualSupport": 16,
+        "topicCoverage": 17,
+        "citationSupport": 11,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 5
+      },
+      "total": 65,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": false,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1622
+      },
+      "usage": {
+        "input_tokens": 124240,
+        "cached_input_tokens": 120576,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3665,
+        "reasoning_output_tokens": 152,
+        "total_tokens": 127905
+      },
+      "finalResponseFlexEquivalentUsd": 0.00170233,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.00712825,
+      "completeAgentFlexEquivalentUsd": 0.014197600000000001
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "model": "gpt-6.1-sol",
+      "variant": "baseline",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 27,
+        "topicCoverage": 21,
+        "citationSupport": 17,
+        "readableArticle": 9,
+        "speakerAttributionAndQuotes": 9,
+        "requestedLength": 5
+      },
+      "total": 88,
+      "fatalSourceError": false,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1593
+      },
+      "usage": {
+        "input_tokens": 102044,
+        "cached_input_tokens": 99072,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3749,
+        "reasoning_output_tokens": 53,
+        "total_tokens": 105793
+      },
+      "finalResponseFlexEquivalentUsd": 0.0266706,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.120789,
+      "completeAgentFlexEquivalentUsd": 0.1623238
+    },
+    {
+      "case": "heldout-02",
+      "split": "held-out",
+      "model": "gpt-6-luna",
+      "variant": "revised",
+      "repeat": 1,
+      "scores": {
+        "factualSupport": 16,
+        "topicCoverage": 16,
+        "citationSupport": 12,
+        "readableArticle": 8,
+        "speakerAttributionAndQuotes": 8,
+        "requestedLength": 5
+      },
+      "total": 65,
+      "fatalSourceError": true,
+      "languageCorrect": true,
+      "rawOutput": {
+        "validJson": true,
+        "schemaValid": true,
+        "quotesValid": true,
+        "withinTarget": true,
+        "words": 1497
+      },
+      "usage": {
+        "input_tokens": 110788,
+        "cached_input_tokens": 107264,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3232,
+        "reasoning_output_tokens": 127,
+        "total_tokens": 114020
+      },
+      "finalResponseFlexEquivalentUsd": 0.00152052,
+      "uncachedFinalResponseFlexEquivalentUsd": 0.0063474000000000004,
+      "completeAgentFlexEquivalentUsd": 0.01244929
+    }
+  ],
+  "privacy": "Aggregate and numeric evidence only; no accounts, job/session/response identifiers, machine paths, transcripts or raw drafts."
+}
