@@ -13,6 +13,8 @@ const articleId = "00000000-0000-4000-8000-000000000917";
 const exhaustedArticleId = "00000000-0000-4000-8000-000000000919";
 const token = "a".repeat(43);
 const otherToken = "b".repeat(43);
+const exampleToken = "_eUKVjs2CsydDZ7nEseiXUNRYc64L1Pp2EPQ8LLIGng";
+const examplePath = `/s/${exampleToken}`;
 const publicBaseUrl = "https://reads.example.test";
 const episodeImage =
   "https://cdn.example.test/episode.jpg?crop=cover&width=1200";
@@ -46,6 +48,96 @@ function canonicalUrl(markup) {
   assert.equal(tags.length, 1, "Expected one canonical link");
   return tagAttribute(tags[0], "href");
 }
+
+test("robots policy allows only the exact login and linked example URLs", async () => {
+  const response = await fetch(`${origin}/robots.txt`);
+  const rules = await response.text();
+  const login = await fetch(`${origin}/login`);
+  const markup = await login.text();
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type"), /^text\/plain/);
+  assert.equal(
+    rules,
+    `User-agent: *\nDisallow: /\nAllow: /login$\nAllow: ${examplePath}$\n`,
+  );
+  assert.ok(
+    markup.includes(`href="https://reads.rogierslag.nl${examplePath}"`),
+  );
+  assert.equal(login.headers.get("x-robots-tag"), null);
+
+  const example = await fetch(`${origin}${examplePath}`);
+  assert.equal(example.status, 200);
+  assert.equal(example.headers.get("x-robots-tag"), null);
+  assert.equal(metaContent(await example.text(), "robots"), "index, follow");
+});
+
+test("other pages, APIs, audio and query variants remain non-indexable", async () => {
+  const cookie = await loginAs("owner");
+  const routes = [
+    "/",
+    "/articles",
+    "/series",
+    "/index.html",
+    "/login.html",
+    "/login?sourceUrl=https://example.com",
+    "/login/",
+    "/login?error=1",
+    `${examplePath}?tracking=1`,
+    `${examplePath}/`,
+    `/s/${token}`,
+    `/s/${otherToken}`,
+    "/s/invalid",
+    `/api/shared/${exampleToken}`,
+    `/api/shared/${exampleToken}/audio`,
+    `/api/shared/${token}`,
+    `/api/shared/${token}/audio`,
+    "/api/articles",
+    "/api/jobs",
+    "/share.js",
+    "/styles.css",
+    "/missing",
+  ];
+
+  for (const route of routes) {
+    for (const headers of [{}, { cookie }]) {
+      const response = await fetch(`${origin}${route}`, {
+        redirect: "manual",
+        headers,
+      });
+
+      assert.equal(
+        response.headers.get("x-robots-tag"),
+        "noindex, nofollow",
+        route,
+      );
+      if (route.startsWith(examplePath) && response.status === 200) {
+        assert.equal(
+          metaContent(await response.text(), "robots"),
+          "noindex, nofollow",
+        );
+      }
+    }
+  }
+});
+
+test("a deleted example remains a non-indexable public 404", async () => {
+  const cookie = await loginAs("example");
+  const deleted = await fetch(
+    `${origin}/api/articles/00000000-0000-4000-8000-000000000920`,
+    { method: "DELETE", headers: { cookie } },
+  );
+  assert.equal(deleted.status, 204);
+
+  const response = await fetch(`${origin}${examplePath}`, {
+    redirect: "manual",
+  });
+
+  assert.equal(response.status, 404);
+  assert.equal(response.headers.get("location"), null);
+  assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow");
+  assert.equal(metaContent(await response.text(), "robots"), "noindex");
+});
 
 test("incoming links survive authentication and failed login without creating jobs", async () => {
   const sourceUrl =
@@ -180,6 +272,13 @@ before(async () => {
   for (const [username, id, shareToken, title, audio] of [
     ["owner", articleId, token, "Intended article", audioBytes],
     [
+      "example",
+      "00000000-0000-4000-8000-000000000920",
+      exampleToken,
+      "Public example article",
+      audioBytes,
+    ],
+    [
       "other",
       "00000000-0000-4000-8000-000000000918",
       otherToken,
@@ -268,6 +367,7 @@ before(async () => {
         APP_USERS: JSON.stringify({
           owner: "test-only-password-owner",
           other: "test-only-password-other",
+          example: "test-only-password-example",
         }),
       },
       stdio: ["ignore", "pipe", "pipe"],
