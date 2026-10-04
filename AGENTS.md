@@ -101,13 +101,16 @@ Readability is the default.
 Some older frontend files are densely formatted; treat that as legacy code, not as the style to imitate.
 Source files must remain pleasant to review without a formatter or minifier.
 
-### Prose line breaks: one sentence per source line
+### Repository prose line breaks: one sentence per source line
 
 - Put each complete sentence on its own physical source line, regardless of its length.
   Do not combine multiple sentences on one line or split a sentence across lines to meet an 80-column, 120-column, or other width limit.
   Editor soft wrapping is fine because it does not insert line breaks into the file.
-- Apply this rule to Markdown, other prose documentation, plain-text files such as `.txt`, extensionless documents such as `LICENSE`, and prose comments where the file syntax permits it.
+- Apply this rule to repository Markdown, other repository prose documentation, plain-text files such as `.txt`, extensionless documents such as `LICENSE`, and prose comments where the file syntax permits it.
   Formatter coverage does not limit the rule's scope.
+- GitHub issues, pull requests, and their comments use normal prose paragraphs, even when written in Markdown or prepared in temporary `.md` body files.
+  Keep the sentences within each paragraph together; do not insert a physical newline after each sentence.
+  Preserve normal Markdown structure for headings, lists, tables, and code blocks.
 - Preserve blank lines between paragraphs; a new sentence within the same paragraph needs a newline, not a blank line.
   Within a list item, indent each continuation sentence so it remains part of that item.
 - Preserve code blocks, tables, URLs, and other syntax-sensitive content rather than applying prose sentence splitting to them.
@@ -119,7 +122,7 @@ Source files must remain pleasant to review without a formatter or minifier.
   Do not infer the intended convention from formatter defaults or older files.
   Before changing the formatting policy or configuration, check the latest `main` version of `AGENTS.md` so an older worktree does not replace a newer convention.
 
-Use this source layout:
+Use this source layout for repository prose:
 
 ```markdown
 A paragraph can contain several sentences.
@@ -255,6 +258,9 @@ In the pull request description, include a concise verification section with:
 - Any known visual or testing limitations.
 
 ## Pull requests
+
+- Write GitHub issue and pull request bodies, comments, and reviewer-facing notes as normal prose paragraphs, including when they use Markdown.
+  The repository sentence-per-line convention does not apply to this copy or to temporary Markdown files used to prepare it.
 
 - When monitoring CI, check every minute because this repository’s CI runs are fast.
   Use the same one-minute interval for CI-monitoring automations.
