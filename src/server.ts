@@ -77,6 +77,11 @@ import { validateSourceUrl } from "./services/resolver.js";
 import { fetchPodcastFeed } from "./services/podcast-feeds.js";
 import { SubscriptionStore } from "./services/subscriptions.js";
 import { subscriptionRouter } from "./services/subscription-routes.js";
+import {
+  WebVitalsCapacityError,
+  WebVitalsStore,
+  webVitalSchema,
+} from "./services/web-vitals.js";
 
 const subscriptions = new SubscriptionStore({
   directory: userDirectory,
@@ -91,6 +96,9 @@ const host = process.env.HOST?.trim() || "127.0.0.1";
 const publicDirectory = path.resolve("public");
 const client = await clientAssets(import.meta.dirname, publicDirectory);
 const gitSha = await resolveGitSha();
+const webVitals = new WebVitalsStore({
+  directory: path.resolve("data/web-vitals"),
+});
 const loginTemplate = await readFile(
   path.join(client.templateDirectory, "login.html"),
   "utf8",
@@ -154,17 +162,22 @@ function localizeError(
 function renderPage(response: express.Response, template: string): string {
   const language = responseLanguage(response);
   response.setHeader("Content-Language", language);
-  return localizeTemplate(template, language).replace(
-    "<!-- SITE_METADATA -->",
-    socialMetadata({
-      type: "website",
-      title: translate(language, "page.title"),
-      description: translate(language, "page.description"),
-      // Private routes and incoming source URLs never belong in the product preview.
-      url: `${publicOrigin(response.req)}/`,
-      image: brandSocialImage(response),
-    }),
-  );
+  return localizeTemplate(template, language)
+    .replace(
+      "<!-- WEB_VITALS_RELEASE -->",
+      `<meta name="app-release" content="${gitSha ?? ""}">`,
+    )
+    .replace(
+      "<!-- SITE_METADATA -->",
+      socialMetadata({
+        type: "website",
+        title: translate(language, "page.title"),
+        description: translate(language, "page.description"),
+        // Private routes and incoming source URLs never belong in the product preview.
+        url: `${publicOrigin(response.req)}/`,
+        image: brandSocialImage(response),
+      }),
+    );
 }
 
 async function sendIndex(
@@ -217,6 +230,47 @@ function loginBuildMarkup(response: express.Response): string {
 app.get("/api/health", async (_request, response) => {
   response.set("Cache-Control", "no-store");
   response.json({ ok: true, deployment: await deploymentHealth(gitSha) });
+});
+
+const webVitalsLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+
+// Public ingestion accepts measurements only; stored telemetry has no HTTP read route.
+app.post("/api/web-vitals", webVitalsLimiter, async (request, response) => {
+  response.setHeader("Cache-Control", "no-store");
+  const origin = request.get("Origin");
+  if (
+    request.get("Sec-Fetch-Site") === "cross-site" ||
+    (origin && origin !== publicOrigin(request))
+  ) {
+    return response.sendStatus(403);
+  }
+  const parsed = webVitalSchema.safeParse(request.body);
+  if (!request.is("application/json") || !parsed.success) {
+    return response.sendStatus(400);
+  }
+  try {
+    await webVitals.record(parsed.data);
+    return response.sendStatus(204);
+  } catch (error) {
+    if (error instanceof WebVitalsCapacityError) {
+      return response.sendStatus(429);
+    }
+    console.error("Could not persist Web Vitals measurement", error);
+    return response.sendStatus(503);
+  }
+});
+
+// Source-mode development uses the same local dependency that production bundles.
+app.get("/vendor/web-vitals.js", (_request, response) => {
+  response.type("text/javascript");
+  return response.sendFile("web-vitals.js", {
+    root: path.resolve("node_modules/web-vitals/dist"),
+  });
 });
 
 app.get("/robots.txt", (_request, response) => {
@@ -996,6 +1050,7 @@ async function shutdown(signal: "SIGINT" | "SIGTERM"): Promise<void> {
     stopDeploymentDrain(),
     shutdownJobs(signal),
     stopArticleBackups(),
+    webVitals.flush(),
     stopAdminAlerts?.(),
   ]);
   clearTimeout(forcedExit);

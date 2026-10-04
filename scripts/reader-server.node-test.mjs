@@ -58,6 +58,88 @@ function canonicalUrl(markup) {
   return tagAttribute(tags[0], "href");
 }
 
+const vitalReport = {
+  name: "LCP",
+  value: 1234,
+  id: "v6-server-test",
+  sequence: 1,
+  navigationType: "navigate",
+  page: "shared-article",
+  layout: "narrow",
+  release: null,
+};
+
+test("public Web Vitals ingestion persists measurements without exposing a read API", async () => {
+  const response = await fetch(`${origin}/api/web-vitals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: publicBaseUrl },
+    body: JSON.stringify(vitalReport),
+  });
+
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const filename = new Date().toISOString().slice(0, 10) + ".jsonl";
+  const stored = await readFile(
+    path.join(directory, "data/web-vitals", filename),
+    "utf8",
+  );
+  assert.ok(stored.includes('"id":"v6-server-test"'));
+  assert.equal((await fetch(`${origin}/api/web-vitals`)).status, 401);
+  assert.equal(
+    (
+      await fetch(`${origin}/data/web-vitals/${filename}`, {
+        redirect: "manual",
+      })
+    ).status,
+    303,
+  );
+  for (const route of ["/api/articles", "/api/jobs"]) {
+    assert.equal((await fetch(origin + route)).status, 401);
+  }
+});
+
+test("Web Vitals rejects cross-origin submissions and unexpected private fields", async () => {
+  for (const [headers, report, status] of [
+    [{ Origin: "https://other.example" }, vitalReport, 403],
+    [{ "Sec-Fetch-Site": "cross-site" }, vitalReport, 403],
+    [{}, { ...vitalReport, shareToken: token }, 400],
+    [{}, { ...vitalReport, page: `/s/${token}` }, 400],
+    [{}, { ...vitalReport, value: -1 }, 400],
+  ]) {
+    const response = await fetch(`${origin}/api/web-vitals`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(report),
+    });
+
+    assert.equal(response.status, status);
+  }
+});
+
+test("Web Vitals has a bounded public ingestion quota", async () => {
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Forwarded-For": "192.0.2.77",
+  };
+  for (let request = 0; request < 60; request++) {
+    const response = await fetch(`${origin}/api/web-vitals`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(vitalReport),
+    });
+    assert.equal(response.status, 204);
+  }
+
+  const blocked = await fetch(`${origin}/api/web-vitals`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(vitalReport),
+  });
+
+  assert.equal(blocked.status, 429);
+  assert.ok(Number(blocked.headers.get("retry-after")) > 0);
+});
+
 test("robots policy allows only the exact login and linked example URLs", async () => {
   const response = await fetch(`${origin}/robots.txt`);
   const rules = await response.text();
