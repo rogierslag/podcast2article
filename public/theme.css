@@ -51,9 +51,47 @@
 }
 
 /* Screen-only overrides leave browser printing on the original light palette. */
+@media screen {
+  :root[data-reading-theme="evening"] {
+    color-scheme: dark;
+    --ink: #eee9de;
+    --cream: #1c1b19;
+    --paper: #252420;
+    --orange: #ef7745;
+    --accent-text: #f58b60;
+    --green: #9bc3ad;
+    --line: #46423b;
+    --muted: #aaa69d;
+    --body-text: #d6d1c7;
+    --intro-text: #c8c3b9;
+    --dek-text: #c8c3b9;
+    --inverse-surface: #141412;
+    --inverse-text: #eee9de;
+    --inverse-muted: #aaa69d;
+    --inverse-green: #9bc3ad;
+    --action-surface: #eee9de;
+    --action-text: #1c1b19;
+    --accent-action-text: #1c1b19;
+    --green-action-text: #1c1b19;
+    --control-surface: #1c1b19;
+    --control-border: #827b70;
+    --focus: #ef7745;
+    --error: #f3a08f;
+    --error-surface: #3c2722;
+    --source-surface: #30372f;
+    --takeaway-surface: #252420;
+    --image-surface: #302e29;
+    --placeholder-surface: #302e29;
+    --placeholder-text: #d6d1c7;
+    --reading-track: #46423b;
+    --transcript-flash: #473025;
+    --search-highlight: #e8b65e;
+    --login-glow: transparent;
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23eee9de' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
 @media screen and (prefers-color-scheme: dark) {
-  :root,
-  :root.login-page {
+  :root:not([data-reading-theme="day"]):not([data-reading-theme="evening"]) {
     color-scheme: dark;
     --ink: #eee9de;
     --cream: #1c1b19;
@@ -171,5 +209,123 @@ button:disabled {
 @media (prefers-reduced-motion: reduce) {
   button {
     transition: none;
+  }
+}
+
+:root[data-reading-size="small"] {
+  --reading-text-scale: 0.9;
+}
+:root[data-reading-size="large"] {
+  --reading-text-scale: 1.15;
+}
+:root[data-reading-font="sans"] {
+  --reading-font: var(--sans);
+}
+
+.reading-preferences {
+  position: relative;
+  margin-left: 20px;
+  font-family: var(--sans, system-ui);
+}
+.reading-preferences summary {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  font-size: 16px;
+  color: var(--ink);
+}
+.reading-preferences summary::-webkit-details-marker {
+  display: none;
+}
+.reading-preferences summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.reading-preferences-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 300px;
+  max-width: calc(100vw - 44px);
+  padding: 20px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--dialog-radius);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 12%);
+  z-index: 100;
+}
+.reading-preferences-title {
+  margin: 0 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.reading-preferences fieldset {
+  padding: 0;
+  margin: 0 0 14px;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.reading-preferences fieldset:last-child {
+  margin-bottom: 0;
+}
+.reading-preferences legend {
+  padding: 0;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.reading-preferences label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.reading-preferences input {
+  accent-color: var(--green);
+}
+@media (max-width: 600px) {
+  .nav:has(.reading-preferences) .brand {
+    padding-right: 56px;
+  }
+  .reading-preferences {
+    position: absolute;
+    right: 22px;
+    top: calc(18px + env(safe-area-inset-top));
+    margin: 0;
+  }
+}
+@media print {
+  .reading-preferences {
+    display: none;
+  }
+}
+
+.reading-preferences-panel > button {
+  min-height: 44px;
+  padding: 10px 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  font: 13px var(--sans);
+}
+
+@media (min-width: 601px) and (max-width: 800px) {
+  .nav:has(.reading-preferences) {
+    grid-template-columns: minmax(0, 1fr) auto 44px;
+    column-gap: 20px;
+  }
+  .reading-preferences {
+    margin-left: 0;
   }
 }

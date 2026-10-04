@@ -346,22 +346,24 @@ function renderSharedArticle(shared, token) {
       episode.imageUrl
         ? html`
             <img
+              class="source-attribution-image"
               src="${escapeHtml(episode.imageUrl)}"
               alt="${escapeHtml(t("source.image", { name: episode.sourceName }))}"
             />
           `
         : ""
     }
-    <div>
-      <span class="kicker">${escapeHtml(episode.sourceName)}</span>
-      <h1>${escapeHtml(episode.title)}</h1>
-      <p>
+    <div class="source-attribution-body">
+      <span class="source-attribution-publication"
+        >${escapeHtml(episode.sourceName)}</span
+      >
+      <p class="source-attribution-title">${escapeHtml(episode.title)}</p>
+      <p class="source-attribution-meta">
         ${escapeHtml(details.join(" · "))}${details.length ? " · " : ""}
         <a
           href="${escapeHtml(episode.sourceUrl)}"
           target="_blank"
           rel="noreferrer"
-          style="color: inherit"
         >
           ${sourceLabel}
         </a>
@@ -391,7 +393,6 @@ function renderSharedArticle(shared, token) {
         }),
       )}
     </p>
-    <p class="style-note">${escapeHtml(article.styleNote)}</p>
     ${sections}
     <div class="takeaways">
       <h2>${t("article.takeaways")}</h2>

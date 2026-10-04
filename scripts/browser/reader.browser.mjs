@@ -122,7 +122,7 @@ for (const reader of ["owner", "shared"]) {
       await page.setViewportSize({ width, height: 1000 });
       await noOverflow(page, "#article, #episode-hero, .content-layout");
       const widthOfText = await page
-        .locator("#episode-hero h1")
+        .locator("#episode-hero .source-attribution-title")
         .evaluate((element) => element.getBoundingClientRect().width);
       expect(widthOfText).toBeGreaterThan(width <= 800 ? width * 0.6 : 400);
       // Check actual line boxes: ordinary words must not split into two lines.

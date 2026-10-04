@@ -38,6 +38,9 @@ test("Articles and Series preserve the library layout when switching views", asy
   const articlesTitleBounds = await page
     .locator(".collection-heading h1")
     .boundingBox();
+  const articlesCountBounds = await page
+    .locator(".articles-count")
+    .boundingBox();
   const articlesTitle = await page
     .locator(".collection-heading h1")
     .evaluate((title) => getComputedStyle(title).font);
@@ -61,12 +64,16 @@ test("Articles and Series preserve the library layout when switching views", asy
   const seriesTitleBounds = await page
     .locator(".collection-heading h1")
     .boundingBox();
-  // Different title lengths may wrap; the spacing around them must still match.
+  const seriesCountBounds = await page.locator(".articles-count").boundingBox();
+  // Titles and larger metadata may wrap; the spacing around them must still match.
   expect(
     Math.abs(
       seriesHeading.height -
         seriesTitleBounds.height -
-        (articlesHeading.height - articlesTitleBounds.height),
+        seriesCountBounds.height -
+        (articlesHeading.height -
+          articlesTitleBounds.height -
+          articlesCountBounds.height),
     ),
   ).toBeLessThan(1);
   expect(

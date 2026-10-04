@@ -2,6 +2,7 @@
 <html lang="{{language}}">
   <head>
     <meta charset="utf-8" />
+    <script src="/reading-settings.js"></script>
     <!-- SITE_METADATA -->
     <script>
       // Hash routes never reach the server.
@@ -33,7 +34,7 @@
       content="#1c1b19"
       media="(prefers-color-scheme: dark)"
     />
-    <link rel="stylesheet" href="/theme.css?v=system-dark-v1" />
+    <link rel="stylesheet" href="/theme.css?v=reading-v1" />
     <title data-i18n="page.title">{{page.title}}</title>
     <link
       rel="icon"
@@ -55,13 +56,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=optional"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=optional"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css?v=brand-transition-v1" />
     <script src="/app.js?v=initial-view-v1" type="module"></script>
     <script src="/article-arrivals.js" type="module"></script>
     <script src="/account-budget.js" type="module"></script>
+    <script type="module" src="/reading-preferences.js"></script>
+    <link rel="stylesheet" href="/source-preview.css" />
   </head>
   <body class="native-scroll">
     <div class="reading-chrome">
