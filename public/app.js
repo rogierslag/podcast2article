@@ -320,6 +320,14 @@ function updateArticleReadingProgress() {
     "aria-valuetext",
     t("progress.read", { count: progressPercentage }),
   );
+  const sectionIndex = visibleReadingSectionIndex();
+  document.querySelectorAll("#toc a").forEach((link, index) => {
+    if (index === sectionIndex) {
+      link.setAttribute("aria-current", "location");
+    } else {
+      link.removeAttribute("aria-current");
+    }
+  });
   if (shouldTrackReadingPosition) {
     trackReadingPosition();
   }

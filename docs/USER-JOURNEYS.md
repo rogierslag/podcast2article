@@ -136,6 +136,8 @@ Faster concurrency has value only if completion, storage use, and recovery cost 
 The library separates active, unread, and collapsed read items.
 Publication names, dates, and reading estimates support selection.
 The reader offers contents links, progress, and a saved-section continuation action.
+The desktop contents sidebar highlights the current section as the reader scrolls or follows a section link, in both owner and shared articles.
+The highlight follows the same visible-section boundary used for saving a reading position and clears when returning above the first section.
 Owner positions are stored per account; anonymous shared-reader positions stay in that browser.
 The top read toggle stays on the article; marking read from the footer returns to the library after persistence succeeds.
 See [PR 18](https://github.com/rogierslag/podcast2article/pull/18), [PR 20](https://github.com/rogierslag/podcast2article/pull/20), [PR 23](https://github.com/rogierslag/podcast2article/pull/23), and [PR 53](https://github.com/rogierslag/podcast2article/pull/53).

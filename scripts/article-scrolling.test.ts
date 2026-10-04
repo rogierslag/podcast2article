@@ -69,7 +69,8 @@ function setupReadingController(
       translate("nl", key, values),
     document: {
       querySelector: (selector: string) => elements.get(selector),
-      querySelectorAll: () => headings,
+      querySelectorAll: (selector: string) =>
+        selector === "#article section > h2" ? headings : [],
     },
     requestAnimationFrame: (callback: () => void) => {
       frames.push(callback);
