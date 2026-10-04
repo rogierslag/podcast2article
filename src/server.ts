@@ -1,6 +1,8 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import express from "express";
+import { rateLimit } from "express-rate-limit";
+import escapeHtml from "escape-html";
 import {
   alertConfiguration,
   startAdminAlerts,
@@ -91,16 +93,15 @@ const loginTemplate = await readFile(
   "utf8",
 );
 const auth = createUserAuth();
+const requestLimit = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(1_000_000)
+  .parse(process.env.REQUEST_RATE_LIMIT_PER_MINUTE ?? 600);
 // Validate operator configuration before the server accepts work.
 spendingLimitExempt(auth.usernames[0] ?? "local");
 alertConfiguration();
-const loginAttempts = new Map<
-  string,
-  { failures: number; blockedUntil: number }
->();
-const maximumLoginFailures = 5;
-const loginBlockMs = 15 * 60 * 1_000;
-
 app.disable("x-powered-by");
 app.set("trust proxy", "loopback");
 app.use((_request, response, next) => {
@@ -109,6 +110,21 @@ app.use((_request, response, next) => {
   response.vary("Cookie");
   next();
 });
+// Limit admission before body parsing, public file reads, authentication, and webhooks.
+app.use(
+  rateLimit({
+    windowMs: 60_000,
+    limit: requestLimit,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    handler: (_request, response) => {
+      response.setHeader("Cache-Control", "no-store");
+      response
+        .status(429)
+        .json({ error: localizeError(response, "error.requestRateLimit") });
+    },
+  }),
+);
 app.use(openaiWebhookRouter());
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: false, limit: "2kb" }));
@@ -184,20 +200,6 @@ function brandSocialImage(response: express.Response): SocialImage {
   };
 }
 
-function htmlAttribute(value: string): string {
-  return value.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      })[character]!,
-  );
-}
-
 function loginBuildMarkup(response: express.Response): string {
   if (!gitSha) {
     return "";
@@ -234,8 +236,8 @@ app.get("/s/:token", async (request, response) => {
   const description = job.article!.dek;
   const sourceImage = job.episode!.imageUrl;
   const metadata = [
-    `<title>${htmlAttribute(title)} — Podcast2Article</title>`,
-    `<meta name="description" content="${htmlAttribute(description)}">`,
+    `<title>${escapeHtml(title)} — Podcast2Article</title>`,
+    `<meta name="description" content="${escapeHtml(description)}">`,
     socialMetadata({
       type: "article",
       title,
@@ -322,7 +324,9 @@ app.get("/api/shared/:token/audio", async (request, response) => {
   try {
     await stat(file);
     response.setHeader("Cache-Control", "public, max-age=3600");
-    return response.sendFile(path.basename(file), { root: path.dirname(file) });
+    return response.sendFile(path.basename(file), {
+      root: path.join(userDirectory(shared.username), "media"),
+    });
   } catch {
     return response
       .status(404)
@@ -367,9 +371,7 @@ app.get(
     response.type(
       contentTypes[path.extname(request.path)] ?? "application/octet-stream",
     );
-    return response.send(
-      await readFile(path.join(publicDirectory, request.path)),
-    );
+    return response.sendFile(request.path.slice(1), { root: publicDirectory });
   },
 );
 
@@ -398,35 +400,34 @@ app.get("/login", (request, response) => {
     renderPage(response, loginTemplate)
       .replace(
         "<!-- SOURCE_PREFILL -->",
-        `<input type="hidden" name="sourceUrl" value="${htmlAttribute(sourcePrefill(request.query.sourceUrl))}">`,
+        `<input type="hidden" name="sourceUrl" value="${escapeHtml(sourcePrefill(request.query.sourceUrl))}">`,
       )
       .replace("<!-- GIT_SHA -->", loginBuildMarkup(response)),
   );
 });
 
-app.post("/login", (request, response) => {
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  skip: () => !auth.enabled,
+  skipSuccessfulRequests: true,
+  // Both successful and failed form submissions redirect with HTTP 303.
+  requestWasSuccessful: (_request, response) =>
+    response.hasHeader("Set-Cookie"),
+  handler: (_request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    response
+      .status(429)
+      .type("text")
+      .send(localizeError(response, "error.loginRateLimit"));
+  },
+});
+
+app.post("/login", loginLimiter, async (request, response) => {
   if (!auth.enabled) {
     return response.redirect(303, prefillDestination(request.body?.sourceUrl));
-  }
-  const key = request.ip ?? request.socket.remoteAddress ?? "unknown";
-  const now = Date.now();
-  const storedAttempt = loginAttempts.get(key);
-  const attempt =
-    storedAttempt &&
-    (storedAttempt.blockedUntil === 0 || storedAttempt.blockedUntil > now)
-      ? storedAttempt
-      : undefined;
-  if (storedAttempt && !attempt) {
-    loginAttempts.delete(key);
-  }
-  if (attempt && attempt.blockedUntil > Date.now()) {
-    response.setHeader(
-      "Retry-After",
-      String(Math.ceil((attempt.blockedUntil - Date.now()) / 1_000)),
-    );
-    return response
-      .status(429)
-      .send(localizeError(response, "error.loginRateLimit"));
   }
   const username =
     typeof request.body?.username === "string"
@@ -434,21 +435,14 @@ app.post("/login", (request, response) => {
       : "";
   const password =
     typeof request.body?.password === "string" ? request.body.password : "";
-  const token = auth.authenticate(username, password);
+  const token = await auth.authenticate(username, password);
   if (!token) {
-    const failures = (attempt?.failures ?? 0) + 1;
-    loginAttempts.set(key, {
-      failures,
-      blockedUntil:
-        failures >= maximumLoginFailures ? Date.now() + loginBlockMs : 0,
-    });
     const destination = prefillDestination(request.body?.sourceUrl, "/login");
     return response.redirect(
       303,
       `${destination}${destination.includes("?") ? "&" : "?"}error=1`,
     );
   }
-  loginAttempts.delete(key);
   response.setHeader("Set-Cookie", sessionCookie(token, request.secure));
   return response.redirect(303, prefillDestination(request.body?.sourceUrl));
 });
@@ -789,7 +783,9 @@ app.get("/api/jobs/:id/audio", async (request, response) => {
   try {
     await stat(file);
     response.setHeader("Cache-Control", "private, max-age=3600");
-    return response.sendFile(path.basename(file), { root: path.dirname(file) });
+    return response.sendFile(path.basename(file), {
+      root: path.join(userDirectory(response.locals.username), "media"),
+    });
   } catch {
     return response.status(404).json({
       error: localizeError(response, "error.audioNotReady"),

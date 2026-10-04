@@ -537,6 +537,17 @@ sudo systemctl status podcast2article
 ```
 
 Changing `APP_USERS` immediately invalidates all old cookies after restart.
+Unchanged accounts preserve existing sessions; password verifiers use fresh random salts at startup without changing the session signing key.
+Password verification uses asynchronous scrypt (`N=32768`, `r=8`, `p=3`, approximately 32 MiB per active verification), while the environment file remains a plaintext secret.
+
+The application allows 600 requests per minute per IP across all routes by default and five failed sign-ins per fifteen-minute window.
+`REQUEST_RATE_LIMIT_PER_MINUTE` adjusts the general quota and must be a positive integer no greater than 1,000,000; it does not change the failed-login quota.
+Successful sign-ins do not consume the login quota; pending checks count until they finish.
+Excess requests receive `429` with `Retry-After` and `Cache-Control: no-store`.
+Limits are held in memory per process and reset on restart; IPv6 clients share a `/56` subnet quota.
+The application trusts only loopback proxies, so the reverse proxy must overwrite client forwarding headers and the application port must remain bound to loopback.
+OpenAI webhooks share the general quota; polling remains sufficient if a webhook receives `429`.
+Multiple application processes would require a shared limiter store to enforce one installation-wide quota.
 
 ### Webhook environment
 

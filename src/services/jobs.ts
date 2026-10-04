@@ -92,7 +92,7 @@ export function userDirectory(username: string): string {
   if (!/^[a-z][a-z0-9_-]{1,31}$/.test(username)) {
     throw new DomainError("error.usernameInvalid");
   }
-  return path.join(root, "users", username);
+  return path.join(root, "users", path.basename(username));
 }
 
 function jobKey(username: string, id: string): string {
@@ -118,8 +118,10 @@ export function playbackFileForJob(
   username: string,
   id: string,
 ): string | undefined {
-  return /^[0-9a-f-]{36}$/i.test(id)
-    ? path.join(userDirectory(username), "media", `${id}.mp3`)
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    id,
+  )
+    ? path.join(userDirectory(username), "media", `${path.basename(id)}.mp3`)
     : undefined;
 }
 
@@ -418,14 +420,19 @@ async function getStoredJob(
   if (memory.has(key)) {
     return memory.get(key);
   }
-  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+  ) {
     return undefined;
   }
   try {
     const jobDirectory = path.join(userDirectory(username), "jobs");
     const job = normalizeStoredJob(
       JSON.parse(
-        await readFile(path.join(jobDirectory, `${id}.json`), "utf8"),
+        await readFile(
+          path.join(jobDirectory, `${path.basename(id)}.json`),
+          "utf8",
+        ),
       ) as StoredJob,
     );
     memory.set(key, job);

@@ -1,6 +1,7 @@
 import {
-  createHash,
   createHmac,
+  randomBytes,
+  scrypt,
   scryptSync,
   timingSafeEqual,
 } from "node:crypto";
@@ -12,12 +13,53 @@ const SESSION_VERSION = "v2";
 const KEY_SALT = "podcast2article/session/v2";
 const USERNAME_PATTERN = /^[a-z][a-z0-9_-]{1,31}$/;
 
-function digest(value: string): Buffer {
-  return createHash("sha256").update(value, "utf8").digest();
+const PASSWORD_SCRYPT_OPTIONS = {
+  N: 32768,
+  r: 8,
+  p: 3,
+  maxmem: 64 * 1024 * 1024,
+};
+
+interface PasswordVerifier {
+  salt: Buffer;
+  hash: Buffer;
 }
 
-function equal(left: string, right: string): boolean {
-  return timingSafeEqual(digest(left), digest(right));
+function passwordVerifier(password: string): PasswordVerifier {
+  const salt = randomBytes(16);
+  return {
+    salt,
+    hash: scryptSync(password, salt, 32, PASSWORD_SCRYPT_OPTIONS),
+  };
+}
+
+function verifyPassword(
+  password: string,
+  verifier: PasswordVerifier,
+): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    scrypt(
+      password,
+      verifier.salt,
+      32,
+      PASSWORD_SCRYPT_OPTIONS,
+      (error, hash) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(timingSafeEqual(hash, verifier.hash));
+      },
+    );
+  });
+}
+
+function equalSignature(left: string, right: string): boolean {
+  const received = Buffer.from(left, "utf8");
+  const expected = Buffer.from(right, "utf8");
+  return (
+    received.length === expected.length && timingSafeEqual(received, expected)
+  );
 }
 
 function parseUsers(rawUsers: string | undefined): Map<string, string> {
@@ -60,7 +102,7 @@ function parseUsers(rawUsers: string | undefined): Map<string, string> {
 export interface UserAuth {
   enabled: boolean;
   usernames: string[];
-  authenticate(username: string, password: string): string | undefined;
+  authenticate(username: string, password: string): Promise<string | undefined>;
   createSession(username: string, now?: number): string | undefined;
   sessionUser(token: string | undefined, now?: number): string | undefined;
 }
@@ -75,6 +117,18 @@ export function createUserAuth(rawUsers = process.env.APP_USERS): UserAuth {
     ? scryptSync(credentialFingerprint, KEY_SALT, 32)
     : undefined;
 
+  const verifiers = new Map(
+    [...users].map(([username, password]) => [
+      username,
+      passwordVerifier(password),
+    ]),
+  );
+  // Unknown accounts do the same password work without ever receiving a session.
+  const dummyVerifier = users.size
+    ? passwordVerifier(randomBytes(32).toString("hex"))
+    : undefined;
+  users.clear();
+
   function signature(payload: string): string {
     return createHmac("sha256", signingKey!)
       .update(payload, "utf8")
@@ -85,7 +139,7 @@ export function createUserAuth(rawUsers = process.env.APP_USERS): UserAuth {
     username: string,
     now = Date.now(),
   ): string | undefined {
-    if (!signingKey || !users.has(username)) {
+    if (!signingKey || !verifiers.has(username)) {
       return undefined;
     }
     const expiresAt = Math.floor(now / 1_000) + SESSION_MAX_AGE_SECONDS;
@@ -95,11 +149,19 @@ export function createUserAuth(rawUsers = process.env.APP_USERS): UserAuth {
   }
 
   return {
-    enabled: users.size > 0,
-    usernames: [...users.keys()],
-    authenticate(username: string, password: string): string | undefined {
-      const configuredPassword = users.get(username);
-      return configuredPassword && equal(password, configuredPassword)
+    enabled: verifiers.size > 0,
+    usernames: [...verifiers.keys()],
+    async authenticate(
+      username: string,
+      password: string,
+    ): Promise<string | undefined> {
+      const configuredVerifier = verifiers.get(username);
+      const verifier = configuredVerifier ?? dummyVerifier;
+      if (!verifier) {
+        return undefined;
+      }
+      const matches = await verifyPassword(password, verifier);
+      return configuredVerifier && matches
         ? createSession(username)
         : undefined;
     },
@@ -133,7 +195,7 @@ export function createUserAuth(rawUsers = process.env.APP_USERS): UserAuth {
       } catch {
         return undefined;
       }
-      if (!users.has(username)) {
+      if (!verifiers.has(username)) {
         return undefined;
       }
       const expiresAt = Number(expiresAtText);
@@ -146,7 +208,7 @@ export function createUserAuth(rawUsers = process.env.APP_USERS): UserAuth {
         return undefined;
       }
       const payload = `${version}.${encodedUsername}.${expiresAtText}`;
-      return equal(receivedSignature, signature(payload))
+      return equalSignature(receivedSignature, signature(payload))
         ? username
         : undefined;
     },

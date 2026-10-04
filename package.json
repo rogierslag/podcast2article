@@ -26,7 +26,9 @@
     "@aws-sdk/client-s3": "^3.1136.0",
     "@aws-sdk/client-sesv2": "3.1136.0",
     "entities": "^7.0.0",
+    "escape-html": "^1.0.3",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "fast-xml-parser": "^5.11.1",
     "ffmpeg-static": "^5.3.0",
     "openai": "^7.9.0",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
+    "@types/escape-html": "^1.0.4",
     "@types/express": "^5.0.6",
     "@types/node": "^24.13.6",
     "@types/pdfkit": "^0.17.6",

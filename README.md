@@ -110,7 +110,14 @@ When upgrading an older installation, configure `APP_USERS` before deployment: t
 Leaving `APP_USERS` unset or blank disables authentication for local development.
 The example accounts above are `rogier` and John Appleseed (`john_appleseed`).
 Always put production installations behind HTTPS, for example through Caddy or Nginx.
-After five failed attempts from the same IP address, sign-in blocks new attempts for fifteen minutes.
+Sign-in allows five failed attempts per IP address in each fifteen-minute window, then returns `429` until that window resets.
+Successful sign-ins do not consume that quota; concurrent attempts count until verification finishes.
+All routes also share a default limit of 600 requests per minute per IP address, including public assets, audio, API routes, and OpenAI webhooks.
+Set `REQUEST_RATE_LIMIT_PER_MINUTE` to a positive integer up to 1,000,000 to adjust this quota; the failed-login limit remains unchanged.
+Rate-limited responses include `Retry-After` and are not cached.
+These limits live in memory, reset on restart, and apply per server process; IPv6 clients are grouped by `/56` subnet.
+Passwords are verified asynchronously using salted scrypt (`N=32768`, `r=8`, `p=3`); `APP_USERS` remains an operator-managed plaintext secret.
+Existing session cookies remain valid when restarting with unchanged accounts.
 
 For regional OpenAI processing in the EU or US, set `OPENAI_REGION=eu` or `OPENAI_REGION=us` respectively in `.env`.
 `yarn start` reads the variables from that file:
@@ -229,6 +236,7 @@ Refresh the page after changing the browser language.
 | Variable                          | Default                     | Meaning                                                                                                     |
 | --------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`                  | required for processing     | OpenAI API key supplied through the process environment or environment file                                 |
+| `REQUEST_RATE_LIMIT_PER_MINUTE`   | `600`                       | Requests per minute per IP across all routes; positive integer up to 1,000,000                              |
 | `APP_USERS`                       | empty                       | JSON account map; unset or blank disables authentication                                                    |
 | `SPENDING_LIMIT_EXEMPT_USERS`     | empty                       | Comma-separated usernames exempt from spending limits; usage stays tracked                                  |
 | `OPENAI_REGION`                   | `global`                    | OpenAI API region: `global`, `eu` (EEA + Switzerland), or `us`                                              |

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -16,7 +16,8 @@ const otherToken = "b".repeat(43);
 const publicBaseUrl = "https://reads.example.test";
 const episodeImage =
   "https://cdn.example.test/episode.jpg?crop=cover&width=1200";
-const escapedFixtureText = "A <tag> \"quoted\" & 'apostrophe'";
+const escapedFixtureText =
+  "A </title><script>alert(1)</script> \"quoted\" & 'apostrophe'";
 const audioBytes = Buffer.from("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 let directory;
 let child;
@@ -217,6 +218,7 @@ before(async () => {
       };
       article.episode.imageUrl = episodeImage;
       article.episode.title = escapedFixtureText;
+      article.article.title = escapedFixtureText;
       article.article.dek = escapedFixtureText;
     }
     await writeFile(
@@ -516,7 +518,7 @@ test("article artwork is preserved and untrusted preview fields are escaped", as
   const markup = await response.text();
   const escapedImage = episodeImage.replaceAll("&", "&amp;");
   const escapedText =
-    "A &lt;tag&gt; &quot;quoted&quot; &amp; &#39;apostrophe&#39;";
+    "A &lt;/title&gt;&lt;script&gt;alert(1)&lt;/script&gt; &quot;quoted&quot; &amp; &#39;apostrophe&#39;";
 
   assert.equal(response.status, 200);
   assert.equal(metaContent(markup, "og:image"), escapedImage);
@@ -531,6 +533,8 @@ test("article artwork is preserved and untrusted preview fields are escaped", as
     /<meta property="og:image:(?:width|height|type)"/,
   );
   assert.equal(markup.includes(escapedFixtureText), false);
+  assert.doesNotMatch(markup, /<script>alert\(1\)<\/script>/);
+  assert.ok(markup.includes(`<title>${escapedText} — Podcast2Article</title>`));
 });
 
 test("series discovery, confirmation and mutations require an owner session", async () => {
@@ -603,7 +607,7 @@ test("each public token returns only its own article and minimal source fields",
   const other = await (
     await fetch(`${origin}/api/shared/${otherToken}`)
   ).json();
-  assert.equal(other.article.title, "Other article");
+  assert.equal(other.article.title, escapedFixtureText);
 });
 
 test("public audio supports byte ranges without crossing the token boundary", async () => {
@@ -1102,3 +1106,144 @@ test("retired narration routes and assets remain unavailable with old flags set"
     /article-narration|data-browser-narration|article-speech-text/,
   );
 });
+
+test("public assets and owner audio reject paths outside their fixed roots", async () => {
+  const cookie = await loginAs("owner");
+  for (const route of [
+    "/%2e%2e%2fpackage.json",
+    "/styles.css%2f..%2f..%2fpackage.json",
+    "/api/jobs/%2e%2e%2foutside/audio",
+    "/api/jobs/------------------------------------/audio",
+    "/api/jobs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/audio",
+  ]) {
+    const response = await fetch(origin + route, {
+      headers: { Cookie: cookie },
+      redirect: "manual",
+    });
+
+    assert.notEqual(response.status, 200, route);
+    assert.doesNotMatch(await response.text(), /"dependencies"|"APP_USERS"/);
+  }
+});
+
+test("successful logins do not consume the failed-login quota, which blocks correct credentials too", async () => {
+  const headers = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "X-Forwarded-For": "192.0.2.10",
+  };
+  const login = (password) =>
+    fetch(`${origin}/login`, {
+      method: "POST",
+      headers,
+      body: new URLSearchParams({ username: "owner", password }),
+      redirect: "manual",
+    });
+  for (let attempt = 0; attempt < 6; attempt++) {
+    assert.ok(
+      (await login("test-only-password-owner")).headers.get("set-cookie"),
+    );
+  }
+  for (let attempt = 0; attempt < 5; attempt++) {
+    assert.equal((await login("incorrect password")).status, 303);
+  }
+
+  const blocked = await login("test-only-password-owner");
+
+  assert.equal(blocked.status, 429);
+  assert.equal(blocked.headers.get("set-cookie"), null);
+  assert.ok(Number(blocked.headers.get("retry-after")) > 0);
+  assert.equal(blocked.headers.get("cache-control"), "no-store");
+});
+
+test("concurrent failed logins cannot bypass the five-attempt limit", async () => {
+  const responses = await Promise.all(
+    Array.from({ length: 10 }, () =>
+      fetch(`${origin}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Forwarded-For": "192.0.2.11",
+        },
+        body: new URLSearchParams({
+          username: "unknown",
+          password: "incorrect password",
+        }),
+        redirect: "manual",
+      }),
+    ),
+  );
+
+  assert.equal(
+    responses.filter((response) => response.status === 303).length,
+    5,
+  );
+  assert.equal(
+    responses.filter((response) => response.status === 429).length,
+    5,
+  );
+  assert.ok(responses.every((response) => !response.headers.has("set-cookie")));
+});
+
+test("public file and API requests share a per-IP limit before route work", async () => {
+  const headers = { "X-Forwarded-For": "192.0.2.20", "Accept-Language": "en" };
+  for (let request = 0; request < 600; request++) {
+    const response = await fetch(`${origin}/api/shared/invalid`, { headers });
+    assert.equal(response.status, 404);
+    await response.arrayBuffer();
+  }
+
+  for (const route of [
+    "/styles.css",
+    "/s/invalid",
+    "/api/articles",
+    "/login",
+    "/hooks/openai",
+  ]) {
+    const response = await fetch(origin + route, { headers });
+    assert.equal(response.status, 429, route);
+    assert.ok(Number(response.headers.get("retry-after")) > 0);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(
+      (await response.json()).error,
+      translate("en", "error.requestRateLimit"),
+    );
+  }
+  const malformedSubmission = await fetch(`${origin}/login`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: "{invalid json",
+  });
+  assert.equal(malformedSubmission.status, 429);
+  assert.equal(
+    (
+      await fetch(`${origin}/styles.css`, {
+        headers: { "X-Forwarded-For": "192.0.2.21" },
+      })
+    ).status,
+    200,
+  );
+});
+
+for (const limit of ["0", "-1", "1.5", "invalid", "1000001"]) {
+  test(`invalid request quota fails startup before serving requests: ${limit}`, () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--import", import.meta.resolve("tsx"), path.resolve("src/server.ts")],
+      {
+        cwd: directory,
+        env: {
+          ...process.env,
+          APP_USERS: "",
+          OPENAI_API_KEY: "",
+          REQUEST_RATE_LIMIT_PER_MINUTE: limit,
+        },
+        encoding: "utf8",
+        timeout: 10_000,
+      },
+    );
+
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /ZodError/);
+    assert.doesNotMatch(result.stdout, /luistert op/);
+  });
+}
