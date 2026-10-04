@@ -1,6 +1,5 @@
 import * as z from "zod/mini";
 import {
-  responseData,
   errorSchema,
   seriesPreviewSchema,
   seriesCandidateSchema,

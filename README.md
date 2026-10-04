@@ -368,6 +368,7 @@ yarn run check:media
 ```
 
 `yarn run typecheck` checks the server and shared TypeScript in `src/`, including tests, and the browser TypeScript in `public/` without emitting files.
+Both configurations reject unused imports, declarations, and parameters so dead code does not accumulate.
 `yarn run build` uses `tsconfig.build.json` to compile the application while keeping tests out of `dist/`, then builds the browser assets.
 `yarn run build:client` compiles, bundles, and minifies the frontend TypeScript into JavaScript with esbuild and minifies and prefixes CSS with Lightning CSS.
 The browser baseline is Chrome/Edge 109, Firefox 121, and Safari/iOS 16.4 or newer; the targets cover JavaScript syntax and CSS transformations, without adding runtime API polyfills.

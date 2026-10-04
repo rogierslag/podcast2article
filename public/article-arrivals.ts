@@ -2,6 +2,7 @@ import * as z from "zod/mini";
 import { responseData } from "../src/shared/api.js";
 import { localizedFetch, t } from "./localize.js";
 
+const arrivalsSchema = z.object({ count: z.int().check(z.nonnegative()) });
 const badge = document.querySelector<HTMLElement>(".article-arrivals");
 let revision = 0;
 
@@ -17,11 +18,8 @@ async function refreshArrivals() {
     if (!response.ok) {
       return;
     }
-    const { count } = await responseData(
-      response,
-      z.object({ count: z.int().check(z.nonnegative()) }),
-    );
-    if (currentRevision !== revision || !Number.isInteger(count) || count < 0) {
+    const { count } = await responseData(response, arrivalsSchema);
+    if (currentRevision !== revision) {
       return;
     }
     badge.hidden = count === 0;

@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { brotliCompressSync, gzipSync } from "node:zlib";
 import { build } from "esbuild";
 import { transform } from "lightningcss";
@@ -60,16 +59,6 @@ export async function buildClient(root = ".") {
   const urls = new Map();
   const options = {
     bundle: true,
-    plugins: [
-      {
-        name: "local-web-vitals",
-        setup(builder) {
-          builder.onResolve({ filter: /^\/vendor\/web-vitals\.js$/ }, () => ({
-            path: fileURLToPath(import.meta.resolve("web-vitals")),
-          }));
-        },
-      },
-    ],
     minify: true,
     target: browserTargets,
     outdir: outputDirectory,

@@ -17,6 +17,12 @@ import {
   shareStatsSchema,
   articleSeriesSchema,
 } from "../src/shared/api.js";
+import {
+  html,
+  escapeHtml,
+  formatTimestamp as time,
+  articleSectionId as slug,
+} from "./article-format.js";
 import { requiredElement } from "./dom.js";
 import { acknowledgeArticleVisit } from "./article-arrivals.js";
 import {
@@ -36,14 +42,6 @@ import {
 import { supportsIOSShortcutInstall } from "./ios-shortcut.js";
 
 const $ = (selector: string) => requiredElement(selector, HTMLElement);
-
-function html(strings: TemplateStringsArray, ...values: unknown[]) {
-  let markup = strings[0] ?? "";
-  values.forEach((value, index) => {
-    markup += String(value) + (strings[index + 1] ?? "");
-  });
-  return markup.trim();
-}
 const browserFetch = window.fetch.bind(window);
 
 window.fetch = async (...arguments_) => {
@@ -426,36 +424,12 @@ let routeVersion = 0;
 let jobPollTimer: number | undefined;
 let processingJob: ClientJob | undefined;
 const pendingArticleRetryIds = new Set();
-const sourceLabels = {
-  spotify: "Spotify",
-  rss: "Podcast",
-  youtube: "YouTube",
-  fathom: "Fathom",
-  "google-drive": "Google Drive",
-};
 const processingStageLabels = {
   queued: t("stage.queued"),
   resolving: t("stage.resolving"),
   downloading: t("stage.downloading"),
   transcribing: t("stage.transcribing"),
   writing: t("stage.writing"),
-};
-const escapeHtml = (value: unknown = "") =>
-  String(value).replace(
-    /[&<>'"]/g,
-    (char) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[
-        char
-      ] ?? char,
-  );
-const time = (seconds: number) => {
-  const value = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(value / 3600);
-  const m = Math.floor((value % 3600) / 60);
-  const s = value % 60;
-  return h
-    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-    : `${m}:${String(s).padStart(2, "0")}`;
 };
 
 function showFormError(
@@ -787,13 +761,6 @@ function articleBlock(
   return html`
     <p>${escapeHtml(block.text)} ${sourceButtons(block.sources, transcript)}</p>
   `;
-}
-
-function slug(value: string, index: number) {
-  return `section-${index}-${value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")}`;
 }
 
 function renderResult(job: ClientJob) {
@@ -1795,14 +1762,6 @@ async function updateArticleShareStats(job: ClientJob) {
       throw new Error("Statistics unavailable");
     }
     const statistics = await responseData(response, shareStatsSchema);
-    if (
-      !Number.isSafeInteger(statistics.loads) ||
-      statistics.loads < 0 ||
-      !Number.isSafeInteger(statistics.reads) ||
-      statistics.reads < 0
-    ) {
-      throw new Error("Invalid statistics");
-    }
     if (currentJob?.id !== job.id || requestId !== shareStatsRequest) {
       return;
     }

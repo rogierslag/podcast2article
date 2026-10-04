@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
-import { browserSource } from "./client-source.mjs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
+import {
+  html,
+  escapeHtml,
+  formatTimestamp as time,
+} from "../public/article-format.ts";
 import { translate } from "../src/shared/i18n.ts";
+import { browserSource } from "./client-source.mjs";
 
 const app = browserSource("public/app.ts");
 const renderer = app.slice(
@@ -39,17 +44,9 @@ function setup(language = "nl") {
     HTMLInputElement: class {},
     HTMLButtonElement: class {},
     t: (key, values) => translate(language, key, values),
-    time: String,
-    escapeHtml: (value) =>
-      String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll('"', "&quot;"),
-    html: (strings, ...values) =>
-      strings.reduce(
-        (result, part, index) => result + part + (values[index] ?? ""),
-        "",
-      ),
+    time,
+    escapeHtml,
+    html,
   };
   runInNewContext(renderer + "; this.render = renderTranscript;", context);
   return { elements, context };

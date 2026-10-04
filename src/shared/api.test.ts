@@ -5,6 +5,8 @@ import {
   jobSchema,
   responseData,
   sharedArticleSchema,
+  shareStatsSchema,
+  readingPositionSchema,
 } from "./api.js";
 
 describe("browser API boundaries", () => {
@@ -37,4 +39,18 @@ describe("browser API boundaries", () => {
 
     expect(sharedArticleSchema.safeParse(shared).success).toBe(false);
   });
+  it.each([-1, 0.5, Number.MAX_SAFE_INTEGER + 1, Infinity, NaN])(
+    "rejects invalid counts and reading positions (%s) at the API boundary",
+    (value) => {
+      expect(
+        shareStatsSchema.safeParse({ loads: value, reads: 0 }).success,
+      ).toBe(false);
+      expect(
+        shareStatsSchema.safeParse({ loads: 0, reads: value }).success,
+      ).toBe(false);
+      expect(
+        readingPositionSchema.safeParse({ sectionIndex: value }).success,
+      ).toBe(false);
+    },
+  );
 });

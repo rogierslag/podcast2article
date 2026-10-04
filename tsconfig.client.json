@@ -9,7 +9,9 @@
     "noEmit": true,
     "types": [],
     "skipLibCheck": true,
-    "rewriteRelativeImportExtensions": true
+    "rewriteRelativeImportExtensions": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
   "include": ["public/**/*.ts", "src/shared/**/*.ts"]
 }

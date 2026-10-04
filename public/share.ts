@@ -1,3 +1,9 @@
+import {
+  html,
+  escapeHtml,
+  formatTimestamp as time,
+  articleSectionId as slug,
+} from "./article-format.js";
 import type { ArticleParagraph, TranscriptSegment } from "../src/types.js";
 import type { SharedArticle } from "../src/shared/api.js";
 import {
@@ -14,37 +20,6 @@ import { createShareTracker } from "./share-analytics.js";
 import { createSourcePreview } from "./source-preview.js";
 
 const $ = (selector: string) => requiredElement(selector, HTMLElement);
-
-function html(strings: TemplateStringsArray, ...values: unknown[]) {
-  let markup = strings[0] ?? "";
-  values.forEach((value, index) => {
-    markup += String(value) + (strings[index + 1] ?? "");
-  });
-  return markup.trim();
-}
-
-const escapeHtml = (value: unknown = "") =>
-  String(value).replace(
-    /[&<>'"]/g,
-    (character) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[
-        character
-      ] ?? character,
-  );
-const time = (seconds: number) => {
-  const value = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(value / 3600);
-  const minutes = Math.floor((value % 3600) / 60);
-  const remainder = value % 60;
-  return hours
-    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
-    : `${minutes}:${String(remainder).padStart(2, "0")}`;
-};
-const slug = (value: string, index: number) =>
-  `section-${index}-${value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")}`;
 const articleReadingProgress = $("#article-reading-progress");
 const pageScroll = $(".page-scroll");
 let readingProgressFrame: number | undefined;
@@ -98,12 +73,9 @@ function storedReadingPosition() {
     return undefined;
   }
   try {
-    const value = readingPositionSchema.parse(
+    return readingPositionSchema.parse(
       JSON.parse(localStorage.getItem(sharedReadingStorageKey) ?? "null"),
     );
-    return Number.isInteger(value?.sectionIndex) && value.sectionIndex >= 0
-      ? value
-      : undefined;
   } catch {
     return undefined;
   }
