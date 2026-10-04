@@ -3,6 +3,32 @@ import { password } from "./fixture.mjs";
 
 test.use({ video: "on" });
 
+test("article read labels have space before their arrows", async ({
+  page,
+}, testInfo) => {
+  await page.request.post("/login", {
+    form: { username: "regression", password },
+  });
+  await page.goto("/articles");
+  const readLink = page.locator(".article-card-read").first();
+  await expect(readLink).toBeVisible();
+
+  const spacing = await readLink.evaluate((link) => {
+    const labelRange = document.createRange();
+    labelRange.selectNodeContents(link.firstChild);
+    return (
+      link.querySelector("span").getBoundingClientRect().left -
+      labelRange.getBoundingClientRect().right
+    );
+  });
+
+  expect(spacing).toBeGreaterThanOrEqual(6);
+  await expect(readLink).toHaveAccessibleName("Lees");
+  await page.screenshot({
+    path: `/tmp/p2a-read-spacing-${testInfo.project.name}.png`,
+  });
+});
+
 test("Articles and Series preserve the library layout when switching views", async ({
   page,
 }, testInfo) => {
