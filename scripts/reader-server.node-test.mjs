@@ -2,11 +2,20 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, test } from "node:test";
+import { buildClient } from "./build-client.mjs";
 import { translate } from "../public/i18n.js";
 
 const articleId = "00000000-0000-4000-8000-000000000917";
@@ -177,6 +186,24 @@ before(async () => {
   await cp(path.resolve("public"), path.join(directory, "public"), {
     recursive: true,
   });
+  // Run the real file-serving route with an isolated client build, even in the standalone test job.
+  await cp(path.resolve("src"), path.join(directory, "src"), {
+    recursive: true,
+  });
+  await cp(path.resolve("package.json"), path.join(directory, "package.json"));
+  await symlink(
+    path.resolve("node_modules"),
+    path.join(directory, "node_modules"),
+    "dir",
+  );
+  await buildClient(directory);
+  for (const name of ["client", "client-templates"]) {
+    await cp(
+      path.join(directory, "dist", name),
+      path.join(directory, "src", name),
+      { recursive: true },
+    );
+  }
   for (const [username, id, shareToken, title, audio] of [
     ["owner", articleId, token, "Intended article", audioBytes],
     [
@@ -252,7 +279,11 @@ before(async () => {
   origin = `http://127.0.0.1:${port}`;
   child = spawn(
     process.execPath,
-    ["--import", import.meta.resolve("tsx"), path.resolve("src/server.ts")],
+    [
+      "--import",
+      import.meta.resolve("tsx"),
+      path.join(directory, "src/server.ts"),
+    ],
     {
       cwd: directory,
       env: {
@@ -333,6 +364,66 @@ test("shared reader assets are public while owner routes require authentication"
     `/api/jobs/${articleId}/audio`,
   ]) {
     assert.equal((await fetch(origin + route)).status, 401, route);
+  }
+});
+
+test("built assets negotiate compression and cache safely without exposing build files", async () => {
+  const page = await fetch(`${origin}/login`);
+  const markup = await page.text();
+  const urls = [...markup.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map(
+    ([, url]) => url,
+  );
+  assert.ok(urls.length > 0);
+
+  for (const url of urls) {
+    const plain = await fetch(origin + url, {
+      headers: { "Accept-Encoding": "identity" },
+    });
+    assert.equal(plain.status, 200);
+    assert.equal(plain.headers.get("content-encoding"), null);
+    const content = await plain.text();
+    for (const [accept, encoding] of [
+      ["gzip", "gzip"],
+      ["br, gzip", "br"],
+      ["br;q=0, gzip;q=1", "gzip"],
+    ]) {
+      const compressed = await fetch(origin + url, {
+        headers: { "Accept-Encoding": accept },
+      });
+      assert.equal(compressed.status, 200);
+      assert.equal(compressed.headers.get("content-encoding"), encoding);
+      assert.match(compressed.headers.get("vary"), /Accept-Encoding/i);
+      assert.match(
+        compressed.headers.get("cache-control"),
+        /max-age=31536000.*immutable/,
+      );
+      assert.equal(await compressed.text(), content);
+    }
+    const head = await fetch(origin + url, {
+      method: "HEAD",
+      headers: { "Accept-Encoding": "br" },
+    });
+    assert.equal(head.status, 200);
+    assert.equal(head.headers.get("content-encoding"), "br");
+    assert.equal(await head.text(), "");
+    assert.equal((await fetch(origin + url, { method: "POST" })).status, 404);
+    const refused = await fetch(origin + url, {
+      headers: { "Accept-Encoding": "identity;q=0, br;q=0, gzip;q=0" },
+    });
+    assert.equal(refused.status, 406);
+  }
+  for (const url of [
+    "/assets/assets.json",
+    "/assets/index.html",
+    "/assets/missing.js",
+    urls[0] + ".br",
+    "/assets/%2e%2e%2fpackage.json",
+  ]) {
+    assert.equal(
+      (await fetch(origin + url, { redirect: "manual" })).status,
+      404,
+      url,
+    );
   }
 });
 
@@ -479,6 +570,7 @@ test("articles without artwork use localized branding while preserving article i
     const image = `${publicBaseUrl}/social-card-${language}.png`;
 
     assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "public, no-cache");
     assert.equal(metaContent(markup, "og:type"), "article");
     assert.equal(metaContent(markup, "og:title"), "Intended article");
     assert.equal(metaContent(markup, "og:description"), "A test article");
@@ -1185,6 +1277,9 @@ test("concurrent failed logins cannot bypass the five-attempt limit", async () =
 });
 
 test("public file and API requests share a per-IP limit before route work", async () => {
+  const markup = await (await fetch(`${origin}/login`)).text();
+  const assetUrl = markup.match(/src="(\/assets\/[^"]+)"/)?.[1];
+  assert.ok(assetUrl, "Expected a built asset on the login page");
   const headers = { "X-Forwarded-For": "192.0.2.20", "Accept-Language": "en" };
   for (let request = 0; request < 600; request++) {
     const response = await fetch(`${origin}/api/shared/invalid`, { headers });
@@ -1194,6 +1289,7 @@ test("public file and API requests share a per-IP limit before route work", asyn
 
   for (const route of [
     "/styles.css",
+    assetUrl,
     "/s/invalid",
     "/api/articles",
     "/login",

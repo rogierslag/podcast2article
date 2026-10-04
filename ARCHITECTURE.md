@@ -62,6 +62,12 @@ The VPS performs source resolution, download, audio normalization, chunking, orc
 ### 3.1 Browser interface
 
 The browser interface consists of static HTML, CSS, images, and vanilla JavaScript under `public/`.
+The build bundles JavaScript with shared ESM chunks, minifies and prefixes CSS for the documented browser baseline, and rewrites generated HTML templates to content-hashed `/assets/` URLs.
+The compiled server serves manifest-listed JavaScript and CSS from `dist/client/` before authentication, negotiating precompressed Brotli/gzip files with immutable caching.
+The file-serving handler is registered directly on the main Express app after its global request limiter; the asset helper only loads and validates the catalog.
+This keeps one shared request quota and makes the admission boundary visible to CodeQL; isolated real-server tests verify that built assets receive `429` after the quota is exhausted.
+Generated templates and the asset manifest remain private; images and other unchanged files still come from `public/`.
+Development serves readable source assets directly.
 Owner pages require authentication when configured; public reader assets and capability routes are registered before that boundary.
 After authentication, unknown page GET and HEAD requests redirect to `/articles`, including unknown HTML paths.
 Logged-out page visitors still go to `/login`; unmatched API or shared paths and unsupported methods do not use the overview redirect.

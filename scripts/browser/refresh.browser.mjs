@@ -51,7 +51,7 @@ for (const [name, url, api, ready] of [
     await page.goto(url);
     await expect(page.locator(ready).first()).toBeVisible();
     await observeLanding(page);
-    const script = holdRequest(page, "**/app.js?*");
+    const script = holdRequest(page, "**/assets/app-*.js");
     const data = holdRequest(page, api);
     await Promise.all([script.installed, data.installed]);
 
