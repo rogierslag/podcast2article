@@ -95,6 +95,7 @@ const loginTemplate = await readFile(
   path.join(client.templateDirectory, "login.html"),
   "utf8",
 );
+const exampleArticlePath = "/s/_eUKVjs2CsydDZ7nEseiXUNRYc64L1Pp2EPQ8LLIGng";
 const auth = createUserAuth();
 const requestLimit = z.coerce
   .number()
@@ -108,6 +109,7 @@ alertConfiguration();
 app.disable("x-powered-by");
 app.set("trust proxy", "loopback");
 app.use((_request, response, next) => {
+  response.setHeader("X-Robots-Tag", "noindex, nofollow");
   // Cached responses must not mix UI languages between visitors.
   response.vary("Accept-Language");
   response.vary("Cookie");
@@ -217,6 +219,11 @@ app.get("/api/health", async (_request, response) => {
   response.json({ ok: true, deployment: await deploymentHealth(gitSha) });
 });
 
+app.get("/robots.txt", (_request, response) => {
+  response.type("text/plain");
+  return response.sendFile("robots.txt", { root: publicDirectory });
+});
+
 app.get("/s/:token", async (request, response) => {
   const shared = getSharedArticle(request.params.token);
   if (!shared) {
@@ -232,6 +239,10 @@ app.get("/s/:token", async (request, response) => {
           ),
         ),
       );
+  }
+  const isExampleArticle = request.originalUrl === exampleArticlePath;
+  if (isExampleArticle) {
+    response.removeHeader("X-Robots-Tag");
   }
   const { job } = shared;
   const url = `${publicOrigin(request)}/s/${request.params.token}`;
@@ -260,7 +271,14 @@ app.get("/s/:token", async (request, response) => {
   response.setHeader("Cache-Control", "public, no-cache");
   response.type("html");
   return response.send(
-    renderPage(response, template).replace("<!-- SHARE_METADATA -->", metadata),
+    renderPage(response, template)
+      .replace("<!-- SHARE_METADATA -->", metadata)
+      .replace(
+        '<meta name="robots" content="noindex, nofollow" />',
+        isExampleArticle
+          ? '<meta name="robots" content="index, follow" />'
+          : '<meta name="robots" content="noindex, nofollow" />',
+      ),
   );
 });
 
@@ -427,6 +445,9 @@ app.get("/login", (request, response) => {
   response.setHeader("Cache-Control", "no-store");
   if (authenticatedUser(request.headers.cookie)) {
     return response.redirect(303, prefillDestination(request.query.sourceUrl));
+  }
+  if (request.originalUrl === "/login") {
+    response.removeHeader("X-Robots-Tag");
   }
   response.type("html");
   return response.send(

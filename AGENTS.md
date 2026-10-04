@@ -81,7 +81,8 @@ This file applies to the entire repository.
 - Shared pages need server-rendered Open Graph and Twitter metadata because link-preview crawlers do not execute the client application.
   Escape all metadata values.
 - Use `PUBLIC_BASE_URL` for canonical production permalink and Open Graph URLs when configured; fall back to the request origin for local development.
-- Keep shared capability pages out of search indexes with `noindex, nofollow` unless the product requirements explicitly change.
+- Keep shared capability pages out of search indexes with `noindex, nofollow` and block crawling in `robots.txt`.
+  Only the exact login URL and its linked example article may be crawlable and indexable; APIs and source audio remain excluded.
 
 ## Project structure
 

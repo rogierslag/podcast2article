@@ -51,6 +51,13 @@ The link and explanation follow the visitor's Dutch or English language preferen
 The example links to the production article at `reads.rogierslag.nl`.
 Deleting that article disables the permalink; preserve it or update the example link.
 
+`GET /robots.txt` is public and blocks crawling everywhere except the exact `/login` URL and the example article linked there.
+All other responses carry `X-Robots-Tag: noindex, nofollow`, including owner pages, other permalinks, APIs, audio, assets, and URLs with query parameters.
+The example article omits the shared reader's `noindex` metadata only at its exact URL; missing or deleted examples remain non-indexable.
+Keep the example link, the server's `exampleArticlePath`, and the allow rule in `public/robots.txt` in sync when replacing it.
+These are crawler directives, not access controls; non-compliant crawlers can still access public permalinks.
+A URL already listed by a search engine may require removal through that engine because blocked crawling prevents it from reading new `noindex` directives.
+
 ## Design
 
 The [brand guidelines](docs/BRAND.md) describe the visual identity, typography, colors, interactions, and intended use of rounded corners.
