@@ -1862,6 +1862,7 @@ footer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 7px;
   min-height: 44px;
   padding: 10px 14px;
   border: 1px solid var(--green);
