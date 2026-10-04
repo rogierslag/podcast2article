@@ -131,7 +131,8 @@ Article language is still determined by the user's selection: `auto` follows the
 The coverage addition is unchanged, but the complete English prompt and message arrangement differ from the evaluated version.
 Its quality has not been remeasured; offline checks verify the request structure and language settings, not equivalent model behavior.
 
-The application retains its configured `ARTICLE_MODEL` (default `gpt-5.6-terra`), existing length ranges, source checks, literal-quote validation, and request budget tracking.
+The application retains its configured `ARTICLE_MODEL`, existing length ranges, source checks, literal-quote validation, and request budget tracking.
+The default is now `gpt-6.1-sol` with low reasoning effort, selected in the later [cost and quality evaluation](API-COST-EVALUATION.md).
 The implementation also preserves the current Flex service tier and bounded standard fallback, which were introduced after the evaluated baseline.
 The study used `gpt-5.6-sol`; other models and compact/extended targets were not evaluated.
 The narrow experimental length band and correction loop are not part of this change.

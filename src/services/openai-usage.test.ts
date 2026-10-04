@@ -176,13 +176,13 @@ function generateArticle(signal?: AbortSignal) {
   );
 }
 
-function articleResponse(tier: string) {
+function articleResponse(tier: string, model = "gpt-5.6-terra") {
   return new Response(
     JSON.stringify({
       id: "resp-flex-test",
       object: "response",
       status: "completed",
-      model: "gpt-5.6-terra",
+      model,
       service_tier: tier,
       output: [
         {
@@ -238,6 +238,72 @@ function mockArticleFetch(failures: number, status = 429) {
   return tiers;
 }
 
+it.each([undefined, "gpt-6.1-sol"])(
+  "uses the evaluated Sol candidate for the default or explicit selection (%s)",
+  async (model) => {
+    vi.stubEnv("ARTICLE_MODEL", model);
+    const fetchMock = vi.fn(async (_url, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return articleResponse(body.service_tier, body.model);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateArticle();
+
+    expect(result.title).toBe("Hello");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1].body));
+    expect(payload).toMatchObject({
+      model: "gpt-6.1-sol",
+      reasoning: { effort: "low" },
+      service_tier: "flex",
+      max_output_tokens: 16_384,
+      text: { format: { strict: true } },
+    });
+    expect(records[0]?.reservedCostUsd).toBeGreaterThan(0);
+    expect(records.at(-1)).toMatchObject({
+      requestedModel: "gpt-6.1-sol",
+      actualModel: "gpt-6.1-sol",
+      cost: { amount: 0.0035 },
+    });
+  },
+);
+
+it("retains the evaluated model and effort when Flex falls back to standard", async () => {
+  vi.stubEnv("ARTICLE_MODEL", undefined);
+  let attempts = 0;
+  const fetchMock = vi.fn(async (_url, init: RequestInit) => {
+    attempts += 1;
+    const body = JSON.parse(String(init.body));
+    return attempts <= 3
+      ? providerError()
+      : articleResponse(body.service_tier, body.model);
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await generateArticle();
+
+  const payloads = fetchMock.mock.calls.map(([, init]) =>
+    JSON.parse(String(init.body)),
+  );
+  expect(payloads.map((payload) => payload.service_tier)).toEqual([
+    "flex",
+    "flex",
+    "flex",
+    "default",
+  ]);
+  for (const payload of payloads) {
+    expect(payload).toMatchObject({
+      model: "gpt-6.1-sol",
+      reasoning: { effort: "low" },
+    });
+  }
+  expect(records.at(-1)).toMatchObject({
+    actualServiceTier: "default",
+    cost: { amount: 0.007 },
+  });
+});
+
 it.each([0, 1, 2, 3, 4, 5])(
   "uses Flex by default and falls back only after three failures (%i failures)",
   async (failures) => {
@@ -261,7 +327,7 @@ it.each([0, 1, 2, 3, 4, 5])(
     expect(completed.at(-1)).toMatchObject({
       requestedServiceTier: failures < 3 ? "flex" : "default",
       actualServiceTier: failures < 3 ? "flex" : "default",
-      cost: { amount: failures < 3 ? 0.004 : 0.008, pricingDate: "2026-09-19" },
+      cost: { amount: failures < 3 ? 0.004 : 0.008, pricingDate: "2026-10-04" },
     });
   },
 );
@@ -524,6 +590,7 @@ it.each([
         },
       },
     });
+    expect(payload).not.toHaveProperty("reasoning");
   },
 );
 
@@ -632,6 +699,7 @@ it("retrieves a saved background response after restart without another generati
     }),
   ).rejects.toThrow();
   const state = JSON.parse(await readFile(savedFile, "utf8"));
+  vi.stubEnv("ARTICLE_MODEL", "gpt-6.1-sol");
   const result = await writeArticle(
     transcript,
     metadata,

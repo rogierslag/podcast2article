@@ -54,6 +54,7 @@ GitHub webhook -> isolated webhook receiver -> update mechanism-+
 ```
 
 The transcription and article models run remotely through the OpenAI API.
+Article generation and new quote repairs default to `gpt-6.1-sol` with low reasoning effort; `ARTICLE_MODEL` can select another model without changing that model's reasoning defaults.
 The VPS performs source resolution, download, audio normalization, chunking, orchestration, persistence, HTML delivery, and PDF generation.
 
 ## 3. Runtime components
@@ -361,9 +362,10 @@ Article retries and restart recovery preserve the ledger.
 A hard stop leaves pending attempts with unknown cost.
 
 Known USD estimates are summed separately from unknown-cost attempts.
-Price snapshots are stored in `src/services/api-usage.ts` with their source and date (2026-09-19), covering diarization, Terra, and Sol.
+The current price table in `src/services/api-usage.ts` was checked on 4 October 2026; saved request estimates retain their original source and dated snapshots.
 Diarization uses the published per-minute estimate applied to reported seconds.
-Article models use reported tokens, cache reads/writes, actual service tier, the [272K context boundary](https://developers.openai.com/api/docs/models/gpt-5.6-terra), and regional uplift.
+The verified article price table covers `gpt-5.6-terra`, `gpt-5.6-sol`, and `gpt-6.1-sol`.
+Article models use reported tokens, cache reads/writes, actual service tier, the [272K context boundary](https://developers.openai.com/api/docs/models/gpt-6.1-sol), and regional uplift.
 These are estimates, excluding infrastructure and invoice-level adjustments.
 Unsupported models, custom endpoints, and missing usage remain unknown.
 Legacy jobs have unknown history; tracking initiated later is marked partial.

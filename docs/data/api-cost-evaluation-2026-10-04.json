@@ -1,0 +1,1958 @@
+{
+  "reviewDate": "2026-10-04",
+  "issue": "https://github.com/rogierslag/podcast2article/issues/62",
+  "scope": "Sanitized aggregate production ledger data and selected Codex screen measurements; API equivalents are estimates, not a Codex bill or production forecast.",
+  "omitted": "Account identities, job and operation IDs, session IDs, agent paths, absolute file paths, raw transcripts, raw drafts, and full grading reports are excluded.",
+  "pricing": {
+    "checkedDate": "2026-10-04",
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "currency": "USD",
+    "units": "per million tokens",
+    "tier": "Flex",
+    "region": "global",
+    "models": {
+      "gpt-5.6-sol": {
+        "input": 2,
+        "cacheRead": 0.2,
+        "cacheWrite": 2.5,
+        "output": 10
+      },
+      "gpt-5.6-terra": {
+        "input": 1,
+        "cacheRead": 0.1,
+        "cacheWrite": 1.25,
+        "output": 6
+      },
+      "gpt-6.1-sol": {
+        "input": 1,
+        "cacheRead": 0.05,
+        "cacheWrite": 1.25,
+        "output": 5
+      },
+      "gpt-6-luna": {
+        "input": 0.05,
+        "cacheRead": 0.005,
+        "cacheWrite": 0.0625,
+        "output": 0.25
+      }
+    },
+    "longContextRule": "For each request above 272000 input tokens, double input/cache rates and multiply output rates by 1.5. Do not apply this threshold to cumulative agent usage.",
+    "accounting": "Sum individually priced response token_usage_record.usage records. Ordinary input excludes cache reads/writes. Reasoning output is already included in output_tokens. Cache writes are reported separately.",
+    "limitations": "These are API-equivalent costs for Codex activity, not an API bill, a Codex allowance valuation, or a production forecast."
+  },
+  "production": {
+    "snapshotUtc": "2026-10-04T08:54:08.911737+00:00",
+    "sinceUtc": "2026-09-15T00:00:00Z",
+    "cohort": {
+      "generatedJobs": 29,
+      "missingLedgers": 1,
+      "unknownCostAttempts": 27
+    },
+    "flex": {
+      "jobs": 14,
+      "currentlyComplete": 14,
+      "knownUsd": 6.737874258333333,
+      "transcriptionUsd": 4.286800958333333,
+      "articleUsd": 2.4510733,
+      "unknownRequests": 8,
+      "articleAttempts": 22,
+      "articleSucceeded": 20,
+      "articleFailed": 2,
+      "fallbackOperations": 0,
+      "successfulArticleMedianSeconds": 41.8815,
+      "successfulArticleP90NearestRankSeconds": 66.927,
+      "knownSameUsageStandardUsd": 9.188947558333332,
+      "priceableArticleAttempts": 20,
+      "priceableArticleUsage": {
+        "inputTokens": 736554,
+        "cachedInputTokens": 75804,
+        "cacheWriteInputTokens": 660385,
+        "outputTokens": 78422,
+        "reasoningOutputTokens": 12401
+      },
+      "requestsAbove272000": 0
+    },
+    "sameUsageFlexScenarios": [
+      {
+        "model": "gpt-5.6-sol",
+        "jobs": 14,
+        "transcriptionUsd": 4.286800958333333,
+        "generationUsd": 2.4510732999999996,
+        "totalUsd": 6.737874258333333,
+        "transcriptionPerArticleUsd": 0.30620006845238096,
+        "generationPerArticleUsd": 0.17507666428571425,
+        "totalPerArticleUsd": 0.48127673273809524,
+        "reductionAgainstKnownCurrent": 0.0
+      },
+      {
+        "model": "gpt-5.6-terra",
+        "jobs": 14,
+        "transcriptionUsd": 4.286800958333333,
+        "generationUsd": 1.3039586499999998,
+        "totalUsd": 5.590759608333332,
+        "transcriptionPerArticleUsd": 0.30620006845238096,
+        "generationPerArticleUsd": 0.09313990357142855,
+        "totalPerArticleUsd": 0.39933997202380944,
+        "reductionAgainstKnownCurrent": 0.17024874701116022
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "jobs": 14,
+        "transcriptionUsd": 4.286800958333333,
+        "generationUsd": 1.22174645,
+        "totalUsd": 5.5085474083333335,
+        "transcriptionPerArticleUsd": 0.30620006845238096,
+        "generationPerArticleUsd": 0.08726760357142857,
+        "totalPerArticleUsd": 0.39346767202380956,
+        "reductionAgainstKnownCurrent": 0.18245025105352497
+      },
+      {
+        "model": "gpt-6-luna",
+        "jobs": 14,
+        "transcriptionUsd": 4.286800958333333,
+        "generationUsd": 0.0612768325,
+        "totalUsd": 4.348077790833333,
+        "transcriptionPerArticleUsd": 0.30620006845238096,
+        "generationPerArticleUsd": 0.0043769166071428575,
+        "totalPerArticleUsd": 0.3105769850595238,
+        "reductionAgainstKnownCurrent": 0.354681072378922
+      }
+    ]
+  },
+  "screen": {
+    "generatedUtc": "2026-10-04T10:44:20.905029+00:00",
+    "implementationCommit": "c65ebc7b3297f7f73e544ca96f12be5122ecdf42",
+    "sourceChecklistSha256": "9c475f4b70005bff5624c04dfc812de5c02d13eb1bb41c17ddfa3479face2354",
+    "cases": [
+      {
+        "case": "case-07",
+        "metadata": {
+          "title": "How Meta reduced diff authoring time by 40%",
+          "sourceName": "Engineering Enablement by DX",
+          "language": "auto",
+          "length": "standard"
+        },
+        "segments": 480,
+        "sourceUrl": "https://podcasters.spotify.com/pod/show/engineering-enablement/episodes/How-Meta-reduced-diff-authoring-time-by-40-e3ph8t8",
+        "hashes": {
+          "instructions.txt": "c05c6ce17555731dea9d92796fa3eb5fa8ba5a4bd6c0611437c5a438c5591411",
+          "input.txt": "2a34615dfc074619ce2e15d210624ca48e807b3f48b5771df528a437da09410d",
+          "schema.json": "8c668f529c803cf0f6c8b61a494631fc0862cff21846a2b7c7bc9199f2b7440c",
+          "transcript.json": "ca65d7c1d702f6385927f5c041a9b22a7d74bd5cfd6b0247463f636a11691231",
+          "metadata.json": "a1cd422367486d7f3fba500c521e9c3fd70888afdb856cc104f97618faf3b12a"
+        }
+      },
+      {
+        "case": "case-11",
+        "metadata": {
+          "title": "Opus 5.5 vs. GPT-6 Sol: which model won my blind taste test?",
+          "sourceName": "How I AI",
+          "language": "auto",
+          "length": "standard"
+        },
+        "segments": 509,
+        "sourceUrl": "https://podcasters.spotify.com/pod/show/pen-name/episodes/Opus-5-5-vs--GPT-6-Sol-which-model-won-my-blind-taste-test-e3p8okk",
+        "hashes": {
+          "instructions.txt": "c05c6ce17555731dea9d92796fa3eb5fa8ba5a4bd6c0611437c5a438c5591411",
+          "input.txt": "18aa7a808d4ea24ea1829becf2eaa95141183b98eff0d0788358f9899e2bd4ec",
+          "schema.json": "7c0ba0efe936973ea7d656506b028714a339480511c302769f9efcf9e0f7160c",
+          "transcript.json": "0e0d8c34fb47fbbc7e1cf916d2eb098289eddea9a69efadc8b0ce0994ee441e6",
+          "metadata.json": "f6a132160eb83f70bf3af6ac7fd2591d1d0e83aa5896e1b46fdc75083a3b7176"
+        }
+      },
+      {
+        "case": "case-12",
+        "metadata": {
+          "title": "90 minutes of unfiltered product advice from Snap and Discord’s product chief | Peter Sellis",
+          "sourceName": "Lenny's Podcast: Product | Career | Growth",
+          "language": "auto",
+          "length": "standard"
+        },
+        "segments": 1006,
+        "sourceUrl": "https://www.lennysnewsletter.com/p/90-minutes-of-unfiltered-product",
+        "hashes": {
+          "instructions.txt": "c05c6ce17555731dea9d92796fa3eb5fa8ba5a4bd6c0611437c5a438c5591411",
+          "input.txt": "74b2100f54fe17e6c3a0c61899ee450cee407273657a2f55c639455a5229333c",
+          "schema.json": "93f32cec2eb0949b0e55b2bbd3f69c1bace259e77038b556772d13b63839f4e7",
+          "transcript.json": "3f62ba3dcfb87e042b6dacd5727fe833c0bdb6750d008c08eff956c22c1979f0",
+          "metadata.json": "610e9a0979f261f41ba26e549b5b27b5eb476cb0b40f55c04ba963dbeef11ca3"
+        }
+      },
+      {
+        "case": "case-18",
+        "metadata": {
+          "title": "OpenAI Dev Day 2026: The releases that actually matter",
+          "sourceName": "How I AI",
+          "language": "auto",
+          "length": "standard"
+        },
+        "segments": 310,
+        "sourceUrl": "https://podcasters.spotify.com/pod/show/pen-name/episodes/OpenAI-Dev-Day-2026-The-releases-that-actually-matter-e3pkss3",
+        "hashes": {
+          "instructions.txt": "c05c6ce17555731dea9d92796fa3eb5fa8ba5a4bd6c0611437c5a438c5591411",
+          "input.txt": "4b5287eacfd064f231d2e5944442c372de3a4746d0342e9e803673c9d457c6a7",
+          "schema.json": "684dbd6db6de222da8233751647faeefe6169d2c68d0a25cd542ddd09bdab472",
+          "transcript.json": "4212998888e4312949e766df2a3b142fb2345289d4d17a2c7bac01594171e3e5",
+          "metadata.json": "544c6581134a64d03534e633f54a5275c88436560a59a3a30013f4c7d489c9b5"
+        }
+      },
+      {
+        "case": "case-24",
+        "metadata": {
+          "title": "Flow Town met Frank Loer",
+          "sourceName": "RTM XL Podcast",
+          "language": "auto",
+          "length": "standard"
+        },
+        "segments": 1459,
+        "sourceUrl": "https://shows.acast.com/rtm-xl-podcast/episodes/flow-town-met-frank-loer",
+        "hashes": {
+          "instructions.txt": "c05c6ce17555731dea9d92796fa3eb5fa8ba5a4bd6c0611437c5a438c5591411",
+          "input.txt": "0e1487d9160b99836fdd648b7e14a003b533218db38c9fda748f742cfce2cd56",
+          "schema.json": "cd8d97c30f2de7728ab2817ae57ecd2c6e9d6bb99c92a71e400380c9b50c8f7a",
+          "transcript.json": "b3d0c1e32e51f8b7c5359bbb6b77cda182d99c7ebdc0125884a2fec23f8c9366",
+          "metadata.json": "c867208ae8ff8c02742590c38954584cb6edf6c3b3a1827c5db820b929418e39"
+        }
+      },
+      {
+        "case": "case-26",
+        "metadata": {
+          "title": "Jev for beginners: how to use it and what to build",
+          "sourceName": "How I AI",
+          "language": "auto",
+          "length": "standard"
+        },
+        "segments": 302,
+        "sourceUrl": "https://podcasters.spotify.com/pod/show/pen-name/episodes/Jev-for-beginners-how-to-use-it-and-what-to-build-e3pctfc",
+        "hashes": {
+          "instructions.txt": "c05c6ce17555731dea9d92796fa3eb5fa8ba5a4bd6c0611437c5a438c5591411",
+          "input.txt": "8fc43842cf020a77eea0e51326658f41b1dc236c0b0a3164013a82373ec3856c",
+          "schema.json": "d77e38801a20db24a1dbdab6494c73e1f48e412bcde87ac6e3c3387ff7b0d734",
+          "transcript.json": "8554699901c803056fefc1e347dfd8c2e66079b0b076cdc0535db51b934ee200",
+          "metadata.json": "edbef647315dfdc6084806bee51dec450e1b76e2bb74ca5c33ef09fb4806176b"
+        }
+      }
+    ],
+    "grader": {
+      "model": "gpt-6.1-sol",
+      "effort": "ultra",
+      "rubric": {
+        "factualSupport": 30,
+        "topicCoverage": 25,
+        "citationSupport": 20,
+        "readableArticle": 10,
+        "speakerAttributionAndQuotes": 10,
+        "requestedLength": 5
+      },
+      "blinded": true
+    },
+    "modelSummary": [
+      {
+        "model": "gpt-5.6-sol",
+        "cases": 6,
+        "meanContentScore": 83.66666666666667,
+        "minContentScore": 75,
+        "meanScores": {
+          "factualSupport": 26.833333333333332,
+          "topicCoverage": 19.916666666666668,
+          "citationSupport": 14.75,
+          "readableArticle": 8.583333333333334,
+          "speakerAttributionAndQuotes": 8.916666666666666,
+          "requestedLength": 4.666666666666667
+        },
+        "rawSchemaPasses": 6,
+        "rawJsonPasses": 6,
+        "literalQuotePasses": 5,
+        "quoteAssessableDrafts": 6,
+        "inRangeLengths": 5,
+        "lengthAssessableDrafts": 6,
+        "rawMechanicalUsable": 4,
+        "graderRawUsable": 3,
+        "contentFatalDrafts": 1,
+        "allFullInputsReceived": true,
+        "efforts": ["low"],
+        "meanAllAgentFlexEquivalentUsd": 0.25129486666666667,
+        "meanFinalCompletionFlexEquivalentUsd": 0.059550533333333336,
+        "sumAllAgentFlexEquivalentUsd": 1.5077692,
+        "sumFinalCompletionFlexEquivalentUsd": 0.3573032,
+        "meanArticleCompletionUsage": {
+          "input_tokens": 83787.16666666667,
+          "cached_input_tokens": 79082.66666666667,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3432.5,
+          "reasoning_output_tokens": 194
+        },
+        "meanAllAgentUsage": {
+          "input_tokens": 641626.1666666666,
+          "cached_input_tokens": 599722.6666666666,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4754.333333333333,
+          "reasoning_output_tokens": 330.8333333333333
+        }
+      },
+      {
+        "model": "gpt-5.6-terra",
+        "cases": 6,
+        "meanContentScore": 78.66666666666667,
+        "minContentScore": 71.5,
+        "meanScores": {
+          "factualSupport": 26.166666666666668,
+          "topicCoverage": 19.166666666666668,
+          "citationSupport": 14.916666666666666,
+          "readableArticle": 7.916666666666667,
+          "speakerAttributionAndQuotes": 7.166666666666667,
+          "requestedLength": 3.3333333333333335
+        },
+        "rawSchemaPasses": 0,
+        "rawJsonPasses": 5,
+        "literalQuotePasses": 3,
+        "quoteAssessableDrafts": 4,
+        "inRangeLengths": 3,
+        "lengthAssessableDrafts": 5,
+        "rawMechanicalUsable": 0,
+        "graderRawUsable": 0,
+        "contentFatalDrafts": 1,
+        "allFullInputsReceived": true,
+        "efforts": ["medium"],
+        "meanAllAgentFlexEquivalentUsd": 0.16038346666666667,
+        "meanFinalCompletionFlexEquivalentUsd": 0.03276166666666667,
+        "sumAllAgentFlexEquivalentUsd": 0.9623008,
+        "sumFinalCompletionFlexEquivalentUsd": 0.19657,
+        "meanArticleCompletionUsage": {
+          "input_tokens": 84715.66666666667,
+          "cached_input_tokens": 80640,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3437,
+          "reasoning_output_tokens": 225.83333333333334
+        },
+        "meanAllAgentUsage": {
+          "input_tokens": 811865.6666666666,
+          "cached_input_tokens": 759594.6666666666,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5358.833333333333,
+          "reasoning_output_tokens": 461.8333333333333
+        }
+      },
+      {
+        "model": "gpt-6.1-sol",
+        "cases": 6,
+        "meanContentScore": 91.16666666666667,
+        "minContentScore": 85,
+        "meanScores": {
+          "factualSupport": 28.833333333333332,
+          "topicCoverage": 22.666666666666668,
+          "citationSupport": 16.166666666666668,
+          "readableArticle": 9.25,
+          "speakerAttributionAndQuotes": 9.75,
+          "requestedLength": 4.5
+        },
+        "rawSchemaPasses": 6,
+        "rawJsonPasses": 6,
+        "literalQuotePasses": 6,
+        "quoteAssessableDrafts": 6,
+        "inRangeLengths": 5,
+        "lengthAssessableDrafts": 6,
+        "rawMechanicalUsable": 5,
+        "graderRawUsable": 5,
+        "contentFatalDrafts": 0,
+        "allFullInputsReceived": true,
+        "efforts": ["low"],
+        "meanAllAgentFlexEquivalentUsd": 0.0831236,
+        "meanFinalCompletionFlexEquivalentUsd": 0.02645516666666667,
+        "sumAllAgentFlexEquivalentUsd": 0.4987416,
+        "sumFinalCompletionFlexEquivalentUsd": 0.158731,
+        "meanArticleCompletionUsage": {
+          "input_tokens": 77007.66666666667,
+          "cached_input_tokens": 70933.33333333333,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3366.8333333333335,
+          "reasoning_output_tokens": 40
+        },
+        "meanAllAgentUsage": {
+          "input_tokens": 413019.5,
+          "cached_input_tokens": 368405.3333333333,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4017.8333333333335,
+          "reasoning_output_tokens": 45.5
+        }
+      },
+      {
+        "model": "gpt-6-luna",
+        "cases": 6,
+        "meanContentScore": 81.58333333333333,
+        "minContentScore": 69,
+        "meanScores": {
+          "factualSupport": 25.416666666666668,
+          "topicCoverage": 19.833333333333332,
+          "citationSupport": 15.916666666666666,
+          "readableArticle": 7.166666666666667,
+          "speakerAttributionAndQuotes": 9.083333333333334,
+          "requestedLength": 4.166666666666667
+        },
+        "rawSchemaPasses": 0,
+        "rawJsonPasses": 6,
+        "literalQuotePasses": 6,
+        "quoteAssessableDrafts": 6,
+        "inRangeLengths": 4,
+        "lengthAssessableDrafts": 6,
+        "rawMechanicalUsable": 0,
+        "graderRawUsable": 0,
+        "contentFatalDrafts": 2,
+        "allFullInputsReceived": true,
+        "efforts": ["medium"],
+        "meanAllAgentFlexEquivalentUsd": 0.008297023333333334,
+        "meanFinalCompletionFlexEquivalentUsd": 0.0016842033333333334,
+        "sumAllAgentFlexEquivalentUsd": 0.04978214,
+        "sumFinalCompletionFlexEquivalentUsd": 0.01010522,
+        "meanArticleCompletionUsage": {
+          "input_tokens": 96553,
+          "cached_input_tokens": 91050.66666666667,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3815.3333333333335,
+          "reasoning_output_tokens": 207
+        },
+        "meanAllAgentUsage": {
+          "input_tokens": 814025,
+          "cached_input_tokens": 749568,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5305.333333333333,
+          "reasoning_output_tokens": 583.1666666666666
+        }
+      }
+    ],
+    "selectedRows": [
+      {
+        "case": "case-07",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 28,
+          "topicCoverage": 22,
+          "citationSupport": 18.5,
+          "readableArticle": 9,
+          "speakerAttributionAndQuotes": 9.5,
+          "requestedLength": 5
+        },
+        "score": 92,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": true,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1529,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 480,
+          "receivedFullSegmentLines": 480,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 71023,
+            "cached_input_tokens": 69248,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3503,
+            "reasoning_output_tokens": 226,
+            "total_tokens": 74526
+          },
+          "completeAgent": {
+            "input_tokens": 640375,
+            "cached_input_tokens": 611072,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 5012,
+            "reasoning_output_tokens": 281,
+            "total_tokens": 645387
+          },
+          "responseCount": 12
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0524296,
+          "completeAgent": 0.23094040000000002
+        }
+      },
+      {
+        "case": "case-07",
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 28,
+          "topicCoverage": 20.5,
+          "citationSupport": 12.5,
+          "readableArticle": 8.5,
+          "speakerAttributionAndQuotes": 7,
+          "requestedLength": 5
+        },
+        "score": 81.5,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[2].paragraphs[1].sources: 7 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[3].sources: 7 items exceeds max 5",
+            "$.sections[4].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[5].paragraphs[0].sources: 7 items exceeds max 5",
+            "$.sections[5].paragraphs[1].sources: 8 items exceeds max 5",
+            "$.sections[5].paragraphs[2].sources: 9 items exceeds max 5",
+            "$.sections[6].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[6].paragraphs[1].sources: 6 items exceeds max 5"
+          ],
+          "words": 1680,
+          "withinTarget": true,
+          "quotesValid": false,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 480,
+          "receivedFullSegmentLines": 480,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 71145,
+            "cached_input_tokens": 68352,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3058,
+            "reasoning_output_tokens": 100,
+            "total_tokens": 74203
+          },
+          "completeAgent": {
+            "input_tokens": 641212,
+            "cached_input_tokens": 606208,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4689,
+            "reasoning_output_tokens": 193,
+            "total_tokens": 645901
+          },
+          "responseCount": 12
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0279762,
+          "completeAgent": 0.1237588
+        }
+      },
+      {
+        "case": "case-07",
+        "model": "gpt-6-luna",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 26.5,
+          "topicCoverage": 21,
+          "citationSupport": 15,
+          "readableArticle": 7.5,
+          "speakerAttributionAndQuotes": 9.5,
+          "requestedLength": 5
+        },
+        "score": 84.5,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[0].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[0].paragraphs[3].sources: 6 items exceeds max 5",
+            "$.sections[1].paragraphs[0].sources: 7 items exceeds max 5",
+            "$.sections[1].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[1].paragraphs[2].sources: 10 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[2].paragraphs[3].sources: 6 items exceeds max 5",
+            "$.sections[2].paragraphs[4].sources: 8 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 11 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 7 items exceeds max 5",
+            "$.sections[3].paragraphs[2].sources: 9 items exceeds max 5",
+            "$.sections[3].paragraphs[3].sources: 8 items exceeds max 5",
+            "$.sections[3].paragraphs[4].sources: 8 items exceeds max 5"
+          ],
+          "words": 1465,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 480,
+          "receivedFullSegmentLines": 480,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 77475,
+            "cached_input_tokens": 75520,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3180,
+            "reasoning_output_tokens": 219,
+            "total_tokens": 80655
+          },
+          "completeAgent": {
+            "input_tokens": 697260,
+            "cached_input_tokens": 654080,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4626,
+            "reasoning_output_tokens": 428,
+            "total_tokens": 701886
+          },
+          "responseCount": 13
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.00127035,
+          "completeAgent": 0.0065859000000000004
+        }
+      },
+      {
+        "case": "case-07",
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 28.5,
+          "topicCoverage": 23,
+          "citationSupport": 17.5,
+          "readableArticle": 9.5,
+          "speakerAttributionAndQuotes": 9.5,
+          "requestedLength": 5
+        },
+        "score": 93,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": true,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1453,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 480,
+          "receivedFullSegmentLines": 480,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 64995,
+            "cached_input_tokens": 63104,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3065,
+            "reasoning_output_tokens": 26,
+            "total_tokens": 68060
+          },
+          "completeAgent": {
+            "input_tokens": 306951,
+            "cached_input_tokens": 278528,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3531,
+            "reasoning_output_tokens": 26,
+            "total_tokens": 310482
+          },
+          "responseCount": 6
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0203712,
+          "completeAgent": 0.0600044
+        }
+      },
+      {
+        "case": "case-11",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 28,
+          "topicCoverage": 19,
+          "citationSupport": 15,
+          "readableArticle": 8,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 85,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1370,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 509,
+          "receivedFullSegmentLines": 509,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 70274,
+            "cached_input_tokens": 67456,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3862,
+            "reasoning_output_tokens": 229,
+            "total_tokens": 74136
+          },
+          "completeAgent": {
+            "input_tokens": 637586,
+            "cached_input_tokens": 608896,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 5156,
+            "reasoning_output_tokens": 303,
+            "total_tokens": 642742
+          },
+          "responseCount": 12
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0577472,
+          "completeAgent": 0.2307192
+        }
+      },
+      {
+        "case": "case-11",
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 26,
+          "topicCoverage": 19,
+          "citationSupport": 16,
+          "readableArticle": 9,
+          "speakerAttributionAndQuotes": 9,
+          "requestedLength": 3
+        },
+        "score": 82,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[1].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[1].paragraphs[2].sources: 8 items exceeds max 5",
+            "$.sections[2].paragraphs[0].sources: 10 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[2].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[3].paragraphs[3].sources: 8 items exceeds max 5",
+            "$.sections[4].paragraphs[0].sources: 10 items exceeds max 5",
+            "$.sections[4].paragraphs[1].sources: 7 items exceeds max 5",
+            "$.sections[4].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[4].paragraphs[3].sources: 7 items exceeds max 5",
+            "$.sections[5].paragraphs[1].sources: 9 items exceeds max 5",
+            "$.sections[5].paragraphs[2].sources: 9 items exceeds max 5"
+          ],
+          "words": 1856,
+          "withinTarget": false,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 509,
+          "receivedFullSegmentLines": 509,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 70705,
+            "cached_input_tokens": 67328,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3678,
+            "reasoning_output_tokens": 382,
+            "total_tokens": 74383
+          },
+          "completeAgent": {
+            "input_tokens": 639523,
+            "cached_input_tokens": 606208,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 5403,
+            "reasoning_output_tokens": 567,
+            "total_tokens": 644926
+          },
+          "responseCount": 12
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0321778,
+          "completeAgent": 0.12635380000000002
+        }
+      },
+      {
+        "case": "case-11",
+        "model": "gpt-6-luna",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 28,
+          "topicCoverage": 22,
+          "citationSupport": 16,
+          "readableArticle": 8,
+          "speakerAttributionAndQuotes": 9,
+          "requestedLength": 4
+        },
+        "score": 87,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[0].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[0].paragraphs[1].sources: 15 items exceeds max 5",
+            "$.sections[0].paragraphs[2].sources: 13 items exceeds max 5",
+            "$.sections[1].paragraphs[0].sources: 13 items exceeds max 5",
+            "$.sections[1].paragraphs[2].sources: 15 items exceeds max 5",
+            "$.sections[1].paragraphs[3].sources: 13 items exceeds max 5",
+            "$.sections[2].paragraphs[0].sources: 12 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 17 items exceeds max 5",
+            "$.sections[2].paragraphs[2].sources: 29 items exceeds max 5",
+            "$.sections[2].paragraphs[3].sources: 13 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 22 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 14 items exceeds max 5",
+            "$.sections[3].paragraphs[2].sources: 14 items exceeds max 5",
+            "$.sections[4].paragraphs[0].sources: 13 items exceeds max 5",
+            "$.sections[4].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[4].paragraphs[2].sources: 13 items exceeds max 5",
+            "$.takeaways[1].sources: 6 items exceeds max 5",
+            "$.takeaways[2].sources: 8 items exceeds max 5"
+          ],
+          "words": 1707,
+          "withinTarget": false,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 509,
+          "receivedFullSegmentLines": 509,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 67868,
+            "cached_input_tokens": 64256,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4654,
+            "reasoning_output_tokens": 147,
+            "total_tokens": 72522
+          },
+          "completeAgent": {
+            "input_tokens": 613929,
+            "cached_input_tokens": 580608,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 5955,
+            "reasoning_output_tokens": 313,
+            "total_tokens": 619884
+          },
+          "responseCount": 12
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0016653800000000002,
+          "completeAgent": 0.00605784
+        }
+      },
+      {
+        "case": "case-11",
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 29,
+          "topicCoverage": 23,
+          "citationSupport": 15,
+          "readableArticle": 9,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 91,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": true,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1553,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 509,
+          "receivedFullSegmentLines": 509,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 74944,
+            "cached_input_tokens": 66944,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3186,
+            "reasoning_output_tokens": 0,
+            "total_tokens": 78130
+          },
+          "completeAgent": {
+            "input_tokens": 391755,
+            "cached_input_tokens": 353152,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3744,
+            "reasoning_output_tokens": 16,
+            "total_tokens": 395499
+          },
+          "responseCount": 7
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0272772,
+          "completeAgent": 0.07498060000000001
+        }
+      },
+      {
+        "case": "case-12",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 26,
+          "topicCoverage": 17,
+          "citationSupport": 14,
+          "readableArticle": 8,
+          "speakerAttributionAndQuotes": 7,
+          "requestedLength": 3
+        },
+        "score": 75,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1821,
+          "withinTarget": false,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 1006,
+          "receivedFullSegmentLines": 1006,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 106132,
+            "cached_input_tokens": 101376,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4092,
+            "reasoning_output_tokens": 333,
+            "total_tokens": 110224
+          },
+          "completeAgent": {
+            "input_tokens": 863445,
+            "cached_input_tokens": 798848,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 5767,
+            "reasoning_output_tokens": 633,
+            "total_tokens": 869212
+          },
+          "responseCount": 12
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0707072,
+          "completeAgent": 0.34663360000000004
+        }
+      },
+      {
+        "case": "case-12",
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 27,
+          "topicCoverage": 16,
+          "citationSupport": 16,
+          "readableArticle": 8,
+          "speakerAttributionAndQuotes": 8,
+          "requestedLength": 2
+        },
+        "score": 77,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[2].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 7 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 7 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[4].paragraphs[2].sources: 6 items exceeds max 5",
+            "$.sections[5].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[5].paragraphs[1].sources: 8 items exceeds max 5",
+            "$.sections[5].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[6].paragraphs[1].sources: 7 items exceeds max 5",
+            "$.sections[6].paragraphs[3].sources: 8 items exceeds max 5",
+            "$.sections[7].paragraphs[0].sources: 7 items exceeds max 5",
+            "$.sections[7].paragraphs[1].sources: 8 items exceeds max 5"
+          ],
+          "words": 1899,
+          "withinTarget": false,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 1006,
+          "receivedFullSegmentLines": 1006,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 119407,
+            "cached_input_tokens": 114432,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3604,
+            "reasoning_output_tokens": 235,
+            "total_tokens": 123011
+          },
+          "completeAgent": {
+            "input_tokens": 1764725,
+            "cached_input_tokens": 1676032,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 7476,
+            "reasoning_output_tokens": 720,
+            "total_tokens": 1772201
+          },
+          "responseCount": 25
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0380422,
+          "completeAgent": 0.3011522
+        }
+      },
+      {
+        "case": "case-12",
+        "model": "gpt-6-luna",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 27,
+          "topicCoverage": 18,
+          "citationSupport": 16,
+          "readableArticle": 8,
+          "speakerAttributionAndQuotes": 9,
+          "requestedLength": 1
+        },
+        "score": 79,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[0].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[0].paragraphs[2].sources: 6 items exceeds max 5",
+            "$.sections[0].paragraphs[4].sources: 7 items exceeds max 5",
+            "$.sections[1].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[1].paragraphs[2].sources: 6 items exceeds max 5",
+            "$.sections[2].paragraphs[0].sources: 8 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[2].paragraphs[2].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[4].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[4].paragraphs[3].sources: 7 items exceeds max 5",
+            "$.sections[5].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[5].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[6].paragraphs[0].sources: 8 items exceeds max 5",
+            "$.sections[6].paragraphs[1].sources: 6 items exceeds max 5"
+          ],
+          "words": 1966,
+          "withinTarget": false,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 1006,
+          "receivedFullSegmentLines": 1006,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 123249,
+            "cached_input_tokens": 118528,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3932,
+            "reasoning_output_tokens": 105,
+            "total_tokens": 127181
+          },
+          "completeAgent": {
+            "input_tokens": 839927,
+            "cached_input_tokens": 753152,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 5540,
+            "reasoning_output_tokens": 402,
+            "total_tokens": 845467
+          },
+          "responseCount": 10
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0018116900000000001,
+          "completeAgent": 0.00948951
+        }
+      },
+      {
+        "case": "case-12",
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 28,
+          "topicCoverage": 21,
+          "citationSupport": 16,
+          "readableArticle": 9,
+          "speakerAttributionAndQuotes": 9,
+          "requestedLength": 2
+        },
+        "score": 85,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1879,
+          "withinTarget": false,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 1006,
+          "receivedFullSegmentLines": 1006,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 92082,
+            "cached_input_tokens": 87296,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3846,
+            "reasoning_output_tokens": 48,
+            "total_tokens": 95928
+          },
+          "completeAgent": {
+            "input_tokens": 572023,
+            "cached_input_tokens": 514944,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4703,
+            "reasoning_output_tokens": 48,
+            "total_tokens": 576726
+          },
+          "responseCount": 9
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.028380799999999998,
+          "completeAgent": 0.1063412
+        }
+      },
+      {
+        "case": "case-18",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 25,
+          "topicCoverage": 22,
+          "citationSupport": 14,
+          "readableArticle": 9,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 85,
+        "contentFatalIssues": [
+          "The central model-price comparison supplies missing per-million output units as announced fact; that numerical claim cannot be verified from the only permitted source."
+        ],
+        "rawUsableAccordingToGrader": true,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1641,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 310,
+          "receivedFullSegmentLines": 310,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 60894,
+            "cached_input_tokens": 57216,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3125,
+            "reasoning_output_tokens": 179,
+            "total_tokens": 64019
+          },
+          "completeAgent": {
+            "input_tokens": 448460,
+            "cached_input_tokens": 429568,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4145,
+            "reasoning_output_tokens": 258,
+            "total_tokens": 452605
+          },
+          "responseCount": 9
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.050049199999999995,
+          "completeAgent": 0.1651476
+        }
+      },
+      {
+        "case": "case-18",
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 25,
+          "topicCoverage": 22,
+          "citationSupport": 16,
+          "readableArticle": 7,
+          "speakerAttributionAndQuotes": 6,
+          "requestedLength": 0
+        },
+        "score": 76,
+        "contentFatalIssues": [
+          "The central price comparison presents incomplete output-token units as settled pricing, despite the frozen source limitation."
+        ],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": false,
+          "schemaValid": null,
+          "schemaErrors": null,
+          "words": null,
+          "withinTarget": null,
+          "quotesValid": null,
+          "productionSourceValidationPass": null
+        },
+        "inputDelivery": {
+          "expectedSegments": 310,
+          "receivedFullSegmentLines": 310,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 66733,
+            "cached_input_tokens": 62208,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3784,
+            "reasoning_output_tokens": 76,
+            "total_tokens": 70517
+          },
+          "completeAgent": {
+            "input_tokens": 274869,
+            "cached_input_tokens": 227072,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4745,
+            "reasoning_output_tokens": 136,
+            "total_tokens": 279614
+          },
+          "responseCount": 5
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0334498,
+          "completeAgent": 0.09897420000000001
+        }
+      },
+      {
+        "case": "case-18",
+        "model": "gpt-6-luna",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 25,
+          "topicCoverage": 21,
+          "citationSupport": 17,
+          "readableArticle": 6,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 84,
+        "contentFatalIssues": [
+          "The central price comparison states per-million output units that the supplied transcript does not establish."
+        ],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[1].paragraphs[0].sources: 10 items exceeds max 5",
+            "$.sections[1].paragraphs[1].sources: 10 items exceeds max 5",
+            "$.sections[1].paragraphs[2].sources: 11 items exceeds max 5",
+            "$.sections[1].paragraphs[3].sources: 10 items exceeds max 5",
+            "$.sections[2].paragraphs[0].sources: 12 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 11 items exceeds max 5",
+            "$.sections[2].paragraphs[2].sources: 9 items exceeds max 5",
+            "$.sections[2].paragraphs[3].sources: 14 items exceeds max 5",
+            "$.sections[2].paragraphs[4].sources: 10 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 12 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 10 items exceeds max 5",
+            "$.sections[3].paragraphs[3].sources: 12 items exceeds max 5",
+            "$.sections[3].paragraphs[4].sources: 15 items exceeds max 5",
+            "$.sections[3].paragraphs[5].sources: 10 items exceeds max 5",
+            "$.sections[4].paragraphs[0].sources: 9 items exceeds max 5",
+            "$.takeaways[0].sources: 6 items exceeds max 5",
+            "$.takeaways[1].sources: 7 items exceeds max 5",
+            "$.takeaways[2].sources: 9 items exceeds max 5"
+          ],
+          "words": 1405,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 310,
+          "receivedFullSegmentLines": 310,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 63741,
+            "cached_input_tokens": 52992,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3513,
+            "reasoning_output_tokens": 96,
+            "total_tokens": 67254
+          },
+          "completeAgent": {
+            "input_tokens": 200951,
+            "cached_input_tokens": 157696,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3918,
+            "reasoning_output_tokens": 153,
+            "total_tokens": 204869
+          },
+          "responseCount": 4
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.00168066,
+          "completeAgent": 0.00393073
+        }
+      },
+      {
+        "case": "case-18",
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 29,
+          "topicCoverage": 23,
+          "citationSupport": 14,
+          "readableArticle": 9,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 90,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": true,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1568,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 310,
+          "receivedFullSegmentLines": 310,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 62992,
+            "cached_input_tokens": 56960,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3263,
+            "reasoning_output_tokens": 0,
+            "total_tokens": 66255
+          },
+          "completeAgent": {
+            "input_tokens": 247041,
+            "cached_input_tokens": 205824,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3634,
+            "reasoning_output_tokens": 17,
+            "total_tokens": 250675
+          },
+          "responseCount": 5
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.025195,
+          "completeAgent": 0.06967820000000001
+        }
+      },
+      {
+        "case": "case-24",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 26,
+          "topicCoverage": 16.5,
+          "citationSupport": 14,
+          "readableArticle": 8.5,
+          "speakerAttributionAndQuotes": 7,
+          "requestedLength": 5
+        },
+        "score": 77,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1491,
+          "withinTarget": true,
+          "quotesValid": false,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 1459,
+          "receivedFullSegmentLines": 1459,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 131029,
+            "cached_input_tokens": 123008,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3114,
+            "reasoning_output_tokens": 144,
+            "total_tokens": 134143
+          },
+          "completeAgent": {
+            "input_tokens": 1051905,
+            "cached_input_tokens": 962432,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4900,
+            "reasoning_output_tokens": 424,
+            "total_tokens": 1056805
+          },
+          "responseCount": 12
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0717836,
+          "completeAgent": 0.4204324
+        }
+      },
+      {
+        "case": "case-24",
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 23,
+          "topicCoverage": 17.5,
+          "citationSupport": 16,
+          "readableArticle": 7,
+          "speakerAttributionAndQuotes": 3,
+          "requestedLength": 5
+        },
+        "score": 71.5,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[0].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[0].paragraphs[3].sources: 7 items exceeds max 5",
+            "$.sections[1].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[1].paragraphs[3].sources: 7 items exceeds max 5",
+            "$.sections[2].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[2].sources: 6 items exceeds max 5",
+            "$.sections[4].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[4].paragraphs[1].sources: 9 items exceeds max 5",
+            "$.sections[4].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[5].paragraphs[0].sources: 7 items exceeds max 5",
+            "$.sections[5].paragraphs[1].sources: 10 items exceeds max 5",
+            "$.sections[5].paragraphs[2].sources: 11 items exceeds max 5",
+            "$.sections[5].paragraphs[3].sources: 7 items exceeds max 5",
+            "$.sections[6].paragraphs: required",
+            "$.sections[6].sources: extra property"
+          ],
+          "words": 1561,
+          "withinTarget": true,
+          "quotesValid": null,
+          "productionSourceValidationPass": null
+        },
+        "inputDelivery": {
+          "expectedSegments": 1459,
+          "receivedFullSegmentLines": 1459,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 119233,
+            "cached_input_tokens": 114432,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3555,
+            "reasoning_output_tokens": 361,
+            "total_tokens": 122788
+          },
+          "completeAgent": {
+            "input_tokens": 1098072,
+            "cached_input_tokens": 1012224,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 5658,
+            "reasoning_output_tokens": 836,
+            "total_tokens": 1103730
+          },
+          "responseCount": 14
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.037574199999999995,
+          "completeAgent": 0.2210184
+        }
+      },
+      {
+        "case": "case-24",
+        "model": "gpt-6-luna",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 19,
+          "topicCoverage": 17,
+          "citationSupport": 12.5,
+          "readableArticle": 7.5,
+          "speakerAttributionAndQuotes": 8,
+          "requestedLength": 5
+        },
+        "score": 69,
+        "contentFatalIssues": [
+          "Material cross-project conflation: De Kaai's factory-wall, jars, bell-tower and concrete-column details are presented as part of Flow Town's plan."
+        ],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[0].paragraphs[0].sources: 7 items exceeds max 5",
+            "$.sections[0].paragraphs[1].sources: 9 items exceeds max 5",
+            "$.sections[1].paragraphs[0].sources: 8 items exceeds max 5",
+            "$.sections[1].paragraphs[1].sources: 9 items exceeds max 5",
+            "$.sections[1].paragraphs[3].sources: 9 items exceeds max 5",
+            "$.sections[2].paragraphs[0].sources: 8 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 9 items exceeds max 5",
+            "$.sections[2].paragraphs[2].sources: 9 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 8 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 9 items exceeds max 5",
+            "$.sections[3].paragraphs[2].sources: 10 items exceeds max 5",
+            "$.sections[4].paragraphs[0].sources: 8 items exceeds max 5",
+            "$.sections[4].paragraphs[1].sources: 10 items exceeds max 5",
+            "$.sections[5].paragraphs[0].sources: 9 items exceeds max 5",
+            "$.sections[5].paragraphs[1].sources: 10 items exceeds max 5",
+            "$.sections[5].paragraphs[2].sources: 8 items exceeds max 5",
+            "$.takeaways[0].sources: 6 items exceeds max 5",
+            "$.takeaways[1].sources: 6 items exceeds max 5",
+            "$.takeaways[3].sources: 6 items exceeds max 5"
+          ],
+          "words": 1552,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 1459,
+          "receivedFullSegmentLines": 1459,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 186042,
+            "cached_input_tokens": 182016,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4141,
+            "reasoning_output_tokens": 491,
+            "total_tokens": 190183
+          },
+          "completeAgent": {
+            "input_tokens": 2333802,
+            "cached_input_tokens": 2175744,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 7689,
+            "reasoning_output_tokens": 1906,
+            "total_tokens": 2341491
+          },
+          "responseCount": 21
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.00214663,
+          "completeAgent": 0.02070387
+        }
+      },
+      {
+        "case": "case-24",
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 28.5,
+          "topicCoverage": 22,
+          "citationSupport": 17.5,
+          "readableArticle": 9,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 92,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": true,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1571,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 1459,
+          "receivedFullSegmentLines": 1459,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 111056,
+            "cached_input_tokens": 98688,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3561,
+            "reasoning_output_tokens": 121,
+            "total_tokens": 114617
+          },
+          "completeAgent": {
+            "input_tokens": 557222,
+            "cached_input_tokens": 482176,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4448,
+            "reasoning_output_tokens": 121,
+            "total_tokens": 561670
+          },
+          "responseCount": 8
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.035107400000000004,
+          "completeAgent": 0.12139480000000001
+        }
+      },
+      {
+        "case": "case-26",
+        "model": "gpt-5.6-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 28,
+          "topicCoverage": 23,
+          "citationSupport": 13,
+          "readableArticle": 9,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 88,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": true,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1248,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 302,
+          "receivedFullSegmentLines": 302,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 63371,
+            "cached_input_tokens": 56192,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2899,
+            "reasoning_output_tokens": 53,
+            "total_tokens": 66270
+          },
+          "completeAgent": {
+            "input_tokens": 207986,
+            "cached_input_tokens": 187520,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3546,
+            "reasoning_output_tokens": 86,
+            "total_tokens": 211532
+          },
+          "responseCount": 4
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0545864,
+          "completeAgent": 0.113896
+        }
+      },
+      {
+        "case": "case-26",
+        "model": "gpt-5.6-terra",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 28,
+          "topicCoverage": 20,
+          "citationSupport": 13,
+          "readableArticle": 8,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 84,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[0].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[0].paragraphs[3].sources: 6 items exceeds max 5",
+            "$.sections[1].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[1].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[1].paragraphs[2].sources: 7 items exceeds max 5",
+            "$.sections[2].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[2].paragraphs[2].sources: 6 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.sections[4].paragraphs[1].sources: 6 items exceeds max 5",
+            "$.sections[5].paragraphs[0].sources: 6 items exceeds max 5",
+            "$.takeaways[2].sources: 6 items exceeds max 5"
+          ],
+          "words": 1559,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 302,
+          "receivedFullSegmentLines": 302,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 61071,
+            "cached_input_tokens": 57088,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 2943,
+            "reasoning_output_tokens": 201,
+            "total_tokens": 64014
+          },
+          "completeAgent": {
+            "input_tokens": 452793,
+            "cached_input_tokens": 429824,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4182,
+            "reasoning_output_tokens": 319,
+            "total_tokens": 456975
+          },
+          "responseCount": 9
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0273498,
+          "completeAgent": 0.0910434
+        }
+      },
+      {
+        "case": "case-26",
+        "model": "gpt-6-luna",
+        "reasoningEffort": "medium",
+        "rubricScores": {
+          "factualSupport": 27,
+          "topicCoverage": 20,
+          "citationSupport": 19,
+          "readableArticle": 6,
+          "speakerAttributionAndQuotes": 9,
+          "requestedLength": 5
+        },
+        "score": 86,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": false,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": false,
+          "schemaErrors": [
+            "$.sections[0].paragraphs[0].sources: 10 items exceeds max 5",
+            "$.sections[0].paragraphs[1].sources: 15 items exceeds max 5",
+            "$.sections[0].paragraphs[2].sources: 12 items exceeds max 5",
+            "$.sections[0].paragraphs[4].sources: 7 items exceeds max 5",
+            "$.sections[1].paragraphs[0].sources: 11 items exceeds max 5",
+            "$.sections[1].paragraphs[1].sources: 16 items exceeds max 5",
+            "$.sections[1].paragraphs[2].sources: 14 items exceeds max 5",
+            "$.sections[1].paragraphs[3].sources: 16 items exceeds max 5",
+            "$.sections[2].paragraphs[0].sources: 7 items exceeds max 5",
+            "$.sections[2].paragraphs[1].sources: 8 items exceeds max 5",
+            "$.sections[3].paragraphs[0].sources: 12 items exceeds max 5",
+            "$.sections[3].paragraphs[1].sources: 7 items exceeds max 5",
+            "$.sections[3].paragraphs[2].sources: 12 items exceeds max 5",
+            "$.sections[3].paragraphs[3].sources: 10 items exceeds max 5",
+            "$.takeaways[0].sources: 6 items exceeds max 5",
+            "$.takeaways[1].sources: 6 items exceeds max 5"
+          ],
+          "words": 1434,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 302,
+          "receivedFullSegmentLines": 302,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 60943,
+            "cached_input_tokens": 52992,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3472,
+            "reasoning_output_tokens": 184,
+            "total_tokens": 64415
+          },
+          "completeAgent": {
+            "input_tokens": 198281,
+            "cached_input_tokens": 176128,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4104,
+            "reasoning_output_tokens": 297,
+            "total_tokens": 202385
+          },
+          "responseCount": 4
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.00153051,
+          "completeAgent": 0.0030142899999999998
+        }
+      },
+      {
+        "case": "case-26",
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "low",
+        "rubricScores": {
+          "factualSupport": 30,
+          "topicCoverage": 24,
+          "citationSupport": 17,
+          "readableArticle": 10,
+          "speakerAttributionAndQuotes": 10,
+          "requestedLength": 5
+        },
+        "score": 96,
+        "contentFatalIssues": [],
+        "rawUsableAccordingToGrader": true,
+        "mechanical": {
+          "validJson": true,
+          "schemaValid": true,
+          "schemaErrors": [],
+          "words": 1576,
+          "withinTarget": true,
+          "quotesValid": true,
+          "productionSourceValidationPass": true
+        },
+        "inputDelivery": {
+          "expectedSegments": 302,
+          "receivedFullSegmentLines": 302,
+          "allFullSegmentLinesReceived": true,
+          "entireInstructionsReceived": true,
+          "entireSchemaReceived": true
+        },
+        "usage": {
+          "articleProducingResponse": {
+            "input_tokens": 55977,
+            "cached_input_tokens": 52608,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 3280,
+            "reasoning_output_tokens": 45,
+            "total_tokens": 59257
+          },
+          "completeAgent": {
+            "input_tokens": 403125,
+            "cached_input_tokens": 375808,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 4047,
+            "reasoning_output_tokens": 45,
+            "total_tokens": 407172
+          },
+          "responseCount": 9
+        },
+        "flexApiEquivalentUsd": {
+          "articleProducingResponse": 0.0223994,
+          "completeAgent": 0.0663424
+        }
+      }
+    ],
+    "accounting": {
+      "generatorRuns": 44,
+      "selectedRuns": 24,
+      "discardedDeliveryRuns": 20,
+      "selectedGeneratorFlexApiEquivalentUsd": 3.01859374,
+      "discardedGeneratorFlexApiEquivalentUsd": 2.56976875,
+      "allGeneratorFlexApiEquivalentUsd": 5.58836249,
+      "graderFlexApiEquivalentUsd": 2.2916654,
+      "totalGeneratorAndGraderFlexApiEquivalentUsd": 7.880027889999999,
+      "excludes": "Parent/orchestration conversation and independent accounting-verification agent"
+    },
+    "independentGeneratorAccountingAudit": {
+      "verifiedUtc": "2026-10-04T10:43:04.504631+00:00",
+      "scope": "Generator token accounting only; no access to drafts, grades, blinded mapping or reasoning.",
+      "generatorRuns": 44,
+      "selectedRuns": 24,
+      "discardedDeliveryRuns": 20,
+      "uniqueResponseRecords": 412,
+      "maximumRequestInputTokens": 186042,
+      "requestsAbove272000": 0,
+      "cacheWriteTokens": 0,
+      "allGeneratorFlexEquivalentUsd": 5.58836249,
+      "selectedGeneratorFlexEquivalentUsd": 3.01859374,
+      "discardedDeliveryFlexEquivalentUsd": 2.56976875,
+      "issues": [],
+      "assumption": "Dated 2026-10-04 global Flex API rates; no actual Codex billing or production forecast claim."
+    }
+  }
+}

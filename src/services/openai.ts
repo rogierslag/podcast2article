@@ -1,5 +1,6 @@
 import { createReadStream } from "node:fs";
 import OpenAI from "openai";
+import { articleModel, articleReasoning } from "./article-model.js";
 import {
   articleSnapshot,
   retrieveArticleAnswer,
@@ -392,10 +393,11 @@ export async function writeArticle(
   let answer: string;
   try {
     if (!savedResponse) {
-      const model = process.env.ARTICLE_MODEL ?? "gpt-5.6-terra";
+      const model = articleModel();
       // Preserve the coverage wording evaluated in docs/ARTICLE-COVERAGE-EVALUATION.md.
       const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
         model,
+        reasoning: articleReasoning(model),
         background: true,
         store: true,
         service_tier: serviceTier,
@@ -490,7 +492,7 @@ COVERAGE REQUIREMENT: Before writing, survey the complete transcript and choose 
   validateArticleSources(article, new Set(validIds));
   return repairArticleQuotes(article, transcript, {
     openai,
-    model: process.env.ARTICLE_MODEL ?? "gpt-5.6-terra",
+    model: articleModel(),
     serviceTier,
     timeoutMs,
     signal,

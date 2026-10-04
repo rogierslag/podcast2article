@@ -7,7 +7,7 @@ import {
   assertAccountBudget,
   budgetWindowMs,
 } from "./account-budget.js";
-import { reserveApiCost } from "./api-usage.js";
+import { estimateApiCost, reserveApiCost } from "./api-usage.js";
 
 const now = Date.parse("2026-09-19T12:00:00Z");
 function request(
@@ -175,6 +175,41 @@ describe("rolling account budget", () => {
     expect(
       reserveApiCost("gpt-4o-transcribe-diarize", "eu", { audioSeconds: 601 }),
     ).toBeGreaterThan(0.06);
+  });
+
+  it("reserves 6.1 Sol before admission and bounds the highest priced usage", () => {
+    const size = { inputBytes: 300000, outputTokens: 16384 };
+    const reservation = reserveApiCost("gpt-6.1-sol", "eu", size);
+    const highestTierCost = estimateApiCost(
+      request(null, {
+        requestedModel: "gpt-6.1-sol",
+        actualServiceTier: "priority",
+        endpointRegion: "eu",
+        usage: {
+          input_tokens: size.inputBytes + 4096,
+          input_tokens_details: { cache_write_tokens: size.inputBytes + 4096 },
+          output_tokens: size.outputTokens,
+        },
+      }),
+    );
+    const previousReservation = reserveApiCost("gpt-5.6-sol", "eu", size);
+    const jobs = [
+      job([
+        request(null, {
+          requestedModel: "gpt-6.1-sol",
+          status: "pending",
+          reservedCostUsd: reservation,
+        }),
+      ]),
+    ];
+
+    expect(reservation).toBeGreaterThan(0);
+    expect(reservation).toBeCloseTo(highestTierCost.amount ?? 0, 10);
+    expect(reservation).toBeLessThan(previousReservation ?? 0);
+    expect(accountSpend(jobs, now)).toBe(reservation);
+    expect(() => assertAccountBudget(jobs, 2, now)).toThrow(
+      "error.accountBudget",
+    );
   });
 });
 

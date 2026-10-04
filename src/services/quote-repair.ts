@@ -13,6 +13,7 @@ import {
   type UsageRecorder,
 } from "./api-usage.js";
 import { paidRequestDrain } from "./deployment-drain.js";
+import { articleReasoning } from "./article-model.js";
 
 function words(value: string): string[] {
   return (
@@ -118,6 +119,7 @@ export async function repairArticleQuotes(
     }
     const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
       model,
+      reasoning: articleReasoning(model),
       background: true,
       store: true,
       service_tier: serviceTier,
