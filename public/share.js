@@ -279,38 +279,38 @@ pageScroll.addEventListener(
 window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
 
 function sourceButtons(ids, sources) {
-  return html`
-    <span class="sources">
-      ${ids
-        .map((id) => {
-          const source = sources.find((item) => item.id === id);
-          return source
-            ? html`
-                <button
-                  class="source-link"
-                  data-time="${source.start}"
-                  aria-label="${escapeHtml(
-                    t("source.listen", { time: time(source.start) }),
-                  )}"
-                  title="${escapeHtml(
-                    t("source.listen", { time: time(source.start) }),
-                  )}"
-                >
-                  ${time(source.start)}
-                </button>
-              `
-            : "";
-        })
-        .join("")}
-    </span>
-  `;
+  const buttons = ids
+    .map((id) => {
+      const source = sources.find((item) => item.id === id);
+      return source
+        ? html`
+            <button
+              class="source-link"
+              data-time="${source.start}"
+              aria-label="${escapeHtml(
+                t("source.listen", { time: time(source.start) }),
+              )}"
+              title="${escapeHtml(
+                t("source.listen", { time: time(source.start) }),
+              )}"
+            >
+              ${time(source.start)}
+            </button>
+          `
+        : "";
+    })
+    .filter(Boolean)
+    .join(" ");
+  return buttons ? html`<span class="sources">${buttons}</span>` : "";
 }
 
 function articleBlock(block, sources) {
   if (block.kind === "quote") {
     return html`
       <blockquote>
-        <p>${escapeHtml(block.text)}${sourceButtons(block.sources, sources)}</p>
+        <p>
+          ${escapeHtml(block.text)} ${sourceButtons(block.sources, sources)}
+        </p>
       </blockquote>
     `;
   }

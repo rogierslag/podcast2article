@@ -50,6 +50,124 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const reader of ["owner", "shared"]) {
+  test(`${reader}: references flow inline and wrapped rows align with the text`, async ({
+    page,
+  }, testInfo) => {
+    const job = articleFixture();
+    job.transcript = Array.from({ length: 8 }, (_, index) => ({
+      ...job.transcript[0],
+      id: `t-${String(index + 1).padStart(5, "0")}`,
+      start: 64 + index * 125,
+      end: 69 + index * 125,
+    }));
+    const sources = job.transcript.map((segment) => segment.id);
+    job.article.sections = [
+      {
+        heading: "Making room for better work",
+        paragraphs: [
+          {
+            kind: "paragraph",
+            text: "Better work takes time.",
+            sources: sources.slice(0, 1),
+          },
+          {
+            kind: "paragraph",
+            text: "Teams need room to think, ask questions and test their ideas. A calmer schedule makes careful collaboration possible.",
+            sources,
+          },
+          {
+            kind: "quote",
+            text: "Give ideas room.",
+            sources: sources.slice(0, 1),
+          },
+          {
+            kind: "quote",
+            text: "The best ideas often arrive when we have enough time to listen and think together.",
+            sources,
+          },
+        ],
+      },
+    ];
+    job.article.takeaways = [
+      { text: "Make time to think.", sources: sources.slice(0, 1) },
+      {
+        text: "Protect time for focused work, thoughtful review and conversations that help a team move forward.",
+        sources,
+      },
+    ];
+    if (reader === "owner") {
+      await owner(page, job);
+    } else {
+      await page.route(`**/api/shared/${token}`, (route) =>
+        route.fulfill({
+          json: {
+            episode: job.episode,
+            article: job.article,
+            sources: job.transcript.map(({ id, start }) => ({ id, start })),
+          },
+        }),
+      );
+      await shared(page);
+    }
+    await page.evaluate(() => document.fonts.ready);
+    for (const selector of ["#article section", ".takeaways"]) {
+      await testInfo.attach(
+        `${reader}-${selector.includes("section") ? "paragraphs-quotes" : "takeaways"}`,
+        {
+          body: await page.locator(selector).screenshot(),
+          contentType: "image/png",
+        },
+      );
+    }
+    const shortParagraph = page.locator("#article section > p").first();
+    const inline = await shortParagraph.evaluate((paragraph) => {
+      const text = document.createRange();
+      text.selectNode(paragraph.firstChild);
+      const textBounds = text.getBoundingClientRect();
+      const buttonBounds = paragraph
+        .querySelector("button")
+        .getBoundingClientRect();
+      return Math.abs(
+        textBounds.top +
+          textBounds.height / 2 -
+          buttonBounds.top -
+          buttonBounds.height / 2,
+      );
+    });
+    expect(inline).toBeLessThan(10);
+    for (const width of [390, 320, 1440]) {
+      await page.setViewportSize({ width, height: width < 800 ? 844 : 1000 });
+      await noOverflow(page, "#article, .takeaways, .takeaways li");
+      const rows = await page
+        .locator("#article section > p, #article blockquote p, .takeaways li")
+        .evaluateAll((elements) =>
+          elements.flatMap((element) => {
+            const left = element.getBoundingClientRect().left;
+            const buttons = [...element.querySelectorAll("button")];
+            const textRange = document.createRange();
+            textRange.selectNode(element.firstChild);
+            const textBottom = textRange.getBoundingClientRect().bottom;
+            return buttons
+              .filter((button, index) =>
+                index === 0
+                  ? button.getBoundingClientRect().top >= textBottom
+                  : button.offsetTop > buttons[index - 1].offsetTop,
+              )
+              .map((button) =>
+                Math.abs(button.getBoundingClientRect().left - left),
+              );
+          }),
+        );
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every((indent) => indent < 1)).toBeTruthy();
+      for (const button of await page.locator("#article .source-link").all()) {
+        await expect(button).toHaveAccessibleName(/\d+:\d+/);
+      }
+    }
+  });
+}
+
+for (const reader of ["owner", "shared"]) {
   test(`${reader}: takeaway timestamps wrap between buttons without splitting times`, async ({
     page,
   }, testInfo) => {

@@ -653,31 +653,29 @@ async function poll(id, version = ++routeVersion) {
 }
 
 function sourceButtons(ids, transcript) {
-  return html`
-    <span class="sources">
-      ${ids
-        .map((id) => {
-          const item = transcript.find((part) => part.id === id);
-          return item
-            ? html`
-                <button
-                  class="source-link"
-                  data-source="${id}"
-                  aria-label="${escapeHtml(
-                    t("source.jump", { time: time(item.start) }),
-                  )}"
-                  title="${escapeHtml(
-                    t("source.jump", { time: time(item.start) }),
-                  )}"
-                >
-                  ${time(item.start)}
-                </button>
-              `
-            : "";
-        })
-        .join("")}
-    </span>
-  `;
+  const buttons = ids
+    .map((id) => {
+      const item = transcript.find((part) => part.id === id);
+      return item
+        ? html`
+            <button
+              class="source-link"
+              data-source="${id}"
+              aria-label="${escapeHtml(
+                t("source.jump", { time: time(item.start) }),
+              )}"
+              title="${escapeHtml(
+                t("source.jump", { time: time(item.start) }),
+              )}"
+            >
+              ${time(item.start)}
+            </button>
+          `
+        : "";
+    })
+    .filter(Boolean)
+    .join(" ");
+  return buttons ? html`<span class="sources">${buttons}</span>` : "";
 }
 
 function articleBlock(block, transcript) {
@@ -685,7 +683,7 @@ function articleBlock(block, transcript) {
     return html`
       <blockquote>
         <p>
-          ${escapeHtml(block.text)}${sourceButtons(block.sources, transcript)}
+          ${escapeHtml(block.text)} ${sourceButtons(block.sources, transcript)}
         </p>
       </blockquote>
     `;

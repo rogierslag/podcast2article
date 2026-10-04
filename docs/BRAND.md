@@ -43,6 +43,8 @@ This difference in emphasis keeps the identity expressive without making every s
 Preserve that character when adding features.
 A new action should fit the existing reading experience without requiring another boxed panel, accent color, or decorative effect.
 Source references should make an article easier to verify without interrupting the reader's place.
+Keep timestamps inline after paragraph, quote, and takeaway text at every viewport width.
+Use spaces between buttons and let them wrap individually, aligning new rows with the text rather than adding an indent.
 
 ### Brand mark
 
