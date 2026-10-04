@@ -1468,7 +1468,7 @@ export function translate(
   if (message === undefined) {
     throw new Error(`Unknown translation: ${key}`);
   }
-  return message.replace(/\{(\w+)\}/g, (placeholder, name) =>
+  return message.replace(/\{(\w+)\}/g, (placeholder: string, name: string) =>
     String(values[name] ?? placeholder),
   );
 }

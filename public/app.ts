@@ -647,7 +647,7 @@ requiredElement("#job-article-retry", HTMLButtonElement).addEventListener(
       const job = jobSchema.parse(data);
       if (version === routeVersion) {
         showProgress(job);
-        poll(jobId);
+        void poll(jobId);
       }
     } catch (error) {
       if (version === routeVersion) {
@@ -1623,13 +1623,13 @@ function showArticleRoute() {
       }
       return;
     }
-    poll(jobId);
+    void poll(jobId);
     return;
   }
   routeVersion += 1;
   clearTimeout(jobPollTimer);
   if (location.pathname.replace(/\/$/, "") === "/articles") {
-    showArticles();
+    void showArticles();
     return;
   }
   resultView.classList.add("hidden");

@@ -165,6 +165,8 @@ Each sentence occupies one complete source line, even when it is longer than a c
   Expand conditionals when compression would hide behavior.
 - Preserve strict typing.
   Avoid `any`, unchecked casts, and non-null assertions; validate external input and narrow `unknown` values before use.
+  Keep the compiler and type-aware ESLint checks enabled; fix violations through narrowing and explicit domain types rather than weakening checks or adding suppressions.
+  Await promises or handle their rejections; use `void` only for intentional background work that already handles failures.
   If a boundary requires a cast, keep it local and explain why it is safe when that is not obvious.
 - Use `interface` for object shapes with a stable domain identity and `type` for unions, aliases, and composed types.
   Reuse the domain types in `src/types.ts` rather than recreating similar inline shapes.

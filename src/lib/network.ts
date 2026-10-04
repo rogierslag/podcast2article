@@ -13,7 +13,7 @@ function isPrivateIp(address: string): boolean {
   ) {
     return true;
   }
-  if (!isIP(address.includes("%") ? address.split("%")[0]! : address)) {
+  if (!isIP(address.split("%", 1)[0] ?? address)) {
     return false;
   }
   const parts = address.split(".").map(Number);

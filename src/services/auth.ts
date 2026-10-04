@@ -130,7 +130,10 @@ export function createUserAuth(rawUsers = process.env.APP_USERS): UserAuth {
   users.clear();
 
   function signature(payload: string): string {
-    return createHmac("sha256", signingKey!)
+    if (!signingKey) {
+      throw new Error("Session signing requires configured users.");
+    }
+    return createHmac("sha256", signingKey)
       .update(payload, "utf8")
       .digest("base64url");
   }

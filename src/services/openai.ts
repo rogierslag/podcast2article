@@ -82,7 +82,7 @@ export async function transcribeChunks(
   const openai = client();
   const all: TranscriptSegment[] = [];
   const chunkSeconds = checkpoint?.chunkSeconds ?? audioChunkSeconds();
-  for (let index = 0; index < files.length; index += 1) {
+  for (const [index, file] of files.entries()) {
     signal?.throwIfAborted();
     const chunkNumber = index + 1;
     const startedAt = Date.now();
@@ -139,7 +139,7 @@ export async function transcribeChunks(
             openai.audio.transcriptions
               .create(
                 {
-                  file: createReadStream(files[index]!),
+                  file: createReadStream(file),
                   model,
                   response_format: "diarized_json",
                   chunking_strategy: "auto",
@@ -291,7 +291,7 @@ function articleSchemaFor(validIds: string[]): Record<string, unknown> {
     type: "string",
     enum: validIds,
   };
-  return schema as unknown as Record<string, unknown>;
+  return schema;
 }
 
 function normalizeSourceId(value: string): string | undefined {

@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { transcribeChunks, writeArticle } from "./openai.js";
-import type { ApiRequestUsage, Article, TranscriptSegment } from "../types.js";
+import type {
+  ApiRequestUsage,
+  Article,
+  BackgroundArticle,
+  TranscriptSegment,
+} from "../types.js";
 
 let directory: string;
 let audio: string;
@@ -728,7 +733,7 @@ it("retrieves a saved background response after restart without another generati
 });
 
 it("retains an invalid article answer before local validation fails", async () => {
-  let saved: import("../types.js").BackgroundArticle | undefined;
+  let saved: BackgroundArticle | undefined;
   vi.stubGlobal(
     "fetch",
     vi.fn(

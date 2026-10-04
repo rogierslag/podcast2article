@@ -68,7 +68,8 @@ The file-serving handler is registered directly on the main Express app after it
 This keeps one shared request quota and makes the admission boundary visible to CodeQL; isolated real-server tests verify that built assets receive `429` after the quota is exhausted.
 Generated templates and the asset manifest remain private; images and other unchanged files still come from `public/`.
 Shared TypeScript helpers and API response schemas live in `src/shared/` and reuse domain types from `src/types.ts`.
-`yarn run typecheck` checks server and browser configurations independently, while esbuild emits the browser JavaScript.
+`yarn run typecheck` checks server and browser configurations independently, including dependency declarations, return paths, module boundaries, and unused code, while esbuild emits the browser JavaScript.
+Type-aware ESLint checks promise handling, assertions, and type-only imports throughout application code and TypeScript tests; production code also rejects unsafe `any` propagation at API and SDK boundaries.
 Unversioned script URLs serve compiled compatibility bundles from `dist/client-legacy/`; TypeScript source files are not served.
 The development launcher builds the client before starting the server and watches frontend and shared sources for rebuilds.
 Owner pages require authentication when configured; public reader assets and capability routes are registered before that boundary.

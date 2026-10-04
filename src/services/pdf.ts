@@ -1,11 +1,17 @@
 import PDFDocument from "pdfkit";
-import type { ArticleParagraph, Job, TranscriptSegment } from "../types.js";
+import type {
+  ArticleParagraph,
+  ArticleJob,
+  Job,
+  TranscriptSegment,
+} from "../types.js";
 import {
   countLabel,
   dateLocale,
   translate,
   type UiLanguage,
 } from "../shared/i18n.js";
+import { hasArticleContent } from "../lib/job-content.js";
 
 const colors = {
   ink: "#1b201d",
@@ -139,13 +145,13 @@ function addPageNumbers(document: PDFKit.PDFDocument): void {
 
 function renderArticle(
   document: PDFKit.PDFDocument,
-  job: Job,
+  job: ArticleJob,
   baseUrl: string,
   language: UiLanguage,
 ): void {
-  const article = job.article!;
-  const episode = job.episode!;
-  const transcript = job.transcript!;
+  const article = job.article;
+  const episode = job.episode;
+  const transcript = job.transcript;
   const transcriptById = new Map(
     transcript.map((segment) => [segment.id, segment]),
   );
@@ -341,7 +347,7 @@ export function generateArticlePdf(
   baseUrl: string,
   language: UiLanguage = "nl",
 ): Promise<Uint8Array> {
-  if (!job.article || !job.episode || !job.transcript) {
+  if (!hasArticleContent(job)) {
     return Promise.reject(
       new Error("De opdracht bevat niet alle gegevens voor PDF-export."),
     );

@@ -14,8 +14,13 @@ export function openaiWebhookRouter(): express.Router {
         return;
       }
       try {
+        const body: unknown = request.body;
+        if (typeof body !== "string") {
+          response.sendStatus(400);
+          return;
+        }
         const event = await new OpenAI().webhooks.unwrap(
-          request.body,
+          body,
           request.headers,
           secret,
         );

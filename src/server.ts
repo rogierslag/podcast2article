@@ -12,6 +12,7 @@ import { openaiWebhookRouter } from "./services/openai-webhook.js";
 import { articleModel } from "./services/article-model.js";
 import { z } from "zod";
 import { clientAssets } from "./lib/client-assets.js";
+import { ownerUsername } from "./lib/owner-context.js";
 import { DomainError, domainErrorStatus } from "./lib/errors.js";
 import {
   ArticleVisits,
@@ -300,9 +301,9 @@ app.get("/s/:token", async (request, response) => {
   }
   const { job } = shared;
   const url = `${publicOrigin(request)}/s/${request.params.token}`;
-  const title = job.article!.title;
-  const description = job.article!.dek;
-  const sourceImage = job.episode!.imageUrl;
+  const title = job.article.title;
+  const description = job.article.dek;
+  const sourceImage = job.episode.imageUrl;
   const metadata = [
     `<title>${escapeHtml(title)} — Podcast2Article</title>`,
     `<meta name="description" content="${escapeHtml(description)}">`,
@@ -313,7 +314,7 @@ app.get("/s/:token", async (request, response) => {
       url,
       publishedAt: job.completedAt ?? job.updatedAt,
       image: sourceImage
-        ? { url: sourceImage, alt: job.episode!.title }
+        ? { url: sourceImage, alt: job.episode.title }
         : brandSocialImage(response),
     }),
   ].join("\n  ");
@@ -347,15 +348,15 @@ app.get("/api/shared/:token", (request, response) => {
   response.setHeader("Cache-Control", "public, max-age=300");
   return response.json({
     article: job.article,
-    sources: job.transcript!.map(({ id, start }) => ({ id, start })),
+    sources: job.transcript.map(({ id, start }) => ({ id, start })),
     episode: {
-      sourceType: job.episode!.sourceType,
-      sourceUrl: job.episode!.sourceUrl,
-      sourceName: job.episode!.sourceName,
-      title: job.episode!.title,
-      imageUrl: job.episode!.imageUrl,
-      durationSeconds: job.episode!.durationSeconds,
-      publishedAt: job.episode!.publishedAt,
+      sourceType: job.episode.sourceType,
+      sourceUrl: job.episode.sourceUrl,
+      sourceName: job.episode.sourceName,
+      title: job.episode.title,
+      imageUrl: job.episode.imageUrl,
+      durationSeconds: job.episode.durationSeconds,
+      publishedAt: job.episode.publishedAt,
     },
   });
 });
@@ -538,25 +539,24 @@ const loginLimiter = rateLimit({
 });
 
 app.post("/login", loginLimiter, async (request, response) => {
+  const parsed = z.record(z.string(), z.unknown()).safeParse(request.body);
+  const form = parsed.success ? parsed.data : {};
   if (!auth.enabled) {
-    return response.redirect(303, prefillDestination(request.body?.sourceUrl));
+    return response.redirect(303, prefillDestination(form.sourceUrl));
   }
   const username =
-    typeof request.body?.username === "string"
-      ? request.body.username.trim().toLowerCase()
-      : "";
-  const password =
-    typeof request.body?.password === "string" ? request.body.password : "";
+    typeof form.username === "string" ? form.username.trim().toLowerCase() : "";
+  const password = typeof form.password === "string" ? form.password : "";
   const token = await auth.authenticate(username, password);
   if (!token) {
-    const destination = prefillDestination(request.body?.sourceUrl, "/login");
+    const destination = prefillDestination(form.sourceUrl, "/login");
     return response.redirect(
       303,
       `${destination}${destination.includes("?") ? "&" : "?"}error=1`,
     );
   }
   response.setHeader("Set-Cookie", sessionCookie(token, request.secure));
-  return response.redirect(303, prefillDestination(request.body?.sourceUrl));
+  return response.redirect(303, prefillDestination(form.sourceUrl));
 });
 
 app.use((request, response, next) => {
@@ -589,12 +589,12 @@ app.post("/logout", (request, response) => {
 
 app.get("/api/auth", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  response.json({ enabled: auth.enabled, username: response.locals.username });
+  response.json({ enabled: auth.enabled, username: ownerUsername(response) });
 });
 
 app.get("/api/account-budget", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  response.json(getAccountBudget(response.locals.username));
+  response.json(getAccountBudget(ownerUsername(response)));
 });
 
 app.get("/api/deployment-status", async (_request, response) => {
@@ -611,7 +611,7 @@ app.get("/api/saved-shares/:token", (request, response) => {
       .json({ error: localizeError(response, "error.sharedNotFound") });
   }
   const saved = findSavedSharedArticle(
-    response.locals.username,
+    ownerUsername(response),
     request.params.token,
   );
   return response.json({ articleId: saved?.id ?? null });
@@ -626,7 +626,7 @@ app.post("/api/saved-shares/:token", async (request, response) => {
   }
   try {
     const saved = await saveSharedArticle(
-      response.locals.username,
+      ownerUsername(response),
       request.params.token,
     );
     return response.json({ articleId: saved.id });
@@ -704,7 +704,7 @@ const readingPositionSchema = z.object({
 const articleVisits = new ArticleVisits(userDirectory);
 app.get("/api/articles/arrivals", async (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  const username = response.locals.username;
+  const username = ownerUsername(response);
   const checkpoint = await articleVisits.checkpoint(username);
   const count = countArticleArrivals(
     listReadyArticles(username),
@@ -722,25 +722,25 @@ app.post("/api/articles/visit", async (request, response) => {
     return response.sendStatus(400);
   }
   await articleVisits.checkpoint(
-    response.locals.username,
+    ownerUsername(response),
     new Date(parsed.data.visitedAt).toISOString(),
   );
-  response.sendStatus(204);
+  return response.sendStatus(204);
 });
 
 app.get("/api/articles", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("X-Articles-Snapshot", new Date().toISOString());
-  response.json(listReadyArticles(response.locals.username));
+  response.json(listReadyArticles(ownerUsername(response)));
 });
 
 app.get("/api/jobs/:id/share-stats", async (request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  const job = await getJob(response.locals.username, request.params.id);
+  const job = await getJob(ownerUsername(response), request.params.id);
   if (!job || job.stage !== "complete") {
     return response.sendStatus(404);
   }
-  response.json({
+  return response.json({
     loads: job.shareAnalytics?.loads ?? 0,
     reads: job.shareAnalytics?.reads ?? 0,
     lastLoadedAt: job.shareAnalytics?.lastLoadedAt,
@@ -751,7 +751,7 @@ app.get("/api/jobs/:id/share-stats", async (request, response) => {
 app.get("/api/jobs", (_request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.json(
-    listProcessingJobs(response.locals.username).map((job) =>
+    listProcessingJobs(ownerUsername(response)).map((job) =>
       localizeProcessingJob(job, responseLanguage(response)),
     ),
   );
@@ -767,7 +767,7 @@ app.patch("/api/articles/:id", async (request, response) => {
   try {
     return response.json(
       await setArticleRead(
-        response.locals.username,
+        ownerUsername(response),
         request.params.id,
         parsed.data.read,
       ),
@@ -786,7 +786,7 @@ app.patch("/api/articles/:id", async (request, response) => {
 app.delete("/api/articles/:id", async (request, response) => {
   response.setHeader("Cache-Control", "no-store");
   try {
-    await deleteArticle(response.locals.username, request.params.id);
+    await deleteArticle(ownerUsername(response), request.params.id);
     return response.status(204).end();
   } catch (error) {
     return response.status(domainErrorStatus(error, 503)).json({
@@ -809,7 +809,7 @@ app.patch("/api/jobs/:id/reading-position", async (request, response) => {
   try {
     return response.json({
       readingPosition: await setArticleReadingPosition(
-        response.locals.username,
+        ownerUsername(response),
         request.params.id,
         parsed.data.sectionIndex,
       ),
@@ -828,7 +828,7 @@ app.patch("/api/jobs/:id/reading-position", async (request, response) => {
 app.post("/api/jobs/:id/share", async (request, response) => {
   try {
     const token = await createArticleShare(
-      response.locals.username,
+      ownerUsername(response),
       request.params.id,
     );
     return response
@@ -863,7 +863,7 @@ app.post("/api/jobs", async (request, response) => {
     });
   }
   try {
-    const job = await createJob(response.locals.username, parsed.data);
+    const job = await createJob(ownerUsername(response), parsed.data);
     return response
       .status(202)
       .json(localizeJob(job, responseLanguage(response)));
@@ -891,7 +891,7 @@ app.post("/api/jobs", async (request, response) => {
 
 app.get("/api/jobs/:id", async (request, response) => {
   response.setHeader("Cache-Control", "no-store");
-  const job = await getJob(response.locals.username, request.params.id);
+  const job = await getJob(ownerUsername(response), request.params.id);
   return job
     ? response.json(localizeJob(job, responseLanguage(response)))
     : response
@@ -900,8 +900,8 @@ app.get("/api/jobs/:id", async (request, response) => {
 });
 
 app.get("/api/jobs/:id/audio", async (request, response) => {
-  const job = await getJob(response.locals.username, request.params.id);
-  const file = playbackFileForJob(response.locals.username, request.params.id);
+  const job = await getJob(ownerUsername(response), request.params.id);
+  const file = playbackFileForJob(ownerUsername(response), request.params.id);
   if (!job || !file) {
     return response
       .status(404)
@@ -911,7 +911,7 @@ app.get("/api/jobs/:id/audio", async (request, response) => {
     await stat(file);
     response.setHeader("Cache-Control", "private, max-age=3600");
     return response.sendFile(path.basename(file), {
-      root: path.join(userDirectory(response.locals.username), "media"),
+      root: path.join(userDirectory(ownerUsername(response)), "media"),
     });
   } catch {
     return response.status(404).json({
@@ -921,7 +921,7 @@ app.get("/api/jobs/:id/audio", async (request, response) => {
 });
 
 app.get("/api/jobs/:id/pdf", async (request, response) => {
-  const job = await getJob(response.locals.username, request.params.id);
+  const job = await getJob(ownerUsername(response), request.params.id);
   if (!job) {
     return response
       .status(404)
@@ -957,7 +957,7 @@ app.get("/api/jobs/:id/pdf", async (request, response) => {
 
 app.post("/api/jobs/:id/retry-article", async (request, response) => {
   try {
-    const job = await retryArticle(response.locals.username, request.params.id);
+    const job = await retryArticle(ownerUsername(response), request.params.id);
     return response
       .status(202)
       .json(localizeJob(job, responseLanguage(response)));
