@@ -45,6 +45,9 @@ try {
       HOST: "127.0.0.1",
       PORT: "4317",
       APP_USERS: JSON.stringify({ regression: password }),
+      // A full suite simulates many visitors through one loopback client.
+      // Dedicated server tests exercise the production default quota.
+      REQUEST_RATE_LIMIT_PER_MINUTE: "100000",
       OPENAI_API_KEY: "",
       PUBLIC_BASE_URL: "",
     },

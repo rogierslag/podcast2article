@@ -1,3 +1,5 @@
+import escapeHtml from "escape-html";
+
 export interface SocialImage {
   url: string;
   alt: string;
@@ -13,15 +15,6 @@ interface SocialPreview {
   url: string;
   image: SocialImage;
   publishedAt?: string;
-}
-
-function escapeAttribute(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
 }
 
 /** Render previews on the server because link crawlers do not run the UI. */
@@ -48,16 +41,15 @@ export function socialMetadata(preview: SocialPreview): string {
   };
 
   return [
-    `<link rel="canonical" href="${escapeAttribute(preview.url)}">`,
+    `<link rel="canonical" href="${escapeHtml(preview.url)}">`,
     ...Object.entries(properties)
       .filter(([, value]) => value !== undefined)
       .map(
         ([property, value]) =>
-          `<meta property="${property}" content="${escapeAttribute(String(value))}">`,
+          `<meta property="${property}" content="${escapeHtml(String(value))}">`,
       ),
     ...Object.entries(names).map(
-      ([name, value]) =>
-        `<meta name="${name}" content="${escapeAttribute(value)}">`,
+      ([name, value]) => `<meta name="${name}" content="${escapeHtml(value)}">`,
     ),
   ].join("\n  ");
 }

@@ -370,6 +370,10 @@ export const messages = {
     nl: "De audio is nog niet beschikbaar.",
     en: "The audio isn’t available yet.",
   },
+  "error.requestRateLimit": {
+    nl: "Te veel verzoeken. Probeer het over een minuut opnieuw.",
+    en: "Too many requests. Please try again in a minute.",
+  },
   "error.loginRateLimit": {
     nl: "Te veel mislukte pogingen. Probeer het over een kwartier opnieuw.",
     en: "Too many failed attempts. Please try again in 15 minutes.",

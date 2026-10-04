@@ -13,31 +13,31 @@ describe("user authentication", () => {
 
   it.each([undefined, "", "   "])(
     "is disabled with APP_USERS=%j",
-    (rawUsers) => {
+    async (rawUsers) => {
       vi.stubEnv("APP_USERS", rawUsers);
 
       const auth = createUserAuth();
 
       expect(auth.enabled).toBe(false);
       expect(auth.usernames).toEqual([]);
-      expect(auth.authenticate("rogier", "anything")).toBeUndefined();
+      expect(await auth.authenticate("rogier", "anything")).toBeUndefined();
       expect(auth.sessionUser(undefined)).toBeUndefined();
     },
   );
 
-  it("authenticates each configured user independently", () => {
+  it("authenticates each configured user independently", async () => {
     const auth = createUserAuth(
       JSON.stringify({
         rogier: "correct horse battery staple",
         john_appleseed: "another sufficiently long password",
       }),
     );
-    const token = auth.authenticate(
+    const token = await auth.authenticate(
       "john_appleseed",
       "another sufficiently long password",
     );
     expect(
-      auth.authenticate("john_appleseed", "correct horse battery staple"),
+      await auth.authenticate("john_appleseed", "correct horse battery staple"),
     ).toBeUndefined();
     expect(auth.sessionUser(token)).toBe("john_appleseed");
   });
@@ -64,7 +64,7 @@ describe("user authentication", () => {
     ).toBeUndefined();
   });
 
-  it("ignores the removed APP_PASSWORD setting", () => {
+  it("ignores the removed APP_PASSWORD setting", async () => {
     vi.stubEnv("APP_USERS", undefined);
     vi.stubEnv("APP_PASSWORD", "legacy password long enough");
 
@@ -73,20 +73,44 @@ describe("user authentication", () => {
     expect(auth.enabled).toBe(false);
     expect(auth.usernames).toEqual([]);
     expect(
-      auth.authenticate("rogier", "legacy password long enough"),
+      await auth.authenticate("rogier", "legacy password long enough"),
     ).toBeUndefined();
     expect(auth.createSession("rogier")).toBeUndefined();
   });
 
-  it("loads configured users from APP_USERS", () => {
+  it("loads configured users from APP_USERS", async () => {
     vi.stubEnv("APP_USERS", '{"rogier":"a sufficiently long password"}');
 
     const auth = createUserAuth();
-    const token = auth.authenticate("rogier", "a sufficiently long password");
+    const token = await auth.authenticate(
+      "rogier",
+      "a sufficiently long password",
+    );
 
     expect(auth.enabled).toBe(true);
     expect(auth.usernames).toEqual(["rogier"]);
     expect(auth.sessionUser(token)).toBe("rogier");
+  });
+
+  it("rejects unknown accounts, empty passwords, and Unicode near matches", async () => {
+    const password = "a long password with café 🔐";
+    const auth = createUserAuth(JSON.stringify({ owner: password }));
+
+    expect(await auth.authenticate("unknown", password)).toBeUndefined();
+    expect(await auth.authenticate("owner", "")).toBeUndefined();
+    expect(
+      await auth.authenticate("owner", password.replace("é", "e")),
+    ).toBeUndefined();
+    expect(auth.sessionUser(await auth.authenticate("owner", password))).toBe(
+      "owner",
+    );
+  });
+
+  it("keeps sessions valid across restarts with the same accounts", () => {
+    const accounts = JSON.stringify({ owner: "a sufficiently long password" });
+    const session = createUserAuth(accounts).createSession("owner");
+
+    expect(createUserAuth(accounts).sessionUser(session)).toBe("owner");
   });
 
   it("rejects malformed account configuration", () => {

@@ -3,6 +3,7 @@ import { normalizeStoredJob, type StoredJob } from "./stored-jobs.js";
 import {
   compareArticleSummaries,
   findDuplicateJob,
+  getJob,
   playbackFileForJob,
   toArticleSummary,
   toProcessingJobSummary,
@@ -191,6 +192,21 @@ describe("user storage isolation", () => {
       playbackFileForJob("john_appleseed", id),
     );
   });
+
+  it.each([
+    "../outside",
+    "00000000-0000-4000-8000-000000000917/../outside",
+    "00000000-0000-4000-8000-000000000917\\outside",
+    "-".repeat(36),
+    "a".repeat(36),
+    "00000000-0000-4000-8000-000000000917\n",
+  ])(
+    "rejects malformed job identifiers before accessing storage: %s",
+    async (id) => {
+      expect(playbackFileForJob("rogier", id)).toBeUndefined();
+      expect(await getJob("rogier", id)).toBeUndefined();
+    },
+  );
 
   it("rejects usernames that could escape the data directory", () => {
     expect(() =>
