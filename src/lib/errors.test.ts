@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { messages, translate } from "../../public/i18n.js";
+import { messages, translate } from "../shared/i18n.js";
 import {
   DomainError,
   domainErrorStatus,

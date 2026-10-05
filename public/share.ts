@@ -1,55 +1,39 @@
+import {
+  html,
+  escapeHtml,
+  formatTimestamp as time,
+  articleSectionId as slug,
+} from "./article-format.js";
+import type { ArticleParagraph, TranscriptSegment } from "../src/types.js";
+import type { SharedArticle } from "../src/shared/api.js";
+import {
+  responseData,
+  sharedArticleSchema,
+  savedArticleSchema,
+  readingPositionSchema,
+} from "../src/shared/api.js";
+import { requiredElement } from "./dom.js";
 import { t, countText, locale, localizedFetch } from "./localize.js";
 
 import { createShareTracker } from "./share-analytics.js";
 
 import { createSourcePreview } from "./source-preview.js";
 
-const $ = (selector) => document.querySelector(selector);
-
-function html(strings, ...values) {
-  let markup = strings[0];
-  values.forEach((value, index) => {
-    markup += String(value) + strings[index + 1];
-  });
-  return markup.trim();
-}
-
-const escapeHtml = (value = "") =>
-  String(value).replace(
-    /[&<>'"]/g,
-    (character) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[
-        character
-      ],
-  );
-const time = (seconds) => {
-  const value = Math.max(0, Math.floor(seconds));
-  const hours = Math.floor(value / 3600);
-  const minutes = Math.floor((value % 3600) / 60);
-  const remainder = value % 60;
-  return hours
-    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
-    : `${minutes}:${String(remainder).padStart(2, "0")}`;
-};
-const slug = (value, index) =>
-  `section-${index}-${value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")}`;
+const $ = (selector: string) => requiredElement(selector, HTMLElement);
 const articleReadingProgress = $("#article-reading-progress");
 const pageScroll = $(".page-scroll");
-let readingProgressFrame;
+let readingProgressFrame: number | undefined;
 let readingPositionTrackingRequested = false;
-let lastSavedReadingSectionIndex;
+let lastSavedReadingSectionIndex: number | undefined;
 let readingTrackingOrigin = 0;
 let readingTrackingEnabled = false;
 let restoringReadingPosition = false;
-let continuationSectionIndex;
-let sharedReadingStorageKey;
+let continuationSectionIndex: number | undefined;
+let sharedReadingStorageKey: string | undefined;
 const materialScrollDistance = 120;
 
 function articleSectionHeadings() {
-  return [...document.querySelectorAll("#article section > h2")];
+  return [...document.querySelectorAll<HTMLElement>("#article section > h2")];
 }
 
 function visibleReadingSectionIndex() {
@@ -67,7 +51,9 @@ function visibleReadingSectionIndex() {
 }
 
 function hideContinueReading() {
-  $("#continue-reading").classList.add("hidden");
+  requiredElement("#continue-reading", HTMLButtonElement).classList.add(
+    "hidden",
+  );
   continuationSectionIndex = undefined;
 }
 
@@ -87,16 +73,15 @@ function storedReadingPosition() {
     return undefined;
   }
   try {
-    const value = JSON.parse(localStorage.getItem(sharedReadingStorageKey));
-    return Number.isInteger(value?.sectionIndex) && value.sectionIndex >= 0
-      ? value
-      : undefined;
+    return readingPositionSchema.parse(
+      JSON.parse(localStorage.getItem(sharedReadingStorageKey) ?? "null"),
+    );
   } catch {
     return undefined;
   }
 }
 
-function persistReadingPosition(sectionIndex) {
+function persistReadingPosition(sectionIndex: number) {
   if (
     !sharedReadingStorageKey ||
     sectionIndex === lastSavedReadingSectionIndex
@@ -140,21 +125,25 @@ function trackReadingPosition() {
   }
 }
 
-function showContinueReading(readingPosition) {
+function showContinueReading(readingPosition?: { sectionIndex: number }) {
   lastSavedReadingSectionIndex = readingPosition?.sectionIndex;
   readingTrackingOrigin = pageScroll.scrollTop;
   readingTrackingEnabled = false;
-  const heading = articleSectionHeadings()[readingPosition?.sectionIndex];
-  if (!heading) {
+  const heading = readingPosition
+    ? articleSectionHeadings()[readingPosition.sectionIndex]
+    : undefined;
+  if (!heading || !readingPosition) {
     hideContinueReading();
     return;
   }
   continuationSectionIndex = readingPosition.sectionIndex;
   $("#continue-reading-heading").textContent = heading.textContent;
-  $("#continue-reading").classList.remove("hidden");
+  requiredElement("#continue-reading", HTMLButtonElement).classList.remove(
+    "hidden",
+  );
 }
 
-function drawAttentionToHeading(heading) {
+function drawAttentionToHeading(heading: HTMLElement) {
   heading.classList.remove("resume-highlight");
   void heading.offsetWidth;
   heading.classList.add("resume-highlight");
@@ -165,12 +154,12 @@ function drawAttentionToHeading(heading) {
   }, 2200);
 }
 
-function afterReadingScroll(callback) {
+function afterReadingScroll(callback: () => void) {
   const startedAt = performance.now();
   let previousScrollTop = pageScroll.scrollTop;
   let stableFrames = 0;
 
-  function checkPosition(now) {
+  function checkPosition(now: number) {
     const currentScrollTop = pageScroll.scrollTop;
     stableFrames =
       Math.abs(currentScrollTop - previousScrollTop) < 1 ? stableFrames + 1 : 0;
@@ -186,33 +175,41 @@ function afterReadingScroll(callback) {
   requestAnimationFrame(checkPosition);
 }
 
-$("#continue-reading").addEventListener("click", () => {
-  const heading = articleSectionHeadings()[continuationSectionIndex];
-  if (!heading) {
+requiredElement("#continue-reading", HTMLButtonElement).addEventListener(
+  "click",
+  () => {
+    const heading =
+      continuationSectionIndex === undefined
+        ? undefined
+        : articleSectionHeadings()[continuationSectionIndex];
+    if (!heading) {
+      hideContinueReading();
+      return;
+    }
     hideContinueReading();
-    return;
-  }
-  hideContinueReading();
-  readingTrackingEnabled = false;
-  restoringReadingPosition = true;
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const headingTop =
-    heading.getBoundingClientRect().top -
-    pageScroll.getBoundingClientRect().top +
-    pageScroll.scrollTop -
-    30;
-  pageScroll.scrollTo({
-    top: Math.max(0, headingTop),
-    behavior: reducedMotion ? "auto" : "smooth",
-  });
-  afterReadingScroll(() => {
-    drawAttentionToHeading(heading);
-    readingPositionTrackingRequested = false;
-    readingTrackingOrigin = pageScroll.scrollTop;
     readingTrackingEnabled = false;
-    restoringReadingPosition = false;
-  });
-});
+    restoringReadingPosition = true;
+    const reducedMotion = matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const headingTop =
+      heading.getBoundingClientRect().top -
+      pageScroll.getBoundingClientRect().top +
+      pageScroll.scrollTop -
+      30;
+    pageScroll.scrollTo({
+      top: Math.max(0, headingTop),
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+    afterReadingScroll(() => {
+      drawAttentionToHeading(heading);
+      readingPositionTrackingRequested = false;
+      readingTrackingOrigin = pageScroll.scrollTop;
+      readingTrackingEnabled = false;
+      restoringReadingPosition = false;
+    });
+  },
+);
 
 function updateArticleReadingProgress() {
   readingProgressFrame = undefined;
@@ -244,8 +241,10 @@ function updateArticleReadingProgress() {
     Math.min(1, Math.max(0, progressRatio)) * 100,
   );
 
-  articleReadingProgress.querySelector(
+  requiredElement(
     ".reading-progress-value",
+    HTMLElement,
+    articleReadingProgress,
   ).style.transform = `scaleX(${progressPercentage / 100})`;
   articleReadingProgress.setAttribute(
     "aria-valuenow",
@@ -256,7 +255,7 @@ function updateArticleReadingProgress() {
     t("progress.read", { count: progressPercentage }),
   );
   const sectionIndex = visibleReadingSectionIndex();
-  document.querySelectorAll("#toc a").forEach((link, index) => {
+  document.querySelectorAll<HTMLElement>("#toc a").forEach((link, index) => {
     if (index === sectionIndex) {
       link.setAttribute("aria-current", "location");
     } else {
@@ -286,7 +285,10 @@ pageScroll.addEventListener(
 );
 window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
 
-function sourceButtons(ids, sources) {
+function sourceButtons(
+  ids: string[],
+  sources: Pick<TranscriptSegment, "id" | "start">[],
+) {
   const buttons = ids
     .map((id) => {
       const source = sources.find((item) => item.id === id);
@@ -312,7 +314,10 @@ function sourceButtons(ids, sources) {
   return buttons ? html`<span class="sources">${buttons}</span>` : "";
 }
 
-function articleBlock(block, sources) {
+function articleBlock(
+  block: ArticleParagraph,
+  sources: Pick<TranscriptSegment, "id" | "start">[],
+) {
   if (block.kind === "quote") {
     return html`
       <blockquote>
@@ -327,7 +332,7 @@ function articleBlock(block, sources) {
   `;
 }
 
-function renderSharedArticle(shared, token) {
+function renderSharedArticle(shared: SharedArticle, token: string) {
   const { episode, article, sources } = shared;
   const details = [
     episode.publishedAt
@@ -426,7 +431,8 @@ function renderSharedArticle(shared, token) {
       `,
     )
     .join("");
-  $("#audio").src = `/api/shared/${encodeURIComponent(token)}/audio`;
+  requiredElement("#audio", HTMLAudioElement).src =
+    `/api/shared/${encodeURIComponent(token)}/audio`;
   $("#shared-loading").classList.add("hidden");
   $("#shared-result").classList.remove("hidden");
   articleReadingProgress.classList.remove("hidden");
@@ -445,7 +451,10 @@ function renderSharedArticle(shared, token) {
 }
 
 $("#shared-main").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-time]");
+  const button =
+    event.target instanceof Element
+      ? event.target.closest<HTMLElement>("[data-time]")
+      : null;
   if (!button) {
     return;
   }
@@ -453,15 +462,21 @@ $("#shared-main").addEventListener("click", (event) => {
   sourcePreview.open({ start, label: time(start) }, button);
 });
 
-const sourcePreview = createSourcePreview($("#source-preview"), $("#audio"));
+const sourcePreview = createSourcePreview(
+  requiredElement("#source-preview", HTMLDialogElement),
+  requiredElement("#audio", HTMLAudioElement),
+);
 
-const token = location.pathname.split("/").filter(Boolean).at(-1);
+const token = location.pathname.split("/").filter(Boolean).at(-1) ?? "";
 localizedFetch(`/api/shared/${encodeURIComponent(token)}`)
   .then(async (response) => {
     if (!response.ok) {
       throw new Error("not found");
     }
-    renderSharedArticle(await response.json(), token);
+    renderSharedArticle(
+      await responseData(response, sharedArticleSchema),
+      token,
+    );
     startShareMonitoring();
     void loadSaveState();
   })
@@ -470,10 +485,14 @@ localizedFetch(`/api/shared/${encodeURIComponent(token)}`)
     $("#shared-error").classList.remove("hidden");
   });
 
-const saveButtons = [...document.querySelectorAll("[data-save-shared]")];
-const saveStatuses = [...document.querySelectorAll("[data-save-status]")];
+const saveButtons = [
+  ...document.querySelectorAll<HTMLButtonElement>("[data-save-shared]"),
+];
+const saveStatuses = [
+  ...document.querySelectorAll<HTMLElement>("[data-save-status]"),
+];
 
-function showSavedArticle(articleId) {
+function showSavedArticle(articleId: string) {
   saveButtons.forEach((button) => {
     button.disabled = true;
     button.classList.add("hidden");
@@ -481,10 +500,12 @@ function showSavedArticle(articleId) {
   saveStatuses.forEach((status) => {
     status.textContent = t("shared.saved");
   });
-  document.querySelectorAll("[data-open-saved]").forEach((link) => {
-    link.href = `/#job=${encodeURIComponent(articleId)}`;
-    link.classList.remove("hidden");
-  });
+  document
+    .querySelectorAll<HTMLAnchorElement>("[data-open-saved]")
+    .forEach((link) => {
+      link.href = `/#job=${encodeURIComponent(articleId)}`;
+      link.classList.remove("hidden");
+    });
 }
 
 async function loadSaveState() {
@@ -495,9 +516,9 @@ async function loadSaveState() {
     if (!response.ok) {
       return;
     }
-    const { articleId } = await response.json();
+    const { articleId } = await responseData(response, savedArticleSchema);
     document
-      .querySelectorAll(".shared-save-actions")
+      .querySelectorAll<HTMLElement>(".shared-save-actions")
       .forEach((actions) => actions.classList.remove("hidden"));
     if (articleId) {
       showSavedArticle(articleId);
@@ -507,12 +528,15 @@ async function loadSaveState() {
   }
 }
 
-async function saveArticleToOverview(event) {
+async function saveArticleToOverview(event: Event) {
   const button = event.currentTarget;
+  if (!(button instanceof HTMLButtonElement)) {
+    return;
+  }
   const focusSavedLink = document.activeElement === button;
   const savedLink = button
     .closest(".shared-save-actions")
-    .querySelector("[data-open-saved]");
+    ?.querySelector<HTMLAnchorElement>("[data-open-saved]");
   saveButtons.forEach((button) => {
     button.disabled = true;
     button.textContent = t("shared.saving");
@@ -530,10 +554,13 @@ async function saveArticleToOverview(event) {
         response.status === 401 ? "error.sessionExpired" : "error.sharedSave",
       );
     }
-    const { articleId } = await response.json();
+    const { articleId } = await responseData(response, savedArticleSchema);
+    if (!articleId) {
+      throw new Error("error.sharedSave");
+    }
     showSavedArticle(articleId);
     if (focusSavedLink) {
-      savedLink.focus();
+      savedLink?.focus();
     }
   } catch (error) {
     saveButtons.forEach((button) => {
@@ -542,7 +569,7 @@ async function saveArticleToOverview(event) {
     });
     saveStatuses.forEach((status) => {
       status.textContent = t(
-        error.message === "error.sessionExpired"
+        error instanceof Error && error.message === "error.sessionExpired"
           ? "error.sessionExpired"
           : "error.sharedSave",
       );

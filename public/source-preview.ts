@@ -1,20 +1,39 @@
+import { requiredElement } from "./dom.js";
 import { t } from "./localize.js";
 
 // Reuse the page's audio element so opening a citation cannot start a second player.
-export function createSourcePreview(dialog, audio) {
+export function createSourcePreview(
+  dialog: HTMLDialogElement,
+  audio: HTMLAudioElement,
+) {
   const audioHome = audio.parentElement;
+  if (!audioHome) {
+    throw new Error("Audio player has no container");
+  }
   const originalMinHeight = audioHome.style.minHeight;
-  const player = dialog.querySelector("[data-preview-player]");
-  const metadata = dialog.querySelector("[data-preview-metadata]");
-  const transcript = dialog.querySelector("[data-preview-transcript]");
-  const status = dialog.querySelector("[data-preview-status]");
-  const closeButton = dialog.querySelector("[data-preview-close]");
+  const player = requiredElement("[data-preview-player]", HTMLElement, dialog);
+  const metadata = requiredElement(
+    "[data-preview-metadata]",
+    HTMLElement,
+    dialog,
+  );
+  const transcript = requiredElement(
+    "[data-preview-transcript]",
+    HTMLElement,
+    dialog,
+  );
+  const status = requiredElement("[data-preview-status]", HTMLElement, dialog);
+  const closeButton = requiredElement(
+    "[data-preview-close]",
+    HTMLElement,
+    dialog,
+  );
   const document = dialog.ownerDocument;
   const view = document?.defaultView;
   const desktop = view?.matchMedia("(min-width: 1280px)");
-  let opener;
-  let activeParagraph;
-  let pendingPlayback;
+  let opener: HTMLElement | undefined;
+  let activeParagraph: Element | null | undefined;
+  let pendingPlayback: (() => void) | undefined;
   let playbackVersion = 0;
   let closingVersion = 0;
   let closing = false;
@@ -72,7 +91,7 @@ export function createSourcePreview(dialog, audio) {
     }
   }
 
-  function playFrom(start) {
+  function playFrom(start: number) {
     cancelPendingPlayback();
     const version = playbackVersion;
     const play = () => {
@@ -179,7 +198,15 @@ export function createSourcePreview(dialog, audio) {
   });
 
   return {
-    open({ start, label, speaker, text }, trigger) {
+    open(
+      {
+        start,
+        label,
+        speaker,
+        text,
+      }: { start: number; label: string; speaker?: string; text?: string },
+      trigger?: HTMLElement,
+    ) {
       if (!Number.isFinite(start) || start < 0) {
         return;
       }

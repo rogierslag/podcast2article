@@ -1,7 +1,10 @@
+import type * as FsPromises from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProcessingEvent } from "../lib/processing-events.js";
 import type { ApiRequestUsage, Job } from "../types.js";
+import type * as Resolver from "./resolver.js";
+import type * as YouTube from "./youtube.js";
 
 const state = vi.hoisted(() => ({
   files: new Map<string, string>(),
@@ -13,8 +16,9 @@ const state = vi.hoisted(() => ({
   transcribe: vi.fn(),
   writeArticle: vi.fn(),
 }));
+
 vi.mock("node:fs/promises", async (original) => ({
-  ...(await original<typeof import("node:fs/promises")>()),
+  ...(await original<typeof FsPromises>()),
   mkdir: vi.fn(),
   stat: vi.fn(async (file: string) => {
     if (!state.files.has(file)) {
@@ -54,11 +58,11 @@ vi.mock("./article-backups.js", () => ({
   requestArticleBackup: state.requestBackup,
 }));
 vi.mock("./resolver.js", async (original) => ({
-  ...(await original<typeof import("./resolver.js")>()),
+  ...(await original<typeof Resolver>()),
   resolveSource: state.resolveSource,
 }));
 vi.mock("./youtube.js", async (original) => ({
-  ...(await original<typeof import("./youtube.js")>()),
+  ...(await original<typeof YouTube>()),
   downloadYouTubeAudio: state.download,
 }));
 vi.mock("./audio.js", () => ({

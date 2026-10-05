@@ -1,5 +1,5 @@
 // Keep incoming links as form data, never as navigation destinations or HTML.
-export function sourcePrefill(value) {
+export function sourcePrefill(value: unknown) {
   if (typeof value !== "string" || value.length > 500) {
     return "";
   }
@@ -18,7 +18,10 @@ export function sourcePrefill(value) {
   }
 }
 
-export function prefillDestination(value, pathname = "/") {
+export function prefillDestination(
+  value: unknown,
+  pathname: "/" | "/login" = "/",
+) {
   const sourceUrl = sourcePrefill(value);
   return sourceUrl
     ? `${pathname}?${new URLSearchParams({ sourceUrl })}`
@@ -26,7 +29,11 @@ export function prefillDestination(value, pathname = "/") {
 }
 
 // Android often puts the link in shared text instead of the URL field.
-export function sharedSourcePrefill(url, text, title) {
+export function sharedSourcePrefill(
+  url: unknown,
+  text: unknown,
+  title: unknown,
+) {
   const directUrl = sourcePrefill(url);
   if (directUrl) {
     return directUrl;

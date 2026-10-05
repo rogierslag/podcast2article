@@ -5,10 +5,13 @@ const articleWordRanges = {
 };
 
 // Without a locale, use plain numbers for generation prompts.
-export function formatArticleWordRange(length, locale) {
-  const range = Object.hasOwn(articleWordRanges, length)
-    ? articleWordRanges[length]
-    : articleWordRanges.standard;
+export function formatArticleWordRange(length: string, locale?: string) {
+  const range =
+    length === "compact"
+      ? articleWordRanges.compact
+      : length === "long"
+        ? articleWordRanges.long
+        : articleWordRanges.standard;
   if (locale === undefined) {
     return range.join("-");
   }

@@ -5,7 +5,7 @@ import {
   messages,
   translate,
   uiLanguage,
-} from "../../public/i18n.js";
+} from "../shared/i18n.js";
 import {
   localizeJob,
   localizeProcessingJob,

@@ -13,7 +13,7 @@ test("client catalogs expose only manifest-listed asset names and keep templates
       JSON.stringify(["reader-123456.js", "reader-123456.css"]),
     );
 
-    const client = await clientAssets(directory, "public");
+    const client = await clientAssets(directory);
 
     expect(client.assetDirectory).toBe(path.join(directory, "client"));
     expect(client.templateDirectory).toBe(
@@ -30,11 +30,11 @@ test("client catalogs expose only manifest-listed asset names and keep templates
   }
 });
 
-test("development falls back to source templates while corrupt build manifests fail visibly", async () => {
+test("missing client builds and corrupt manifests fail before serving pages", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "p2a-asset-manifest-"));
   try {
-    expect((await clientAssets(directory, "public")).templateDirectory).toBe(
-      "public",
+    await expect(clientAssets(directory)).rejects.toThrow(
+      "Client assets are missing",
     );
 
     await mkdir(path.join(directory, "client-templates"));
@@ -43,7 +43,7 @@ test("development falls back to source templates while corrupt build manifests f
       JSON.stringify(["../server.js"]),
     );
 
-    await expect(clientAssets(directory, "public")).rejects.toThrow(
+    await expect(clientAssets(directory)).rejects.toThrow(
       "Invalid client asset manifest",
     );
   } finally {

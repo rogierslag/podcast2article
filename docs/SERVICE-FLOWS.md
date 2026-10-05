@@ -207,7 +207,7 @@ These checks filter some previews, but a capable crawler or direct event POST ca
 Load/read counters measure visits, not unique readers or comprehension.
 Their deduplication window and client/server checks are described in [shared article monitoring](SHARED-ARTICLE-MONITORING.md).
 
-Sources: [public and owner routes](../src/server.ts), [share tokens and copy persistence](../src/services/jobs.ts), and [public reader](../public/share.js).
+Sources: [public and owner routes](../src/server.ts), [share tokens and copy persistence](../src/services/jobs.ts), and [public reader](../public/share.ts).
 
 ## Reserve and record API costs
 

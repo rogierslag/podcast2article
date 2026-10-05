@@ -6,10 +6,10 @@ import {
   readdir,
   rename,
   rm,
-  stat,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { hasArticleContent } from "../lib/job-content.js";
 import { processingProgress } from "../lib/processing-events.js";
 import { DomainError } from "../lib/errors.js";
 import {
@@ -50,6 +50,7 @@ import type {
   ApiRequestUsage,
   ArticleReadingPosition,
   ArticleSummary,
+  ArticleJob,
   Job,
   ProcessingJobSummary,
   PodcastEpisode,
@@ -560,7 +561,11 @@ export async function setArticleRead(
   await update(username, job, {
     readAt: read ? new Date().toISOString() : undefined,
   });
-  return toArticleSummary(job)!;
+  const summary = toArticleSummary(job);
+  if (!summary) {
+    throw new DomainError("error.articleReadNotReady");
+  }
+  return summary;
 }
 
 export async function setArticleReadingPosition(
@@ -620,7 +625,7 @@ export async function createArticleShare(
 
 export function getSharedArticle(
   token: string,
-): { username: string; job: Job } | undefined {
+): { username: string; job: ArticleJob } | undefined {
   if (!isShareToken(token)) {
     return undefined;
   }
@@ -629,9 +634,7 @@ export function getSharedArticle(
       job.shareToken === token &&
       !job.deletedAt &&
       job.stage === "complete" &&
-      job.article &&
-      job.episode &&
-      job.transcript
+      hasArticleContent(job)
     ) {
       return { username: key.slice(0, key.indexOf("/")), job };
     }
@@ -957,6 +960,10 @@ async function processArticleRetry(
 ): Promise<void> {
   let releaseProcessing: (() => void) | undefined;
   try {
+    const { transcript, episode } = job;
+    if (!transcript || !episode) {
+      throw new DomainError("error.articleRetryNotFailed");
+    }
     releaseProcessing = await articleSlots.acquire(signal);
     await rm(path.join(userDirectory(username), "work", job.id), {
       recursive: true,
@@ -965,8 +972,8 @@ async function processArticleRetry(
     const article = await generateArticle(
       username,
       job,
-      job.transcript!,
-      job.episode!,
+      transcript,
+      episode,
       signal,
     );
     await update(username, job, {
@@ -1119,7 +1126,10 @@ async function processJob(
 ): Promise<void> {
   const workDirectory = path.join(userDirectory(username), "work");
   const workspace = path.join(workDirectory, job.id);
-  const mediaTarget = playbackFileForJob(username, job.id)!;
+  const mediaTarget = playbackFileForJob(username, job.id);
+  if (!mediaTarget) {
+    throw new DomainError("error.jobNotFound");
+  }
   const jobStartedAt = Date.now();
   let releaseProcessing: (() => void) | undefined;
   let releaseMedia: (() => void) | undefined;

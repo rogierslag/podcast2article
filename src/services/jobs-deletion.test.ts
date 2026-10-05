@@ -1,3 +1,4 @@
+import type * as FsPromises from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Job } from "../types.js";
@@ -5,7 +6,7 @@ import type { Job } from "../types.js";
 const storage = vi.hoisted(() => ({ files: new Map<string, string>() }));
 
 vi.mock("node:fs/promises", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("node:fs/promises")>()),
+  ...(await importOriginal<typeof FsPromises>()),
   mkdir: vi.fn(),
   rename: vi.fn(async (source: string, destination: string) => {
     const content = storage.files.get(source);

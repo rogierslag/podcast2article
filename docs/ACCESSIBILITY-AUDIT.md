@@ -109,8 +109,7 @@ Reproduce these checks with:
 ```sh
 yarn run check
 yarn run test:browser
-node --check public/app.js
-node --check public/share.js
+yarn run typecheck
 git diff --check
 ```
 

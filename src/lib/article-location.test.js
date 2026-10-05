@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   articleHash,
   readArticleLocation,
-} from "../../public/article-location.js";
+} from "../../public/article-location.ts";
 
 const jobId = "00000000-0000-4000-8000-000000000917";
 

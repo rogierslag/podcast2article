@@ -15,7 +15,7 @@ if (host) {
   heading.className = "reading-preferences-title";
   heading.textContent = t("reading.preferences");
   panel.append(heading);
-  const labels = {
+  const labels: Record<string, string> = {
     theme: t("reading.theme"),
     system: t("reading.system"),
     day: t("reading.day"),
@@ -28,7 +28,7 @@ if (host) {
     serif: t("reading.serif"),
     sans: t("reading.sans"),
   };
-  const groups = [
+  const groups: [string, string[]][] = [
     ["theme", ["system", "day", "evening"]],
     ["size", ["small", "standard", "large"]],
     ["font", ["serif", "sans"]],
@@ -36,7 +36,7 @@ if (host) {
   for (const [setting, options] of groups) {
     const fieldset = document.createElement("fieldset");
     const legend = document.createElement("legend");
-    legend.textContent = labels[setting];
+    legend.textContent = labels[setting] ?? setting;
     fieldset.append(legend);
     for (const option of options) {
       const label = document.createElement("label");
@@ -44,7 +44,7 @@ if (host) {
       input.type = "radio";
       input.name = `reading-${setting}`;
       input.value = option;
-      const key = `reading${setting[0].toUpperCase()}${setting.slice(1)}`;
+      const key = `reading${setting.charAt(0).toUpperCase()}${setting.slice(1)}`;
       input.checked = document.documentElement.dataset[key] === option;
       input.addEventListener("change", () => {
         document.documentElement.dataset[key] = option;
@@ -52,7 +52,7 @@ if (host) {
           groups.map(([name]) => [
             name,
             document.documentElement.dataset[
-              `reading${name[0].toUpperCase()}${name.slice(1)}`
+              `reading${name.charAt(0).toUpperCase()}${name.slice(1)}`
             ],
           ]),
         );
@@ -62,7 +62,7 @@ if (host) {
           // The selection still applies for this page when storage is disabled.
         }
       });
-      label.append(input, document.createTextNode(labels[option]));
+      label.append(input, document.createTextNode(labels[option] ?? option));
       fieldset.append(label);
     }
     panel.append(fieldset);
@@ -84,12 +84,15 @@ if (host) {
     }
   });
   document.addEventListener("pointerdown", (event) => {
-    if (!details.contains(event.target)) {
+    if (event.target instanceof Node && !details.contains(event.target)) {
       details.open = false;
     }
   });
   details.addEventListener("focusout", (event) => {
-    if (event.relatedTarget && !details.contains(event.relatedTarget)) {
+    if (
+      event.relatedTarget instanceof Node &&
+      !details.contains(event.relatedTarget)
+    ) {
       details.open = false;
     }
   });

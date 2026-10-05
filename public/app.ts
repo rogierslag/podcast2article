@@ -1,3 +1,29 @@
+import * as z from "zod/mini";
+import type {
+  ArticleSummary,
+  ProcessingJobSummary,
+  ArticleParagraph,
+  ArticleReadingPosition,
+  TranscriptSegment,
+} from "../src/types.js";
+import type { ClientJob, CompletedClientJob } from "../src/shared/api.js";
+import {
+  responseData,
+  jobSchema,
+  errorSchema,
+  articleSummarySchema,
+  processingSummarySchema,
+  shareLinkSchema,
+  shareStatsSchema,
+  articleSeriesSchema,
+} from "../src/shared/api.js";
+import {
+  html,
+  escapeHtml,
+  formatTimestamp as time,
+  articleSectionId as slug,
+} from "./article-format.js";
+import { requiredElement } from "./dom.js";
 import { acknowledgeArticleVisit } from "./article-arrivals.js";
 import {
   t,
@@ -7,29 +33,23 @@ import {
   errorText,
   LocalizedError,
 } from "./localize.js";
-
 import { createSourcePreview } from "./source-preview.js";
 import { articleHash, readArticleLocation } from "./article-location.js";
-import { sourcePrefill, prefillDestination } from "./source-prefill.js";
+import {
+  sourcePrefill,
+  prefillDestination,
+} from "../src/shared/source-prefill.js";
 import { supportsIOSShortcutInstall } from "./ios-shortcut.js";
 
-const $ = (selector) => document.querySelector(selector);
-
-function html(strings, ...values) {
-  let markup = strings[0];
-  values.forEach((value, index) => {
-    markup += String(value) + strings[index + 1];
-  });
-  return markup.trim();
-}
-
+const $ = (selector: string) => requiredElement(selector, HTMLElement);
 const browserFetch = window.fetch.bind(window);
+
 window.fetch = async (...arguments_) => {
   const response = await browserFetch(...arguments_);
   if (response.status === 401) {
     location.assign(
       prefillDestination(
-        document.querySelector("#source-url")?.value,
+        document.querySelector<HTMLInputElement>("#source-url")?.value,
         "/login",
       ),
     );
@@ -43,28 +63,27 @@ const deploymentAlert = $("#deployment-alert");
 const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const articleReadingProgress = $("#article-reading-progress");
-const form = $("#job-form");
+const form = requiredElement("#job-form", HTMLFormElement);
 
 function finishInitialLoad() {
   document.documentElement.removeAttribute("data-loading-view");
 }
-
-let currentJob;
-let articlesState = [];
-let processingState = [];
-let overviewRefreshTimer;
-let readingProgressFrame;
+let currentJob: CompletedClientJob | undefined;
+let articlesState: ArticleSummary[] = [];
+let processingState: ProcessingJobSummary[] = [];
+let overviewRefreshTimer: number | undefined;
+let readingProgressFrame: number | undefined;
 let readingPositionTrackingRequested = false;
-let readingPositionSaveTimer;
-let pendingReadingSectionIndex;
-let lastSavedReadingSectionIndex;
+let readingPositionSaveTimer: number | undefined;
+let pendingReadingSectionIndex: number | undefined;
+let lastSavedReadingSectionIndex: number | undefined;
 let readingTrackingOrigin = 0;
 let readingTrackingEnabled = false;
 let restoringReadingPosition = false;
-let continuationSectionIndex;
+let continuationSectionIndex: number | undefined;
 let naturalReadingScroll = false;
 let naturalReadingScrollMoved = false;
-let readingScrollEndTimer;
+let readingScrollEndTimer: number | undefined;
 const materialScrollDistance = 120;
 
 function stopNaturalReadingScroll() {
@@ -82,7 +101,7 @@ function finishNaturalReadingScroll() {
   stopNaturalReadingScroll();
 }
 
-function beginNaturalReadingScroll(event) {
+function beginNaturalReadingScroll(event: Event) {
   if (event.defaultPrevented || restoringReadingPosition) {
     return;
   }
@@ -91,15 +110,16 @@ function beginNaturalReadingScroll(event) {
   readingScrollEndTimer = setTimeout(finishNaturalReadingScroll, 200);
 }
 
-function handleReadingScrollKey(event) {
+function handleReadingScrollKey(event: KeyboardEvent) {
   if (
     event.defaultPrevented ||
     event.altKey ||
     event.ctrlKey ||
     event.metaKey ||
-    event.target.closest?.(
-      'input, textarea, select, button, a, [contenteditable]:not([contenteditable="false"]), [role="slider"]',
-    )
+    (event.target instanceof Element &&
+      event.target.closest(
+        'input, textarea, select, button, a, [contenteditable]:not([contenteditable="false"]), [role="slider"]',
+      ))
   ) {
     return;
   }
@@ -113,7 +133,7 @@ function handleReadingScrollKey(event) {
 }
 
 function articleSectionHeadings() {
-  return [...document.querySelectorAll("#article section > h2")];
+  return [...document.querySelectorAll<HTMLElement>("#article section > h2")];
 }
 
 function visibleReadingSectionIndex() {
@@ -129,7 +149,9 @@ function visibleReadingSectionIndex() {
 }
 
 function hideContinueReading() {
-  $("#continue-reading").classList.add("hidden");
+  requiredElement("#continue-reading", HTMLButtonElement).classList.add(
+    "hidden",
+  );
   continuationSectionIndex = undefined;
 }
 
@@ -142,7 +164,7 @@ function resetArticleScroll() {
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 
-function persistReadingPosition(sectionIndex) {
+function persistReadingPosition(sectionIndex: number) {
   if (!currentJob || sectionIndex === lastSavedReadingSectionIndex) {
     return;
   }
@@ -206,24 +228,28 @@ function trackReadingPosition(savePosition = false) {
   }
 }
 
-function showContinueReading(readingPosition) {
+function showContinueReading(readingPosition?: ArticleReadingPosition) {
   stopNaturalReadingScroll();
   clearTimeout(readingPositionSaveTimer);
   pendingReadingSectionIndex = undefined;
   lastSavedReadingSectionIndex = readingPosition?.sectionIndex;
   readingTrackingOrigin = window.scrollY;
   readingTrackingEnabled = false;
-  const heading = articleSectionHeadings()[readingPosition?.sectionIndex];
-  if (!heading) {
+  const heading = readingPosition
+    ? articleSectionHeadings()[readingPosition.sectionIndex]
+    : undefined;
+  if (!heading || !readingPosition) {
     hideContinueReading();
     return;
   }
   continuationSectionIndex = readingPosition.sectionIndex;
   $("#continue-reading-heading").textContent = heading.textContent;
-  $("#continue-reading").classList.remove("hidden");
+  requiredElement("#continue-reading", HTMLButtonElement).classList.remove(
+    "hidden",
+  );
 }
 
-function drawAttentionToHeading(heading) {
+function drawAttentionToHeading(heading: HTMLElement) {
   heading.classList.remove("resume-highlight");
   void heading.offsetWidth;
   heading.classList.add("resume-highlight");
@@ -234,12 +260,11 @@ function drawAttentionToHeading(heading) {
   }, 2200);
 }
 
-function afterReadingScroll(callback) {
+function afterReadingScroll(callback: () => void) {
   const startedAt = performance.now();
   let previousScrollTop = window.scrollY;
   let stableFrames = 0;
-
-  function checkPosition(now) {
+  function checkPosition(now: number) {
     const currentScrollTop = window.scrollY;
     stableFrames =
       Math.abs(currentScrollTop - previousScrollTop) < 1 ? stableFrames + 1 : 0;
@@ -251,37 +276,43 @@ function afterReadingScroll(callback) {
     }
     requestAnimationFrame(checkPosition);
   }
-
   requestAnimationFrame(checkPosition);
 }
-
-$("#continue-reading").addEventListener("click", () => {
-  const heading = articleSectionHeadings()[continuationSectionIndex];
-  if (!heading) {
+requiredElement("#continue-reading", HTMLButtonElement).addEventListener(
+  "click",
+  () => {
+    const heading =
+      continuationSectionIndex === undefined
+        ? undefined
+        : articleSectionHeadings()[continuationSectionIndex];
+    if (!heading) {
+      hideContinueReading();
+      return;
+    }
     hideContinueReading();
-    return;
-  }
-  hideContinueReading();
-  stopNaturalReadingScroll();
-  readingTrackingEnabled = false;
-  restoringReadingPosition = true;
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const headingOffset =
-    parseFloat(getComputedStyle(heading).scrollMarginTop) || 30;
-  const headingTop =
-    heading.getBoundingClientRect().top + window.scrollY - headingOffset;
-  window.scrollTo({
-    top: Math.max(0, headingTop),
-    behavior: reducedMotion ? "instant" : "smooth",
-  });
-  afterReadingScroll(() => {
-    drawAttentionToHeading(heading);
-    readingPositionTrackingRequested = false;
-    readingTrackingOrigin = window.scrollY;
+    stopNaturalReadingScroll();
     readingTrackingEnabled = false;
-    restoringReadingPosition = false;
-  });
-});
+    restoringReadingPosition = true;
+    const reducedMotion = matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const headingOffset =
+      parseFloat(getComputedStyle(heading).scrollMarginTop) || 30;
+    const headingTop =
+      heading.getBoundingClientRect().top + window.scrollY - headingOffset;
+    window.scrollTo({
+      top: Math.max(0, headingTop),
+      behavior: reducedMotion ? "instant" : "smooth",
+    });
+    afterReadingScroll(() => {
+      drawAttentionToHeading(heading);
+      readingPositionTrackingRequested = false;
+      readingTrackingOrigin = window.scrollY;
+      readingTrackingEnabled = false;
+      restoringReadingPosition = false;
+    });
+  },
+);
 
 function updateArticleReadingProgress() {
   readingProgressFrame = undefined;
@@ -295,7 +326,6 @@ function updateArticleReadingProgress() {
   ) {
     return;
   }
-
   const articleTop = article.getBoundingClientRect().top + window.scrollY;
   const articleEnd = Math.max(
     articleTop,
@@ -308,9 +338,10 @@ function updateArticleReadingProgress() {
   const progressPercentage = Math.round(
     Math.min(1, Math.max(0, progressRatio)) * 100,
   );
-
-  articleReadingProgress.querySelector(
+  requiredElement(
     ".reading-progress-value",
+    HTMLElement,
+    articleReadingProgress,
   ).style.transform = `scaleX(${progressPercentage / 100})`;
   articleReadingProgress.setAttribute(
     "aria-valuenow",
@@ -321,7 +352,7 @@ function updateArticleReadingProgress() {
     t("progress.read", { count: progressPercentage }),
   );
   const sectionIndex = visibleReadingSectionIndex();
-  document.querySelectorAll("#toc a").forEach((link, index) => {
+  document.querySelectorAll<HTMLElement>("#toc a").forEach((link, index) => {
     if (index === sectionIndex) {
       link.setAttribute("aria-current", "location");
     } else {
@@ -355,6 +386,7 @@ function handleArticleScroll() {
 window.addEventListener("touchmove", beginNaturalReadingScroll, {
   passive: true,
 });
+
 window.addEventListener(
   "wheel",
   (event) => {
@@ -364,33 +396,34 @@ window.addEventListener(
   },
   { passive: true },
 );
-window.addEventListener("keydown", handleReadingScrollKey);
-window.addEventListener("scrollend", finishNaturalReadingScroll);
-window.addEventListener("scroll", handleArticleScroll, { passive: true });
-window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
 
+window.addEventListener("keydown", handleReadingScrollKey);
+
+window.addEventListener("scrollend", finishNaturalReadingScroll);
+
+window.addEventListener("scroll", handleArticleScroll, { passive: true });
+
+window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
 localizedFetch("/api/auth")
-  .then((response) => response.json())
+  .then((response) =>
+    responseData(response, z.object({ enabled: z.boolean() })),
+  )
   .then(({ enabled }) => {
     if (enabled) {
-      $("#logout-form").classList.remove("is-unavailable");
+      requiredElement("#logout-form", HTMLFormElement).classList.remove(
+        "is-unavailable",
+      );
     }
   })
   .catch(() => undefined);
-
-const sourcePreview = createSourcePreview($("#source-preview"), $("#audio"));
+const sourcePreview = createSourcePreview(
+  requiredElement("#source-preview", HTMLDialogElement),
+  requiredElement("#audio", HTMLAudioElement),
+);
 let routeVersion = 0;
-let jobPollTimer;
-let processingJob;
+let jobPollTimer: number | undefined;
+let processingJob: ClientJob | undefined;
 const pendingArticleRetryIds = new Set();
-
-const sourceLabels = {
-  spotify: "Spotify",
-  rss: "Podcast",
-  youtube: "YouTube",
-  fathom: "Fathom",
-  "google-drive": "Google Drive",
-};
 const processingStageLabels = {
   queued: t("stage.queued"),
   resolving: t("stage.resolving"),
@@ -399,31 +432,16 @@ const processingStageLabels = {
   writing: t("stage.writing"),
 };
 
-const escapeHtml = (value = "") =>
-  String(value).replace(
-    /[&<>'"]/g,
-    (char) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[
-        char
-      ],
-  );
-const time = (seconds) => {
-  const value = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(value / 3600);
-  const m = Math.floor((value % 3600) / 60);
-  const s = value % 60;
-  return h
-    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-    : `${m}:${String(s).padStart(2, "0")}`;
-};
-
-function showFormError(message, existingJobId, existingStage) {
+function showFormError(
+  message: string,
+  existingJobId?: string,
+  existingStage?: string,
+) {
   const formError = $("#form-error");
   formError.textContent = message;
   if (!existingJobId || !/^[0-9a-f-]{36}$/i.test(existingJobId)) {
     return;
   }
-
   formError.append(" ");
   const existingJobLink = document.createElement("a");
   existingJobLink.href = `/#job=${existingJobId}`;
@@ -437,11 +455,14 @@ function showFormError(message, existingJobId, existingStage) {
   });
   formError.append(existingJobLink);
 }
-
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   $("#form-error").textContent = "";
   const data = Object.fromEntries(new FormData(form));
+  if (typeof data.sourceUrl !== "string") {
+    showFormError(t("error.input"));
+    return;
+  }
   const source = new URL(data.sourceUrl);
   if (
     ["open.spotify.com", "spotify.com", "www.spotify.com"].includes(
@@ -460,22 +481,28 @@ form.addEventListener("submit", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    const body = await response.json();
+    const responseBody: unknown = await response.json();
+    const body = errorSchema.parse(responseBody);
     if (!response.ok) {
       if (response.status === 409 && body.existingJobId) {
-        showFormError(body.error, body.existingJobId, body.existingStage);
+        showFormError(
+          body.error ?? t("error.jobStart"),
+          body.existingJobId,
+          body.existingStage,
+        );
         return;
       }
       throw new LocalizedError(body.error || t("error.jobStart"));
     }
-    showProgress(body);
-    openArticleJob(body.id);
+    const job = jobSchema.parse(responseBody);
+    showProgress(job);
+    openArticleJob(job.id);
   } catch (error) {
     showFormError(errorText(error));
   }
 });
 
-function showProgress(job) {
+function showProgress(job: ClientJob) {
   processingJob = job;
   landing.classList.add("hidden");
   articlesView.classList.add("hidden");
@@ -493,23 +520,33 @@ function showProgress(job) {
   $("#progress-percent").classList.remove("hidden");
   $("#progress-error").textContent = "";
   $("#progress-hint").textContent = t("processing.leaveHint");
-  $("#job-status-retry").classList.add("hidden");
-  $("#job-article-retry").classList.add("hidden");
-  $("#job-article-retry").disabled = pendingArticleRetryIds.has(job.id);
-  $("#job-edit-source").classList.add("hidden");
+  requiredElement("#job-status-retry", HTMLButtonElement).classList.add(
+    "hidden",
+  );
+  requiredElement("#job-article-retry", HTMLButtonElement).classList.add(
+    "hidden",
+  );
+  requiredElement("#job-article-retry", HTMLButtonElement).disabled =
+    pendingArticleRetryIds.has(job.id);
+  requiredElement("#job-edit-source", HTMLButtonElement).classList.add(
+    "hidden",
+  );
   finishInitialLoad();
 }
 
 function showProcessingError(
-  message,
+  message: string,
   { failedJob = false, missingJob = false } = {},
 ) {
+  if (!processingJob) {
+    return;
+  }
   const canReuseTranscript =
     failedJob &&
     !processingJob.savedShareKey &&
-    processingJob.transcript?.length > 0 &&
+    (processingJob.transcript?.length ?? 0) > 0 &&
     Boolean(processingJob.episode);
-  const retryLimitReached = processingJob.articleRetryAttempts >= 2;
+  const retryLimitReached = (processingJob.articleRetryAttempts ?? 0) >= 2;
   $("#progress-kicker").textContent = t(
     failedJob ? "processing.failed" : "processing.statusUnavailable",
   );
@@ -533,73 +570,99 @@ function showProcessingError(
               : "processing.restartHint"
           : "processing.statusHint",
       );
-  $("#job-status-retry").classList.toggle("hidden", failedJob || missingJob);
-  $("#job-article-retry").classList.toggle(
+  requiredElement("#job-status-retry", HTMLButtonElement).classList.toggle(
+    "hidden",
+    failedJob || missingJob,
+  );
+  requiredElement("#job-article-retry", HTMLButtonElement).classList.toggle(
     "hidden",
     !canReuseTranscript || retryLimitReached,
   );
-  $("#job-edit-source").classList.toggle(
+  requiredElement("#job-edit-source", HTMLButtonElement).classList.toggle(
     "hidden",
     !failedJob || !processingJob.sourceUrl,
   );
 }
-
-$("#job-status-retry").addEventListener("click", () => {
-  poll(processingJob.id);
-});
-
-$("#job-edit-source").addEventListener("click", () => {
-  $("#source-url").value = processingJob.sourceUrl;
-  form.elements.language.value = processingJob.language;
-  form.elements.articleLength.value = processingJob.articleLength;
-  history.pushState(null, "", "/");
-  showArticleRoute();
-  $("#form-error").textContent = "";
-  $("#source-url").focus();
-});
-
-$("#job-article-retry").addEventListener("click", async (event) => {
-  const button = event.currentTarget;
-  const version = routeVersion;
-  const jobId = processingJob.id;
-  if (
-    pendingArticleRetryIds.has(jobId) ||
-    processingJob.stage !== "failed" ||
-    processingJob.savedShareKey ||
-    !processingJob.transcript?.length ||
-    !processingJob.episode ||
-    processingJob.articleRetryAttempts >= 2
-  ) {
-    return;
-  }
-  pendingArticleRetryIds.add(jobId);
-  button.disabled = true;
-  $("#progress-error").textContent = "";
-  try {
-    const response = await localizedFetch(`/api/jobs/${jobId}/retry-article`, {
-      method: "POST",
-    });
-    const job = await response.json();
-    if (!response.ok) {
-      throw new LocalizedError(job.error || t("error.jobStart"));
+requiredElement("#job-status-retry", HTMLButtonElement).addEventListener(
+  "click",
+  () => {
+    if (processingJob) {
+      void poll(processingJob.id);
     }
-    if (version === routeVersion) {
-      showProgress(job);
-      poll(jobId);
+  },
+);
+requiredElement("#job-edit-source", HTMLButtonElement).addEventListener(
+  "click",
+  () => {
+    if (!processingJob) {
+      return;
     }
-  } catch (error) {
-    if (version === routeVersion) {
-      // The server may have accepted paid work before the response was lost.
-      // Reconcile its status before offering another regeneration.
-      showProcessingError(errorText(error));
+    requiredElement("#source-url", HTMLInputElement).value =
+      processingJob.sourceUrl ?? "";
+    requiredElement("[name=language]", HTMLSelectElement, form).value =
+      processingJob.language ?? "nl";
+    requiredElement("[name=articleLength]", HTMLSelectElement, form).value =
+      processingJob.articleLength ?? "standard";
+    history.pushState(null, "", "/");
+    showArticleRoute();
+    $("#form-error").textContent = "";
+    requiredElement("#source-url", HTMLInputElement).focus();
+  },
+);
+requiredElement("#job-article-retry", HTMLButtonElement).addEventListener(
+  "click",
+  async (event) => {
+    const button = event.currentTarget;
+    if (!(button instanceof HTMLButtonElement) || !processingJob) {
+      return;
     }
-  } finally {
-    pendingArticleRetryIds.delete(jobId);
-    button.disabled = pendingArticleRetryIds.has(processingJob.id);
-  }
-});
+    const version = routeVersion;
+    const jobId = processingJob.id;
+    if (
+      pendingArticleRetryIds.has(jobId) ||
+      processingJob.stage !== "failed" ||
+      processingJob.savedShareKey ||
+      !processingJob.transcript?.length ||
+      !processingJob.episode ||
+      (processingJob.articleRetryAttempts ?? 0) >= 2
+    ) {
+      return;
+    }
+    pendingArticleRetryIds.add(jobId);
+    button.disabled = true;
+    $("#progress-error").textContent = "";
+    try {
+      const response = await localizedFetch(
+        `/api/jobs/${jobId}/retry-article`,
+        {
+          method: "POST",
+        },
+      );
+      const data: unknown = await response.json();
+      if (!response.ok) {
+        throw new LocalizedError(
+          errorSchema.parse(data).error || t("error.jobStart"),
+        );
+      }
+      const job = jobSchema.parse(data);
+      if (version === routeVersion) {
+        showProgress(job);
+        void poll(jobId);
+      }
+    } catch (error) {
+      if (version === routeVersion) {
+        // The server may have accepted paid work before the response was lost.
+        // Reconcile its status before offering another regeneration.
+        showProcessingError(errorText(error));
+      }
+    } finally {
+      pendingArticleRetryIds.delete(jobId);
+      button.disabled = pendingArticleRetryIds.has(processingJob?.id ?? "");
+    }
+  },
+);
 
-async function poll(id, version = ++routeVersion) {
+async function poll(id: string, version = ++routeVersion) {
   clearTimeout(jobPollTimer);
   if (processingJob?.id !== id) {
     // Drop the previous job's recovery controls while preserving the initial loading shell until the requested job's state is known.
@@ -628,7 +691,7 @@ async function poll(id, version = ++routeVersion) {
         t(missingJob ? "error.jobNotFound" : "processing.statusUnavailable"),
       );
     }
-    const job = await response.json();
+    const job = await responseData(response, jobSchema);
     if (version !== routeVersion) {
       return;
     }
@@ -660,7 +723,7 @@ async function poll(id, version = ++routeVersion) {
   }
 }
 
-function sourceButtons(ids, transcript) {
+function sourceButtons(ids: string[], transcript: TranscriptSegment[]) {
   const buttons = ids
     .map((id) => {
       const item = transcript.find((part) => part.id === id);
@@ -669,12 +732,8 @@ function sourceButtons(ids, transcript) {
             <button
               class="source-link"
               data-source="${id}"
-              aria-label="${escapeHtml(
-                t("source.jump", { time: time(item.start) }),
-              )}"
-              title="${escapeHtml(
-                t("source.jump", { time: time(item.start) }),
-              )}"
+              aria-label="${escapeHtml(t("source.jump", { time: time(item.start) }))}"
+              title="${escapeHtml(t("source.jump", { time: time(item.start) }))}"
             >
               ${time(item.start)}
             </button>
@@ -686,7 +745,10 @@ function sourceButtons(ids, transcript) {
   return buttons ? html`<span class="sources">${buttons}</span>` : "";
 }
 
-function articleBlock(block, transcript) {
+function articleBlock(
+  block: ArticleParagraph,
+  transcript: TranscriptSegment[],
+) {
   if (block.kind === "quote") {
     return html`
       <blockquote>
@@ -701,16 +763,17 @@ function articleBlock(block, transcript) {
   `;
 }
 
-function slug(value, index) {
-  return `section-${index}-${value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")}`;
-}
-
-function renderResult(job) {
+function renderResult(job: ClientJob) {
+  if (!job.episode || !job.article || !job.transcript) {
+    throw new Error("Incomplete article response");
+  }
   sourcePreview.close();
-  currentJob = job;
+  currentJob = {
+    ...job,
+    episode: job.episode,
+    article: job.article,
+    transcript: job.transcript,
+  };
   void updateArticleSeries(job);
   void updateArticleShareStats(job);
   progressView.classList.add("hidden");
@@ -818,13 +881,18 @@ function renderResult(job) {
       `,
     )
     .join("");
-  $("#audio").src = episode.playbackUrl || episode.mediaUrl;
+  requiredElement("#audio", HTMLAudioElement).src =
+    episode.playbackUrl || episode.mediaUrl;
   const requestedTime = readArticleLocation(location.hash).time;
-  if (Number.isFinite(requestedTime) && requestedTime >= 0) {
-    $("#audio").addEventListener(
+  if (
+    requestedTime !== undefined &&
+    Number.isFinite(requestedTime) &&
+    requestedTime >= 0
+  ) {
+    requiredElement("#audio", HTMLAudioElement).addEventListener(
       "loadedmetadata",
       () => {
-        $("#audio").currentTime = requestedTime;
+        requiredElement("#audio", HTMLAudioElement).currentTime = requestedTime;
       },
       { once: true },
     );
@@ -834,21 +902,20 @@ function renderResult(job) {
   renderTranscript(transcript, "");
   $(".transcript-head").classList.toggle("hidden", Boolean(job.savedShareKey));
   $("#transcript").classList.toggle("hidden", Boolean(job.savedShareKey));
-  $("#toggle-transcript").setAttribute(
+  requiredElement("#toggle-transcript", HTMLButtonElement).setAttribute(
     "aria-expanded",
     String(!job.savedShareKey),
   );
-  $("#toggle-transcript").textContent = t(
+  requiredElement("#toggle-transcript", HTMLButtonElement).textContent = t(
     job.savedShareKey ? "transcript.show" : "transcript.hide",
   );
-
   resetArticleScroll();
   showContinueReading(job.readingPosition);
   restoreArticleSection();
   scheduleArticleReadingProgressUpdate();
 }
 
-function renderTranscript(transcript, query) {
+function renderTranscript(transcript: TranscriptSegment[], query: string) {
   const normalized = query.trim().toLowerCase();
   let matchCount = 0;
   $("#transcript-segments").innerHTML = transcript
@@ -890,8 +957,11 @@ function renderTranscript(transcript, query) {
     : "";
 }
 
-function sourceClick(event) {
-  const source = event.target.closest("[data-source]");
+function sourceClick(event: MouseEvent) {
+  if (!(event.target instanceof Element)) {
+    return;
+  }
+  const source = event.target.closest<HTMLElement>("[data-source]");
   if (source) {
     const segment = currentJob?.transcript.find(
       (part) => part.id === source.dataset.source,
@@ -902,18 +972,20 @@ function sourceClick(event) {
     }
     return;
   }
-  const timestamp = event.target.closest("[data-time]");
+  const timestamp = event.target.closest<HTMLElement>("[data-time]");
   if (timestamp) {
     seek(Number(timestamp.dataset.time));
   }
 }
-function seek(seconds) {
-  const audio = $("#audio");
+
+function seek(seconds: number) {
+  const audio = requiredElement("#audio", HTMLAudioElement);
   audio.currentTime = seconds;
   audio.play().catch(() => undefined);
 }
-let articleActionStatusTimer;
-function setArticleActionStatus(message, isSuccess = false) {
+let articleActionStatusTimer: number | undefined;
+
+function setArticleActionStatus(message: string, isSuccess = false) {
   clearTimeout(articleActionStatusTimer);
   [$("#article-action-status"), $("#article-read-footer-status")].forEach(
     (status) => {
@@ -928,12 +1000,14 @@ function setArticleActionStatus(message, isSuccess = false) {
     );
   }
 }
+
 async function exportToPdf() {
   if (!currentJob) {
     return;
   }
   const job = currentJob;
-  const buttons = document.querySelectorAll("[data-pdf-export]");
+  const buttons =
+    document.querySelectorAll<HTMLButtonElement>("[data-pdf-export]");
   buttons.forEach((button) => {
     button.disabled = true;
     const label = button.querySelector("span");
@@ -945,7 +1019,9 @@ async function exportToPdf() {
   try {
     const response = await localizedFetch(`/api/jobs/${job.id}/pdf`);
     if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
+      const body = await responseData(response, errorSchema).catch(() => ({
+        error: undefined,
+      }));
       throw new LocalizedError(body.error || t("error.pdfExport"));
     }
     const blob = await response.blob();
@@ -977,7 +1053,7 @@ async function exportToPdf() {
   }
 }
 
-async function copyToClipboard(value) {
+async function copyToClipboard(value: string) {
   if (navigator.clipboard?.writeText) {
     return navigator.clipboard.writeText(value);
   }
@@ -999,7 +1075,9 @@ async function shareArticle() {
   if (!currentJob) {
     return;
   }
-  const buttons = document.querySelectorAll("[data-share-article]");
+  const buttons = document.querySelectorAll<HTMLButtonElement>(
+    "[data-share-article]",
+  );
   buttons.forEach((button) => {
     button.disabled = true;
   });
@@ -1008,10 +1086,12 @@ async function shareArticle() {
     const response = await localizedFetch(`/api/jobs/${currentJob.id}/share`, {
       method: "POST",
     });
-    const body = await response.json();
+    const data: unknown = await response.json();
+    const body = errorSchema.parse(data);
     if (!response.ok) {
       throw new LocalizedError(body.error || t("error.shareCreate"));
     }
+    const link = shareLinkSchema.parse(data);
     if (matchMedia("(max-width: 600px)").matches && navigator.share) {
       try {
         // iOS share targets can discard separate URL or text items.
@@ -1019,17 +1099,22 @@ async function shareArticle() {
         await navigator.share({
           text: `${t("share.message", {
             title: currentJob.article.title,
-          })}\n\n${body.url}`,
+          })}\n\n${link.url}`,
         });
         setArticleActionStatus(t("share.completed"), true);
         return;
       } catch (error) {
-        if (error?.name === "AbortError") {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "name" in error &&
+          error.name === "AbortError"
+        ) {
           return;
         }
       }
     }
-    await copyToClipboard(body.url);
+    await copyToClipboard(link.url);
     setArticleActionStatus(t("share.copied"), true);
   } catch (error) {
     setArticleActionStatus(errorText(error));
@@ -1039,75 +1124,93 @@ async function shareArticle() {
     });
   }
 }
+
 resultView.addEventListener("click", sourceClick);
-$("#transcript-search").addEventListener(
+requiredElement("#transcript-search", HTMLInputElement).addEventListener(
   "input",
   (event) =>
-    currentJob && renderTranscript(currentJob.transcript, event.target.value),
+    currentJob &&
+    event.target instanceof HTMLInputElement &&
+    renderTranscript(currentJob.transcript, event.target.value),
 );
-$("#clear-transcript-search").addEventListener("click", () => {
-  const search = $("#transcript-search");
-  search.value = "";
-  if (currentJob) {
-    renderTranscript(currentJob.transcript, "");
-  }
-  search.focus({ preventScroll: true });
-});
-$("#toggle-transcript").addEventListener("click", () => {
-  const transcript = $("#transcript");
-  transcript.classList.toggle("hidden");
-  $("#toggle-transcript").setAttribute(
-    "aria-expanded",
-    String(!transcript.classList.contains("hidden")),
-  );
-  $("#toggle-transcript").textContent = transcript.classList.contains("hidden")
-    ? t("transcript.show")
-    : t("transcript.hide");
-});
+requiredElement("#clear-transcript-search", HTMLButtonElement).addEventListener(
+  "click",
+  () => {
+    const search = requiredElement("#transcript-search", HTMLInputElement);
+    search.value = "";
+    if (currentJob) {
+      renderTranscript(currentJob.transcript, "");
+    }
+    search.focus({ preventScroll: true });
+  },
+);
+requiredElement("#toggle-transcript", HTMLButtonElement).addEventListener(
+  "click",
+  () => {
+    const transcript = $("#transcript");
+    transcript.classList.toggle("hidden");
+    requiredElement("#toggle-transcript", HTMLButtonElement).setAttribute(
+      "aria-expanded",
+      String(!transcript.classList.contains("hidden")),
+    );
+    requiredElement("#toggle-transcript", HTMLButtonElement).textContent =
+      transcript.classList.contains("hidden")
+        ? t("transcript.show")
+        : t("transcript.hide");
+  },
+);
 document
-  .querySelectorAll("[data-pdf-export]")
+  .querySelectorAll<HTMLButtonElement>("[data-pdf-export]")
   .forEach((button) => button.addEventListener("click", exportToPdf));
 document
-  .querySelectorAll("[data-share-article]")
+  .querySelectorAll<HTMLButtonElement>("[data-share-article]")
   .forEach((button) => button.addEventListener("click", shareArticle));
 
-async function updateArticleRead(id, read) {
+async function updateArticleRead(id: string, read: boolean) {
   const response = await localizedFetch(`/api/articles/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ read }),
   });
-  const body = await response.json();
+  const data: unknown = await response.json();
+  const body = errorSchema.parse(data);
   if (!response.ok) {
     throw new LocalizedError(body.error || t("error.readState"));
   }
-  return body;
+  return articleSummarySchema.parse(data);
 }
 
 function updateReadButtons() {
   const isRead = Boolean(currentJob?.readAt);
-  document.querySelectorAll("[data-article-read-toggle]").forEach((button) => {
-    button.classList.toggle("is-read", isRead);
-    button.setAttribute("aria-pressed", String(isRead));
-    button.setAttribute(
-      "aria-label",
-      isRead ? t("article.markUnreadLabel") : t("article.markReadLabel"),
-    );
-    button.querySelector("span").textContent = isRead
-      ? t("article.readStatus")
-      : t("article.markRead");
-  });
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-article-read-toggle]")
+    .forEach((button) => {
+      button.classList.toggle("is-read", isRead);
+      button.setAttribute("aria-pressed", String(isRead));
+      button.setAttribute(
+        "aria-label",
+        isRead ? t("article.markUnreadLabel") : t("article.markReadLabel"),
+      );
+      requiredElement("span", HTMLElement, button).textContent = isRead
+        ? t("article.readStatus")
+        : t("article.markRead");
+    });
 }
 
-async function toggleCurrentArticleRead(event) {
+async function toggleCurrentArticleRead(event: Event) {
   if (!currentJob) {
+    return;
+  }
+  if (!(event.currentTarget instanceof HTMLElement)) {
     return;
   }
   const returnToArticles = event.currentTarget.hasAttribute(
     "data-return-to-articles",
   );
   const markAsRead = !currentJob.readAt;
-  const buttons = document.querySelectorAll("[data-article-read-toggle]");
+  const buttons = document.querySelectorAll<HTMLButtonElement>(
+    "[data-article-read-toggle]",
+  );
   buttons.forEach((button) => {
     button.disabled = true;
   });
@@ -1129,14 +1232,13 @@ async function toggleCurrentArticleRead(event) {
     });
   }
 }
-
 document
-  .querySelectorAll("[data-article-read-toggle]")
+  .querySelectorAll<HTMLButtonElement>("[data-article-read-toggle]")
   .forEach((button) =>
     button.addEventListener("click", toggleCurrentArticleRead),
   );
 
-function articleDate(article) {
+function articleDate(article: ArticleSummary) {
   const value = article.publishedAt || article.completedAt;
   return new Date(value).toLocaleDateString(locale, {
     day: "numeric",
@@ -1152,7 +1254,7 @@ async function deleteCurrentArticle() {
   if (!window.confirm(t("article.deleteConfirm"))) {
     return;
   }
-  const button = $("#delete-article");
+  const button = requiredElement("#delete-article", HTMLButtonElement);
   const status = $("#article-delete-status");
   button.disabled = true;
   status.textContent = "";
@@ -1161,10 +1263,10 @@ async function deleteCurrentArticle() {
       method: "DELETE",
     });
     if (!response.ok) {
-      const body = await response.json();
+      const body = await responseData(response, errorSchema);
       throw new LocalizedError(body.error || t("error.articleDelete"));
     }
-    $("#audio").pause();
+    requiredElement("#audio", HTMLAudioElement).pause();
     clearTimeout(readingPositionSaveTimer);
     pendingReadingSectionIndex = undefined;
     hideContinueReading();
@@ -1175,10 +1277,12 @@ async function deleteCurrentArticle() {
     button.disabled = false;
   }
 }
+requiredElement("#delete-article", HTMLButtonElement).addEventListener(
+  "click",
+  deleteCurrentArticle,
+);
 
-$("#delete-article").addEventListener("click", deleteCurrentArticle);
-
-function articleCard(article) {
+function articleCard(article: ArticleSummary) {
   const articleId = escapeHtml(article.id);
   const articleUrl = `/#job=${articleId}`;
   const isRead = Boolean(article.readAt);
@@ -1188,9 +1292,7 @@ function articleCard(article) {
   return html`
     <article class="article-card ${isRead ? "is-read" : ""}">
       <a
-        class="article-card-image ${
-          article.imageUrl ? "" : "article-card-placeholder"
-        }"
+        class="article-card-image ${article.imageUrl ? "" : "article-card-placeholder"}"
         href="${articleUrl}"
         aria-label="${escapeHtml(
           t("article.read", {
@@ -1248,13 +1350,17 @@ function articleCard(article) {
   `;
 }
 
-function articleShelf(title, articles, emptyText, collapsible = false) {
+function articleShelf(
+  title: string,
+  articles: ArticleSummary[],
+  emptyText: string,
+  collapsible = false,
+) {
   const content = articles.length
     ? html`
         <div class="articles-grid">${articles.map(articleCard).join("")}</div>
       `
     : html`<p class="article-shelf-empty">${emptyText}</p>`;
-
   if (collapsible) {
     return html`
       <details class="article-shelf collapsible-shelf">
@@ -1271,7 +1377,6 @@ function articleShelf(title, articles, emptyText, collapsible = false) {
       </details>
     `;
   }
-
   return html`
     <section class="article-shelf">
       <div class="article-shelf-heading">
@@ -1283,7 +1388,10 @@ function articleShelf(title, articles, emptyText, collapsible = false) {
   `;
 }
 
-function compareArticlesForOverview(left, right) {
+function compareArticlesForOverview(
+  left: ArticleSummary,
+  right: ArticleSummary,
+) {
   if (left.readAt && right.readAt) {
     return right.readAt.localeCompare(left.readAt);
   }
@@ -1296,7 +1404,7 @@ function compareArticlesForOverview(left, right) {
   return right.completedAt.localeCompare(left.completedAt);
 }
 
-function processingCard(job) {
+function processingCard(job: ProcessingJobSummary) {
   const jobId = escapeHtml(job.id);
   const jobUrl = `/#job=${jobId}`;
   return html`
@@ -1326,9 +1434,7 @@ function processingCard(job) {
         </div>
         <div
           class="processing-track"
-          aria-label="${escapeHtml(
-            t("progress.complete", { count: Math.round(job.progress) }),
-          )}"
+          aria-label="${escapeHtml(t("progress.complete", { count: Math.round(job.progress) }))}"
         >
           <i style="width: ${Math.max(0, Math.min(100, job.progress))}%"></i>
         </div>
@@ -1384,8 +1490,11 @@ function scheduleOverviewRefresh() {
 }
 
 articlesView.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-read-toggle]");
-  if (!button) {
+  const button =
+    event.target instanceof Element
+      ? event.target.closest<HTMLButtonElement>("[data-read-toggle]")
+      : null;
+  if (!button || !button.dataset.articleId) {
     return;
   }
   button.disabled = true;
@@ -1408,7 +1517,9 @@ articlesView.addEventListener("click", async (event) => {
 async function refreshDeploymentAlert() {
   try {
     const response = await localizedFetch("/api/deployment-status");
-    const status = response.ok ? await response.json() : undefined;
+    const status = response.ok
+      ? await responseData(response, z.object({ failed: z.boolean() }))
+      : undefined;
     deploymentAlert.classList.toggle("hidden", status?.failed !== true);
   } catch {
     deploymentAlert.classList.add("hidden");
@@ -1439,8 +1550,8 @@ async function showArticles(showLoading = true) {
       throw new LocalizedError(t("error.overviewLoad"));
     }
     const [articles, processing] = await Promise.all([
-      articlesResponse.json(),
-      processingResponse.json(),
+      responseData(articlesResponse, z.array(articleSummarySchema)),
+      responseData(processingResponse, z.array(processingSummarySchema)),
     ]);
     if (version !== routeVersion) {
       return;
@@ -1450,7 +1561,7 @@ async function showArticles(showLoading = true) {
     renderArticlesOverview();
     if (!document.hidden) {
       void acknowledgeArticleVisit(
-        articlesResponse.headers.get("X-Articles-Snapshot"),
+        articlesResponse.headers.get("X-Articles-Snapshot") ?? undefined,
       );
     }
     scheduleOverviewRefresh();
@@ -1485,7 +1596,7 @@ function restoreArticleSection() {
   return true;
 }
 
-function openArticleJob(jobId) {
+function openArticleJob(jobId: string) {
   const hash = articleHash(jobId);
   if (location.hash === hash) {
     showArticleRoute();
@@ -1496,7 +1607,7 @@ function openArticleJob(jobId) {
 
 function showArticleRoute() {
   const activePath = location.pathname.replace(/\/$/, "") || "/";
-  document.querySelectorAll(".main-nav a").forEach((link) => {
+  document.querySelectorAll<HTMLElement>(".main-nav a").forEach((link) => {
     if (link.getAttribute("href") === activePath) {
       link.setAttribute("aria-current", "page");
     } else {
@@ -1512,13 +1623,13 @@ function showArticleRoute() {
       }
       return;
     }
-    poll(jobId);
+    void poll(jobId);
     return;
   }
   routeVersion += 1;
   clearTimeout(jobPollTimer);
   if (location.pathname.replace(/\/$/, "") === "/articles") {
-    showArticles();
+    void showArticles();
     return;
   }
   resultView.classList.add("hidden");
@@ -1535,15 +1646,17 @@ const incomingSourceUrl = sourcePrefill(
   new URLSearchParams(location.search).get("sourceUrl"),
 );
 if (incomingSourceUrl && location.pathname === "/") {
-  $("#source-url").value = incomingSourceUrl;
+  requiredElement("#source-url", HTMLInputElement).value = incomingSourceUrl;
   $("#source-prefill-note").classList.remove("hidden");
 }
 showArticleRoute();
-
 let articleSeriesRequest = 0;
-async function updateArticleSeries(job) {
+
+async function updateArticleSeries(job: ClientJob) {
   const requestId = ++articleSeriesRequest;
-  const containers = document.querySelectorAll("[data-article-series]");
+  const containers = document.querySelectorAll<HTMLElement>(
+    "[data-article-series]",
+  );
   const focusedContainer = [...containers].find((container) =>
     container.contains(document.activeElement),
   );
@@ -1551,7 +1664,7 @@ async function updateArticleSeries(job) {
     container.replaceChildren();
     container.classList.add("hidden");
   });
-  if (!["spotify", "rss"].includes(job.episode?.sourceType)) {
+  if (!["spotify", "rss"].includes(job.episode?.sourceType ?? "")) {
     return;
   }
   containers.forEach((container) => {
@@ -1562,11 +1675,13 @@ async function updateArticleSeries(job) {
     const response = await localizedFetch(
       `/api/subscriptions/article/${job.id}`,
     );
-    const result = await response.json();
+    const data: unknown = await response.json();
+    const errorBody = errorSchema.parse(data);
     if (!response.ok) {
-      throw new LocalizedError(result.error || t("error.generic"));
+      throw new LocalizedError(errorBody.error || t("error.generic"));
     }
-    if (currentJob !== job || requestId !== articleSeriesRequest) {
+    const result = articleSeriesSchema.parse(data);
+    if (currentJob?.id !== job.id || requestId !== articleSeriesRequest) {
       return;
     }
     containers.forEach((container) => {
@@ -1591,7 +1706,7 @@ async function updateArticleSeries(job) {
       }
     });
   } catch {
-    if (currentJob !== job || requestId !== articleSeriesRequest) {
+    if (currentJob?.id !== job.id || requestId !== articleSeriesRequest) {
       return;
     }
     containers.forEach((container) => {
@@ -1608,12 +1723,14 @@ async function updateArticleSeries(job) {
     });
   }
 }
+
 window.addEventListener("pageshow", (event) => {
   if (event.persisted && currentJob) {
     void updateArticleSeries(currentJob);
     void updateArticleShareStats(currentJob);
   }
 });
+
 document.addEventListener("visibilitychange", () => {
   if (
     !document.hidden &&
@@ -1624,13 +1741,15 @@ document.addEventListener("visibilitychange", () => {
     void updateArticleShareStats(currentJob);
   }
 });
-
 const shareStatsValues = $("#share-stats-values");
 const shareStatsStatus = $("#share-stats-status");
-const shareStatsRetry = $("#share-stats-retry");
+const shareStatsRetry = requiredElement(
+  "#share-stats-retry",
+  HTMLButtonElement,
+);
 let shareStatsRequest = 0;
 
-async function updateArticleShareStats(job) {
+async function updateArticleShareStats(job: ClientJob) {
   const requestId = ++shareStatsRequest;
   shareStatsValues.classList.add("hidden");
   shareStatsRetry.classList.add("hidden");
@@ -1642,16 +1761,8 @@ async function updateArticleShareStats(job) {
     if (!response.ok) {
       throw new Error("Statistics unavailable");
     }
-    const statistics = await response.json();
-    if (
-      !Number.isSafeInteger(statistics.loads) ||
-      statistics.loads < 0 ||
-      !Number.isSafeInteger(statistics.reads) ||
-      statistics.reads < 0
-    ) {
-      throw new Error("Invalid statistics");
-    }
-    if (currentJob !== job || requestId !== shareStatsRequest) {
+    const statistics = await responseData(response, shareStatsSchema);
+    if (currentJob?.id !== job.id || requestId !== shareStatsRequest) {
       return;
     }
     $("#share-stats-loads").textContent =
@@ -1661,7 +1772,7 @@ async function updateArticleShareStats(job) {
     shareStatsValues.classList.remove("hidden");
     shareStatsStatus.textContent = "";
   } catch {
-    if (currentJob !== job || requestId !== shareStatsRequest) {
+    if (currentJob?.id !== job.id || requestId !== shareStatsRequest) {
       return;
     }
     shareStatsStatus.textContent = t("share.statsError");

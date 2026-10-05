@@ -160,6 +160,9 @@ export interface Job {
   apiUsage?: JobApiUsage;
 }
 
+export type ArticleJob = Job &
+  Required<Pick<Job, "article" | "episode" | "transcript">>;
+
 export interface PodcastEpisode {
   key: string;
   episode: Episode;

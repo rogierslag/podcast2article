@@ -292,6 +292,7 @@ test("series: covers and fallbacks render in discovery, preview and followed ser
         id: String(index),
         paused: false,
         complete: 4,
+        archiveCount: 0,
         processing: 0,
         pendingCount: 0,
         outstanding: 0,

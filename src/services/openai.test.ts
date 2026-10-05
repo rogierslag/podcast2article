@@ -13,7 +13,7 @@ import {
 } from "./openai.js";
 import type { Article } from "../types.js";
 
-const article: Article = {
+const article = {
   title: "Titel",
   dek: "Intro",
   readingTimeMinutes: 3,
@@ -25,7 +25,7 @@ const article: Article = {
     },
   ],
   takeaways: [{ text: "Punt", sources: ["t-00002"] }],
-};
+} satisfies Article;
 
 describe("article source validation", () => {
   it("removes hallucinated source ids", () => {
@@ -38,17 +38,23 @@ describe("article source validation", () => {
   });
 
   it("normalizes common source-id formatting variations", () => {
-    const formatted = structuredClone(article);
-    formatted.sections[0]!.paragraphs[0]!.sources = ["[T-1]"];
+    const formatted = structuredClone({
+      ...article,
+      sections: [
+        { heading: "Een", paragraphs: [{ text: "Tekst", sources: ["[T-1]"] }] },
+      ],
+    });
     expect(
       validateArticleSources(formatted, new Set(["t-00001", "t-00002"]))
-        .sections[0]!.paragraphs[0]!.sources,
+        .sections[0]?.paragraphs[0]?.sources,
     ).toEqual(["t-00001"]);
   });
 
   it("rejects unsupported paragraphs", () => {
-    const invalid = structuredClone(article);
-    invalid.takeaways[0]!.sources = ["missing"];
+    const invalid = structuredClone({
+      ...article,
+      takeaways: [{ text: "Punt", sources: ["missing"] }],
+    });
     expect(() => validateArticleSources(invalid, new Set(["t-00001"]))).toThrow(
       /zonder geldige transcriptbron/,
     );
@@ -57,12 +63,15 @@ describe("article source validation", () => {
 
 describe("literal article quotes", () => {
   it("accepts a quote whose words occur in its cited transcript", () => {
-    const quoted = structuredClone(article);
-    quoted.sections[0]!.paragraphs[0] = {
-      kind: "quote",
+    const quote = {
+      kind: "quote" as const,
       text: "Dat vergeet je nooit meer.",
       sources: ["t-00001"],
     };
+    const quoted = structuredClone({
+      ...article,
+      sections: [{ heading: "Een", paragraphs: [quote] }],
+    });
 
     expect(
       validateArticleQuotes(quoted, [
@@ -78,12 +87,15 @@ describe("literal article quotes", () => {
   });
 
   it("rejects a quote that paraphrases its cited transcript", () => {
-    const quoted = structuredClone(article);
-    quoted.sections[0]!.paragraphs[0] = {
-      kind: "quote",
+    const quote = {
+      kind: "quote" as const,
       text: "Dat zal je altijd bijblijven.",
       sources: ["t-00001"],
     };
+    const quoted = structuredClone({
+      ...article,
+      sections: [{ heading: "Een", paragraphs: [quote] }],
+    });
 
     expect(() =>
       validateArticleQuotes(quoted, [

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { articleFixture, articleId, password } from "./fixture.mjs";
-import { UI_LANGUAGE_COOKIE } from "../../public/i18n.js";
+import { UI_LANGUAGE_COOKIE } from "../../src/shared/i18n.ts";
 
 test.beforeEach(async ({ page }) => {
   await page.route(/^https?:\/\/(?!127\.0\.0\.1:4317)/, (route) =>

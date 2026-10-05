@@ -28,19 +28,19 @@ test("client builds preserve script timing and CSS order with reproducible compr
 <h1>{{page.title}}</h1><style>.title { user-select: none; }</style>`,
     );
     await writeFile(
-      path.join(publicDirectory, "settings.js"),
-      "window.ready = true;",
+      path.join(publicDirectory, "settings.ts"),
+      "const ready: boolean = true; window.ready = ready;",
     );
     await writeFile(
-      path.join(publicDirectory, "common.js"),
-      "export function shared() { console.log('shared module'); }",
+      path.join(publicDirectory, "common.ts"),
+      "export function shared(): void { console.log('shared module'); }",
     );
     await writeFile(
-      path.join(publicDirectory, "app.js"),
+      path.join(publicDirectory, "app.ts"),
       "import { shared } from './common.js'; shared();",
     );
     await writeFile(
-      path.join(publicDirectory, "other.js"),
+      path.join(publicDirectory, "other.ts"),
       "import { shared } from './common.js'; shared();",
     );
     await writeFile(

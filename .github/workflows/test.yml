@@ -30,8 +30,6 @@ jobs:
             command: |
               yarn run typecheck
               yarn run build
-              node --check public/app.js
-              node --check public/share.js
           - name: Tests
             command: yarn test
           - name: Media regression

@@ -182,7 +182,7 @@ export async function resolveYouTubeVideo(
     if (typeof metadata !== "object" || metadata === null) {
       throw new DomainError("error.youtubeMetadataMissing");
     }
-    return youtubeEpisodeFromMetadata(sourceUrl, metadata as YouTubeMetadata);
+    return youtubeEpisodeFromMetadata(sourceUrl, metadata);
   } catch (error) {
     if (signal?.aborted) {
       throw signal.reason;
@@ -204,8 +204,10 @@ export async function downloadYouTubeAudio(
   options: { maxMegabytes?: number; timeoutMs?: number } = {},
 ): Promise<void> {
   const maxMegabytes =
-    Number.isFinite(options.maxMegabytes) && (options.maxMegabytes ?? 0) > 0
-      ? options.maxMegabytes!
+    typeof options.maxMegabytes === "number" &&
+    Number.isFinite(options.maxMegabytes) &&
+    options.maxMegabytes > 0
+      ? options.maxMegabytes
       : 500;
   const configuredTimeout =
     options.timeoutMs ??

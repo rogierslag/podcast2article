@@ -103,7 +103,7 @@ function runFfmpeg(args: string[], signal?: AbortSignal): Promise<void> {
     let stderr = "";
     const abort = () => process.kill("SIGTERM");
     signal?.addEventListener("abort", abort, { once: true });
-    process.stderr.on("data", (chunk) => {
+    process.stderr.on("data", (chunk: Buffer) => {
       stderr = (stderr + chunk.toString()).slice(-8_000);
     });
     process.once("error", reject);

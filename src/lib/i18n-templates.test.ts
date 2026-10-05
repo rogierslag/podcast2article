@@ -2,7 +2,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { messages } from "../../public/i18n.js";
+import { messages } from "../shared/i18n.js";
 import { localizeTemplate } from "./i18n.js";
 
 function htmlTranslationKeys(template: string): string[] {
@@ -50,10 +50,11 @@ function scriptTranslationKeys(script: string, file: string): string[] {
         // Only the localization adapter may obtain a key from a data-i18n attribute.
         // Those attribute values are checked independently in every HTML template.
         const attributeLookup =
-          path.basename(file) === "localize.js" &&
-          (argument.getText() === "element.dataset.i18n" ||
-            (ts.isCallExpression(argument) &&
-              argument.expression.getText() === "element.getAttribute"));
+          path.basename(file) === "localize.ts" &&
+          (argument.getText() === 'element.dataset.i18n ?? ""' ||
+            (ts.isBinaryExpression(argument) &&
+              ts.isCallExpression(argument.left) &&
+              argument.left.expression.getText() === "element.getAttribute"));
         if (!attributeLookup) {
           for (const key of literalKeys(argument)) {
             keys.push(
@@ -104,7 +105,7 @@ describe("template translation coverage", () => {
     },
   );
 
-  it.each(publicFiles.filter((file) => file.endsWith(".js")))(
+  it.each(publicFiles.filter((file) => file.endsWith(".ts")))(
     "defines every browser template translation used in %s",
     async (file) => {
       const script = await readFile(path.join("public", file), "utf8");

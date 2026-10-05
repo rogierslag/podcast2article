@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
-import { translate } from "../public/i18n.js";
+import {
+  html,
+  escapeHtml,
+  formatTimestamp as time,
+} from "../public/article-format.ts";
+import { translate } from "../src/shared/i18n.ts";
+import { browserSource } from "./client-source.mjs";
 
-const app = readFileSync("public/app.js", "utf8");
+const app = browserSource("public/app.ts");
 const renderer = app.slice(
   app.indexOf("function renderTranscript("),
   app.indexOf("\nfunction sourceClick("),
@@ -35,18 +40,13 @@ function setup(language = "nl") {
   );
   const context = {
     $: (selector) => elements[selector],
+    requiredElement: (selector) => elements[selector],
+    HTMLInputElement: class {},
+    HTMLButtonElement: class {},
     t: (key, values) => translate(language, key, values),
-    time: String,
-    escapeHtml: (value) =>
-      String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll('"', "&quot;"),
-    html: (strings, ...values) =>
-      strings.reduce(
-        (result, part, index) => result + part + (values[index] ?? ""),
-        "",
-      ),
+    time,
+    escapeHtml,
+    html,
   };
   runInNewContext(renderer + "; this.render = renderTranscript;", context);
   return { elements, context };
@@ -106,8 +106,12 @@ test("the clear action empties the field, restores segments and returns focus to
     },
   };
   const handler = app.slice(
-    app.indexOf('$("#clear-transcript-search").addEventListener'),
-    app.indexOf('$("#toggle-transcript").addEventListener'),
+    app.indexOf(
+      'requiredElement("#clear-transcript-search", HTMLButtonElement).addEventListener',
+    ),
+    app.indexOf(
+      'requiredElement("#toggle-transcript", HTMLButtonElement).addEventListener',
+    ),
   );
   runInNewContext(renderer + handler, context);
 

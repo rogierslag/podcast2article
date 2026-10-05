@@ -1,3 +1,11 @@
+import * as z from "zod/mini";
+import {
+  errorSchema,
+  seriesPreviewSchema,
+  seriesCandidateSchema,
+  subscriptionSummarySchema,
+} from "../src/shared/api.js";
+import { requiredElement } from "./dom.js";
 import {
   t,
   locale,
@@ -5,20 +13,25 @@ import {
   LocalizedError,
   errorText,
 } from "./localize.js";
-const searchForm = document.querySelector("#series-search");
-const followForm = document.querySelector("#series-follow");
-const sourceInput = document.querySelector("#series-url");
-const errorMessage = document.querySelector("#series-error");
+
+const searchForm = requiredElement("#series-search", HTMLFormElement);
+const followForm = requiredElement("#series-follow", HTMLFormElement);
+const sourceInput = requiredElement("#series-url", HTMLInputElement);
+const errorMessage = requiredElement("#series-error", HTMLElement);
 errorMessage.tabIndex = -1;
-const previewSection = document.querySelector("#series-preview");
-const candidateSection = document.querySelector("#series-candidates");
-const subscriptionList = document.querySelector("#series-list");
-const statusMessage = document.querySelector("#series-status");
-const backfillSelect = document.querySelector("#series-backfill");
-let preview;
+const previewSection = requiredElement("#series-preview", HTMLElement);
+const candidateSection = requiredElement("#series-candidates", HTMLElement);
+const subscriptionList = requiredElement("#series-list", HTMLElement);
+const statusMessage = requiredElement("#series-status", HTMLElement);
+const backfillSelect = requiredElement("#series-backfill", HTMLSelectElement);
+let preview: z.infer<typeof seriesPreviewSchema> | undefined;
 let busy = false;
 
-async function api(url, method = "GET", body) {
+async function api(
+  url: string,
+  method = "GET",
+  body?: unknown,
+): Promise<unknown> {
   const response = await localizedFetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
@@ -28,14 +41,20 @@ async function api(url, method = "GET", body) {
     location.assign("/login");
     throw new LocalizedError(t("error.sessionExpired"));
   }
-  const result = await response.json();
+  const result: unknown = await response.json();
   if (!response.ok) {
-    throw new LocalizedError(result.error || t("error.generic"));
+    throw new LocalizedError(
+      errorSchema.parse(result).error || t("error.generic"),
+    );
   }
   return result;
 }
 
-function element(tag, content, className) {
+function element<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  content?: string,
+  className?: string,
+) {
   const node = document.createElement(tag);
   if (content) {
     node.textContent = content;
@@ -46,7 +65,7 @@ function element(tag, content, className) {
   return node;
 }
 
-function seriesCover(imageUrl) {
+function seriesCover(imageUrl?: string) {
   const cover = element("span", "", "series-cover");
   cover.setAttribute("aria-hidden", "true");
   cover.append(element("span", "♪", "series-cover-placeholder"));
@@ -77,15 +96,17 @@ function seriesCover(imageUrl) {
   return cover;
 }
 
-async function perform(action) {
+async function perform(action: () => Promise<void>) {
   if (busy) {
     return;
   }
   busy = true;
   errorMessage.textContent = "";
-  document.querySelectorAll(".series-page button").forEach((button) => {
-    button.disabled = true;
-  });
+  document
+    .querySelectorAll<HTMLButtonElement>(".series-page button")
+    .forEach((button) => {
+      button.disabled = true;
+    });
   try {
     await action();
   } catch (error) {
@@ -93,9 +114,11 @@ async function perform(action) {
     errorMessage.focus();
   } finally {
     busy = false;
-    document.querySelectorAll(".series-page button").forEach((button) => {
-      button.disabled = button.dataset.limitDisabled === "true";
-    });
+    document
+      .querySelectorAll<HTMLButtonElement>(".series-page button")
+      .forEach((button) => {
+        button.disabled = button.dataset.limitDisabled === "true";
+      });
   }
 }
 
@@ -105,31 +128,32 @@ function updatePlan() {
   }
   const choice = backfillSelect.value;
   const count = choice === "none" ? 0 : Math.min(preview.count, 3);
-  document.querySelector("#series-plan").textContent = t(
+  requiredElement("#series-plan", HTMLElement).textContent = t(
     count === 1 ? "series.planOne" : "series.plan",
     { count },
   );
 }
 
-async function showPreview(url) {
-  preview = await api("/api/subscriptions/preview", "POST", { url });
+async function showPreview(url: string) {
+  const result = seriesPreviewSchema.parse(
+    await api("/api/subscriptions/preview", "POST", { url }),
+  );
+  preview = result;
   candidateSection.hidden = true;
   previewSection.hidden = false;
-  const heading = document.querySelector("#series-preview-title");
-  heading.textContent = preview.title;
-  document
-    .querySelector("#series-preview-cover")
-    .replaceChildren(seriesCover(preview.imageUrl));
-  document.querySelector("#series-feed-link").href = preview.url;
-  document.querySelector("#series-available").textContent = t(
-    "series.available",
-    { count: preview.count },
+  const heading = requiredElement("#series-preview-title", HTMLElement);
+  heading.textContent = result.title;
+  requiredElement("#series-preview-cover", HTMLElement).replaceChildren(
+    seriesCover(result.imageUrl),
   );
-  document
-    .querySelector("#series-episodes")
-    .replaceChildren(
-      ...preview.episodes.map((episode) => element("li", episode.title)),
-    );
+  requiredElement("#series-feed-link", HTMLAnchorElement).href = result.url;
+  requiredElement("#series-available", HTMLElement).textContent = t(
+    "series.available",
+    { count: result.count },
+  );
+  requiredElement("#series-episodes", HTMLElement).replaceChildren(
+    ...result.episodes.map((episode) => element("li", episode.title)),
+  );
   updatePlan();
   heading.focus();
 }
@@ -140,14 +164,16 @@ searchForm.addEventListener("submit", (event) => {
     preview = undefined;
     previewSection.hidden = true;
     candidateSection.hidden = true;
-    const candidates = await api("/api/subscriptions/discover", "POST", {
-      url: sourceInput.value,
-    });
-    if (candidates.length === 1) {
+    const candidates = z.array(seriesCandidateSchema).parse(
+      await api("/api/subscriptions/discover", "POST", {
+        url: sourceInput.value,
+      }),
+    );
+    if (candidates.length === 1 && candidates[0]) {
       await showPreview(candidates[0].url);
       return;
     }
-    const list = document.querySelector("#series-candidate-list");
+    const list = requiredElement("#series-candidate-list", HTMLElement);
     list.replaceChildren(
       ...candidates.map((candidate) => {
         const button = element("button", "", "series-candidate");
@@ -169,7 +195,9 @@ searchForm.addEventListener("submit", (event) => {
     candidateSection.hidden = false;
   });
 });
+
 backfillSelect.addEventListener("change", updatePlan);
+
 followForm.addEventListener("submit", (event) => {
   event.preventDefault();
   if (!preview) {
@@ -178,24 +206,29 @@ followForm.addEventListener("submit", (event) => {
   void perform(async () => {
     await api("/api/subscriptions", "POST", {
       ...Object.fromEntries(new FormData(followForm)),
-      previewId: preview.id,
+      previewId: preview?.id,
     });
     previewSection.hidden = true;
     preview = undefined;
     sourceInput.value = "";
     statusMessage.textContent = t("series.saved");
     await refresh();
-    document
-      .querySelector("#series-following-title")
-      .scrollIntoView({ block: "start" });
+    requiredElement("#series-following-title", HTMLElement).scrollIntoView({
+      block: "start",
+    });
   });
 });
 
 async function refresh() {
-  const subscriptions = await api("/api/subscriptions");
-  document.querySelector("#series-count").textContent = t("series.total", {
-    count: subscriptions.length,
-  });
+  const subscriptions = z
+    .array(subscriptionSummarySchema)
+    .parse(await api("/api/subscriptions"));
+  requiredElement("#series-count", HTMLElement).textContent = t(
+    "series.total",
+    {
+      count: subscriptions.length,
+    },
+  );
   if (!subscriptions.length) {
     subscriptionList.replaceChildren(
       element("p", t("series.empty"), "series-hint"),
@@ -299,11 +332,11 @@ async function refresh() {
             );
             await refresh();
             // Rendering replaces the button; keep keyboard users on the same action.
-            [...subscriptionList.querySelectorAll("button")]
+            [...subscriptionList.querySelectorAll<HTMLElement>("button")]
               .find(
                 (control) =>
-                  control.closest(".series-item")?.dataset.subscriptionId ===
-                  subscription.id,
+                  control.closest<HTMLElement>(".series-item")?.dataset
+                    .subscriptionId === subscription.id,
               )
               ?.focus();
           }),
@@ -335,11 +368,15 @@ async function refresh() {
           "click",
           () =>
             void perform(async () => {
-              const result = await api(
-                `/api/subscriptions/${subscription.id}/backfill`,
-                "POST",
-                {},
-              );
+              const result = z
+                .object({ count: z.number() })
+                .parse(
+                  await api(
+                    `/api/subscriptions/${subscription.id}/backfill`,
+                    "POST",
+                    {},
+                  ),
+                );
               statusMessage.textContent = t("series.moreSaved", {
                 count: result.count,
               });
@@ -355,7 +392,6 @@ async function refresh() {
     }),
   );
 }
-
 void perform(async () => {
   await refresh();
   if (location.hash.startsWith("#subscription-")) {
@@ -364,7 +400,7 @@ void perform(async () => {
   const params = new URLSearchParams(location.search);
   if (params.get("preview") === "1" && params.get("url")) {
     backfillSelect.value = "none";
-    await showPreview(params.get("url"));
+    await showPreview(params.get("url") ?? "");
   }
 });
 const prefilledUrl = new URLSearchParams(location.search).get("url");
@@ -373,12 +409,12 @@ if (prefilledUrl) {
 }
 void api("/api/auth")
   .then((session) => {
-    document
-      .querySelector("#logout-form")
-      .classList.toggle("is-unavailable", !session.enabled);
+    requiredElement("#logout-form", HTMLFormElement).classList.toggle(
+      "is-unavailable",
+      !z.object({ enabled: z.boolean() }).parse(session).enabled,
+    );
   })
   .catch(() => undefined);
-
 const refreshTimer = setInterval(() => {
   if (
     !busy &&
@@ -390,6 +426,7 @@ const refreshTimer = setInterval(() => {
     });
   }
 }, 10000);
+
 window.addEventListener("pagehide", () => clearInterval(refreshTimer));
 sourceInput.addEventListener("input", () => {
   preview = undefined;

@@ -2,11 +2,11 @@ import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { describe, expect, it, vi } from "vitest";
-import { translate } from "../../public/i18n.js";
+import { translate } from "../shared/i18n.js";
 
 const source = ts.createSourceFile(
-  "app.js",
-  await readFile("public/app.js", "utf8"),
+  "app.ts",
+  await readFile("public/app.ts", "utf8"),
   ts.ScriptTarget.Latest,
   true,
 );
@@ -27,6 +27,9 @@ function setup(language, confirmed) {
     currentJob: { id: "test-article" },
     window: { confirm: vi.fn().mockReturnValue(confirmed) },
     t: (key) => translate(language, key),
+    HTMLButtonElement: class {},
+    HTMLAudioElement: class {},
+    requiredElement: (selector) => context.$(selector),
     $: (selector) =>
       ({
         "#delete-article": button,
@@ -42,7 +45,7 @@ function setup(language, confirmed) {
   };
   // Exercise the real handler without booting unrelated page event listeners.
   const remove = runInNewContext(
-    `${handler.getText(source)}; deleteCurrentArticle`,
+    `${ts.transpileModule(handler.getText(source), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText}; deleteCurrentArticle`,
     context,
   );
   return { context, button, status, audio, remove };

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { password } from "./fixture.mjs";
-import { translate } from "../../public/i18n.js";
+import { translate } from "../../src/shared/i18n.ts";
 
 const exampleUrl =
   "https://reads.rogierslag.nl/s/_eUKVjs2CsydDZ7nEseiXUNRYc64L1Pp2EPQ8LLIGng";

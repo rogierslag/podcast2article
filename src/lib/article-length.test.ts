@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatArticleWordRange } from "../../public/article-length.js";
-import { translate } from "../../public/i18n.js";
+import { formatArticleWordRange } from "../shared/article-length.js";
+import { translate } from "../shared/i18n.js";
 
 describe("article word ranges", () => {
   it.each([

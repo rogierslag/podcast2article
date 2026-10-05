@@ -188,9 +188,16 @@ interface TrackedRequest<T> {
   saveResult?: (data: T, request: ApiRequestUsage) => Promise<void>;
 }
 
+function errorHeader(error: unknown, name: string): string | null {
+  if (!(error instanceof OpenAI.APIError)) {
+    return null;
+  }
+  const headers: unknown = error.headers;
+  return headers instanceof Headers ? headers.get(name) : null;
+}
+
 function retryDelay(error: unknown, attempt: number): number {
-  const header =
-    error instanceof OpenAI.APIError ? error.headers?.get("retry-after") : null;
+  const header = errorHeader(error, "retry-after");
   if (header) {
     const seconds = Number(header);
     const milliseconds = Number.isFinite(seconds)
@@ -291,17 +298,16 @@ export async function trackedRequest<T>(
       }
       request.status = options.signal?.aborted ? "aborted" : "failed";
       if (failure instanceof OpenAI.APIError) {
-        request.httpStatus = failure.status;
+        const status: unknown = failure.status;
+        request.httpStatus = typeof status === "number" ? status : undefined;
         request.requestId = failure.requestID ?? undefined;
-        request.errorCode = failure.code ?? undefined;
+        const code: unknown = failure.code;
+        request.errorCode = typeof code === "string" ? code : undefined;
       }
       request.cost = estimateApiCost(request);
       await options.record?.(request);
       const status = request.httpStatus;
-      const retryHeader =
-        failure instanceof OpenAI.APIError
-          ? failure.headers?.get("x-should-retry")
-          : null;
+      const retryHeader = errorHeader(failure, "x-should-retry");
       const retryable =
         retryHeader === "true" ||
         (retryHeader !== "false" &&

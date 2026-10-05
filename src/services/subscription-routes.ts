@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
+import { ownerUsername } from "../lib/owner-context.js";
 import { DomainError, domainErrorStatus } from "../lib/errors.js";
 import { requestLanguage, translateDomainError } from "../lib/i18n.js";
 import type { PodcastFeed } from "../types.js";
@@ -34,7 +36,7 @@ export function subscriptionRouter(store: SubscriptionStore) {
     next();
   });
   router.get("/", (_request, response) => {
-    const username: string = response.locals.username;
+    const username: string = ownerUsername(response);
     response.json(
       store
         .list(username)
@@ -54,7 +56,7 @@ export function subscriptionRouter(store: SubscriptionStore) {
   });
   router.get("/article/:id", async (request, response) => {
     const id = z.string().uuid().parse(request.params.id);
-    const username: string = response.locals.username;
+    const username: string = ownerUsername(response);
     const job = await getJob(username, id);
     if (
       !job ||
@@ -89,7 +91,7 @@ export function subscriptionRouter(store: SubscriptionStore) {
     const input = urlSchema.parse(request.body);
     const feed = await fetchPodcastFeed(input.url);
     const id = randomUUID();
-    previews.set(response.locals.username, {
+    previews.set(ownerUsername(response), {
       id,
       expires: Date.now() + 15 * 60 * 1000,
       feed,
@@ -108,7 +110,7 @@ export function subscriptionRouter(store: SubscriptionStore) {
   });
   router.post("/", async (request, response) => {
     const input = followSchema.parse(request.body);
-    const username: string = response.locals.username;
+    const username: string = ownerUsername(response);
     const preview = previews.get(username);
     if (
       !preview ||
@@ -132,14 +134,14 @@ export function subscriptionRouter(store: SubscriptionStore) {
   });
   router.post("/:id/backfill", async (request, response) => {
     const count = await store.backfill(
-      response.locals.username,
+      ownerUsername(response),
       request.params.id,
     );
     response.status(202).json({ count });
   });
   router.patch("/:id", async (request, response) => {
     const { paused } = z.object({ paused: z.boolean() }).parse(request.body);
-    const username: string = response.locals.username;
+    const username: string = ownerUsername(response);
     await store.pause(username, request.params.id, paused);
     response.json({ paused });
     if (!paused) {
@@ -149,9 +151,9 @@ export function subscriptionRouter(store: SubscriptionStore) {
   router.use(
     (
       error: unknown,
-      request: import("express").Request,
-      response: import("express").Response,
-      _next: import("express").NextFunction,
+      request: Request,
+      response: Response,
+      _next: NextFunction,
     ) => {
       const fallback =
         error instanceof z.ZodError ? "error.input" : "series.errorFeed";

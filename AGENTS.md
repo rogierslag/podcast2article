@@ -88,12 +88,13 @@ This file applies to the entire repository.
 
 - `src/server.ts`: Express routes, authentication boundary, public share surface, and server startup.
 - `src/services/jobs.ts`: job persistence, per-user isolation, processing queue, read state, and share-token lookup.
-- `src/services/share-analytics.ts` and `public/share-analytics.js`: anonymous shared-visit counters and active reading detection.
+- `src/services/share-analytics.ts` and `public/share-analytics.ts`: anonymous shared-visit counters and active reading detection.
   See [docs/SHARED-ARTICLE-MONITORING.md](docs/SHARED-ARTICLE-MONITORING.md) for definitions and limits.
 - `src/services/pdf.ts`: server-side PDF generation.
 - `src/types.ts`: persisted and API-related domain types.
-- `public/index.html` and `public/app.js`: authenticated/owner application UI.
-- `public/share.html`, `public/share.js`, and `public/share.css`: anonymous public article reader.
+- `src/shared/`: TypeScript helpers and API response schemas used by both server and browser.
+- `public/index.html` and `public/app.ts`: authenticated/owner application UI.
+- `public/share.html`, `public/share.ts`, and `public/share.css`: anonymous public article reader.
 - `public/styles.css`: shared and owner styling.
   Keep additions scoped and avoid unrelated reformatting, but do not copy the compressed formatting of older rules.
 - `data/users/<username>/`: runtime data.
@@ -164,6 +165,8 @@ Each sentence occupies one complete source line, even when it is longer than a c
   Expand conditionals when compression would hide behavior.
 - Preserve strict typing.
   Avoid `any`, unchecked casts, and non-null assertions; validate external input and narrow `unknown` values before use.
+  Keep the compiler and type-aware ESLint checks enabled; fix violations through narrowing and explicit domain types rather than weakening checks or adding suppressions.
+  Await promises or handle their rejections; use `void` only for intentional background work that already handles failures.
   If a boundary requires a cast, keep it local and explain why it is safe when that is not obvious.
 - Use `interface` for object shapes with a stable domain identity and `type` for unions, aliases, and composed types.
   Reuse the domain types in `src/types.ts` rather than recreating similar inline shapes.
@@ -219,7 +222,9 @@ Each sentence occupies one complete source line, even when it is longer than a c
   For source buttons, expose only the fields the reader needs, such as transcript source ID and start time—not the full private transcript unless explicitly required.
 - Escape untrusted content before inserting it into HTML.
   Continue using the existing client-side `escapeHtml` pattern and server-side metadata escaping.
-- Avoid adding a framework or build step for the static frontend unless the task requires it.
+- Keep the static frontend in strict TypeScript using the existing esbuild pipeline.
+  Run both server and browser type checks; esbuild only compiles types away.
+  Avoid adding a framework unless the task requires it.
 - Keep changes focused and preserve unrelated user modifications in a dirty worktree.
 
 ## Validation
@@ -230,11 +235,10 @@ Run the full check before handing off implementation changes:
 yarn run check
 ```
 
-For frontend JavaScript changes, also run:
+Frontend TypeScript is included in the full check; to run its type checks separately:
 
 ```sh
-node --check public/app.js
-node --check public/share.js
+yarn run typecheck
 ```
 
 Also run:

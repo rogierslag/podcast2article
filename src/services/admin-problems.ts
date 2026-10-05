@@ -1,7 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { messages, translate } from "../../public/i18n.js";
+import { messages, translate } from "../shared/i18n.js";
 
 export interface AdminProblem {
   key: string;

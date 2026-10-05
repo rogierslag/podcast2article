@@ -249,7 +249,7 @@ This also applies to error messages, dates, and fixed labels in PDF exports.
 The language setting for article generation is independent.
 Articles and transcripts are not translated again when the interface language changes.
 
-Shared translations live in `public/i18n.js`, using semantic keys such as `article.delete` and `nav.articles` rather than Dutch text as keys.
+Shared translations live in `src/shared/i18n.ts`, using semantic keys such as `article.delete` and `nav.articles` rather than Dutch text as keys.
 Tests automatically check all HTML templates and browser modules for missing translations, including accessibility labels and singular/plural forms.
 The server uses `Accept-Language` for the initial HTML response; browser requests include the selected interface language.
 Refresh the page after changing the browser language.
@@ -349,7 +349,7 @@ Credit and link to the original recording.
 GitHub Actions automatically runs formatting checks, ESLint, the TypeScript build, and all tests on every pull request and push to `main`.
 These checks run as seven independent jobs, so a failure in one check does not prevent the others from reporting results.
 The main-branch ruleset requires all seven checks, including `Browser regressions (Chromium)` and `Browser regressions (WebKit)`, directly.
-The build job also type-checks application and test code and checks browser-code syntax.
+The build job type-checks server, browser, and shared application code as well as TypeScript tests.
 The workflow can be started manually through **Actions → Tests → Run workflow**.
 It uses the Node.js version from `.nvmrc` and installs dependencies with the existing `yarn.lock`.
 Yarn package downloads are cached by the lockfile; every job still performs a frozen-lockfile install, including package install scripts.
@@ -367,20 +367,32 @@ yarn run test:browser
 yarn run check:media
 ```
 
-`yarn run typecheck` checks every TypeScript file in `src/`, including tests, without emitting files.
+`yarn run typecheck` checks the server and shared TypeScript in `src/`, including tests, and the browser TypeScript in `public/` without emitting files.
+Both configurations reject unused imports, declarations, and parameters so dead code does not accumulate.
+They also check return paths, switch fallthrough, overrides, unreachable code, labels, type-only imports, isolated compilation, side-effect imports, filename casing, and dependency declarations.
+Type-aware ESLint rejects explicit `any`, non-null assertions, unhandled promises, invalid `await` expressions, and unnecessary type assertions in application code and TypeScript tests.
+Production code additionally rejects unsafe assignments, arguments, calls, property access, and return values; these rules exclude test fixtures because Vitest matchers and mock calls expose library-provided `any` values.
+Exact optional-property checking remains disabled because current persistence helpers use `undefined` to clear optional state and API schemas also permit it; enabling it requires a separate review of those contracts.
 `yarn run build` uses `tsconfig.build.json` to compile the application while keeping tests out of `dist/`, then builds the browser assets.
-`yarn run build:client` bundles and minifies the frontend JavaScript with esbuild and minifies and prefixes CSS with Lightning CSS.
+`yarn run build:client` compiles, bundles, and minifies the frontend TypeScript into JavaScript with esbuild and minifies and prefixes CSS with Lightning CSS.
 The browser baseline is Chrome/Edge 109, Firefox 121, and Safari/iOS 16.4 or newer; the targets cover JavaScript syntax and CSS transformations, without adding runtime API polyfills.
 Firefox 121 is required by the existing `:has()` selectors.
-Generated files live in `dist/client/`, with rewritten HTML templates in `dist/client-templates/`; readable frontend sources remain in `public/`.
+Generated files live in `dist/client/`, with rewritten HTML templates in `dist/client-templates/`; readable TypeScript frontend sources remain in `public/`.
+Shared translations, source-link helpers, and API response schemas live in `src/shared/`.
+Browser schemas validate incoming JSON and reuse the domain types in `src/types.ts`; esbuild compilation does not replace TypeScript type-checking.
+Compatible unversioned JavaScript assets are compiled into `dist/client-legacy/` so existing asset URLs keep working; TypeScript source files are not served.
 Built pages use content-hashed `/assets/` URLs with one-year immutable caching and precompressed Brotli/gzip variants selected through `Accept-Encoding`.
 Shared HTML revalidates on each request so a deployment does not leave cached pages pointing at old asset hashes.
 Only JavaScript and CSS listed in the build manifest are public under `/assets/`; templates, manifests, and compression sidecars cannot be fetched directly.
 Built assets share the same global request quota as other routes; their handler stays on the main Express app so static analysis can see that boundary.
 Shared assets do not change authentication requirements for owner APIs or article data.
-Development through `yarn run dev` serves the original source assets; the compiled server uses built templates when available and falls back to source templates when no client build exists.
+Development through `yarn run dev` builds browser assets before starting the server and watches `public/` and `src/`.
+Frontend or shared-source changes stop the server, rebuild the client, and restart the server with the new manifest and templates; other server-source changes only restart the server.
+A failed client build leaves the server stopped until the next edit succeeds, so pages cannot reference partially rebuilt assets.
+Both development and the compiled server serve the built JavaScript and templates.
+Starting the server without a client build fails visibly rather than serving uncompiled TypeScript.
 Rebuild after editing frontend files before running the compiled server.
-`yarn run check` runs both commands alongside formatting, lint, and tests.
+`yarn run check` runs type-checking and builds alongside formatting, lint, and tests.
 
 Desktop Chromium and mobile WebKit run in separate browser jobs, each with one worker and its own disposable application server and data.
 Each installs only its required browser; Chromium uses the headless shell without downloading the headed browser.

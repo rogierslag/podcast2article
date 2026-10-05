@@ -61,13 +61,19 @@ The VPS performs source resolution, download, audio normalization, chunking, orc
 
 ### 3.1 Browser interface
 
-The browser interface consists of static HTML, CSS, images, and vanilla JavaScript under `public/`.
-The build bundles JavaScript with shared ESM chunks, minifies and prefixes CSS for the documented browser baseline, and rewrites generated HTML templates to content-hashed `/assets/` URLs.
+The browser interface consists of static HTML, CSS, images, and vanilla TypeScript under `public/`.
+The build compiles browser TypeScript and bundles the generated JavaScript with shared ESM chunks, minifies and prefixes CSS for the documented browser baseline, and rewrites generated HTML templates to content-hashed `/assets/` URLs.
 The compiled server serves manifest-listed JavaScript and CSS from `dist/client/` before authentication, negotiating precompressed Brotli/gzip files with immutable caching.
 The file-serving handler is registered directly on the main Express app after its global request limiter; the asset helper only loads and validates the catalog.
 This keeps one shared request quota and makes the admission boundary visible to CodeQL; isolated real-server tests verify that built assets receive `429` after the quota is exhausted.
 Generated templates and the asset manifest remain private; images and other unchanged files still come from `public/`.
-Development serves readable source assets directly.
+Shared TypeScript helpers and API response schemas live in `src/shared/` and reuse domain types from `src/types.ts`.
+`yarn run typecheck` checks server and browser configurations independently, including dependency declarations, return paths, module boundaries, and unused code, while esbuild emits the browser JavaScript.
+Type-aware ESLint checks promise handling, assertions, and type-only imports throughout application code and TypeScript tests; production code also rejects unsafe `any` propagation at API and SDK boundaries.
+Unversioned script URLs serve compiled compatibility bundles from `dist/client-legacy/`; TypeScript source files are not served.
+The development launcher builds the client before starting the server and watches frontend and server sources.
+Frontend and shared-source edits stop the server before rebuilding assets, then restart it with the new catalog and templates; server-only edits restart without a client rebuild.
+A failed client build leaves the server stopped until a subsequent successful edit.
 Owner pages require authentication when configured; public reader assets and capability routes are registered before that boundary.
 After authentication, unknown page GET and HEAD requests redirect to `/articles`, including unknown HTML paths.
 Logged-out page visitors still go to `/login`; unmatched API or shared paths and unsupported methods do not use the overview redirect.
@@ -393,7 +399,7 @@ Multiple servers sharing data are unsupported.
 
 `GET /api/account-budget` requires authentication, uses only the session account, sets `Cache-Control: no-store`, and returns `windowDays`, `spentUsd`, `historicalSpendUsd`, `countedSpendUsd`, `reservedUsd`, `unknownCostRequests`, `limitUsd` and `remainingUsd`.
 It exposes no job IDs or provider request details.
-`public/account-budget.js` refreshes this summary every 30 seconds and on focus.
+`public/account-budget.ts` refreshes this summary every 30 seconds and on focus.
 
 `SPENDING_LIMIT_EXEMPT_USERS` is an operator-managed comma-separated list of exact account names.
 Exempt accounts have null limits and continue tracking costs; revocation includes their recent new spending.
@@ -403,7 +409,7 @@ Credentials and exemptions are separate settings.
 
 ### Shared permalink monitoring
 
-`public/share-analytics.js` counts visible reading time, and `public/share.js` sends credential-free `load` and `read` events after rendering.
+`public/share-analytics.ts` counts visible reading time, and `public/share.ts` sends credential-free `load` and `read` events after rendering.
 Loads require two consecutive visible seconds; hidden or suspended time resets that window.
 Browsers declaring `navigator.webdriver === true` send no monitoring events.
 Reads require 30 seconds of active visible time and 90% scroll progress.
@@ -611,7 +617,7 @@ It performs:
 4. the Vitest application suite;
 5. Node tests, including authenticated/public HTTP boundaries, monitoring, browser helpers, deployment, and webhook validation.
 
-Frontend changes also require `node --check public/app.js`, `node --check public/share.js`, and `git diff --check`.
+Frontend changes also require `yarn run typecheck` and `git diff --check`.
 Browser and media tests run separately; see [development](README.md#development).
 
 The production updater installs locked dependencies and runs `yarn run check`, including formatting, lint, compilation, Vitest, and Node tests.
