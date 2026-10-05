@@ -386,7 +386,9 @@ Shared HTML revalidates on each request so a deployment does not leave cached pa
 Only JavaScript and CSS listed in the build manifest are public under `/assets/`; templates, manifests, and compression sidecars cannot be fetched directly.
 Built assets share the same global request quota as other routes; their handler stays on the main Express app so static analysis can see that boundary.
 Shared assets do not change authentication requirements for owner APIs or article data.
-Development through `yarn run dev` builds browser assets before starting the server and rebuilds them when `public/` or `src/shared/` changes.
+Development through `yarn run dev` builds browser assets before starting the server and watches `public/` and `src/`.
+Frontend or shared-source changes stop the server, rebuild the client, and restart the server with the new manifest and templates; other server-source changes only restart the server.
+A failed client build leaves the server stopped until the next edit succeeds, so pages cannot reference partially rebuilt assets.
 Both development and the compiled server serve the built JavaScript and templates.
 Starting the server without a client build fails visibly rather than serving uncompiled TypeScript.
 Rebuild after editing frontend files before running the compiled server.

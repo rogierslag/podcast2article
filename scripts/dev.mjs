@@ -1,49 +1,99 @@
 import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { watch } from "node:fs";
 import { buildClient } from "./build-client.mjs";
 
 await buildClient();
-let building = false;
+let server;
+let rebuilding = false;
 let pending = false;
+let needsClientBuild = false;
+let stopping = false;
 let timer;
-async function rebuild() {
-  pending = true;
-  if (building) {
+
+function closeWatchers() {
+  clearTimeout(timer);
+  watchers.forEach((watcher) => watcher.close());
+}
+
+function startServer() {
+  const child = spawn(process.execPath, ["--import", "tsx", "src/server.ts"], {
+    stdio: "inherit",
+  });
+  server = child;
+  child.once("exit", (code) => {
+    if (server !== child) {
+      return;
+    }
+    server = undefined;
+    console.error(
+      `Development server exited (${code ?? "signal"}); waiting for source changes.`,
+    );
+  });
+}
+
+async function stopServer(signal = "SIGTERM") {
+  const child = server;
+  server = undefined;
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
     return;
   }
-  building = true;
+  const exited = once(child, "exit");
+  child.kill(signal);
+  await exited;
+}
+
+async function reload() {
+  if (rebuilding || stopping) {
+    return;
+  }
+  rebuilding = true;
   try {
-    while (pending) {
+    while (pending && !stopping) {
       pending = false;
-      try {
-        await buildClient();
-      } catch (error) {
-        console.error("Client build failed", error);
+      // Stop serving the old manifest before the build replaces its assets.
+      await stopServer();
+      if (needsClientBuild) {
+        needsClientBuild = false;
+        try {
+          await buildClient();
+        } catch (error) {
+          needsClientBuild = true;
+          console.error("Client build failed", error);
+          continue;
+        }
+      }
+      if (!stopping && !pending) {
+        startServer();
       }
     }
   } finally {
-    building = false;
+    rebuilding = false;
   }
 }
-const watchers = ["public", "src/shared"].map((directory) =>
-  watch(directory, { recursive: true }, () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => void rebuild(), 100);
+
+function scheduleReload(rebuildClient) {
+  pending = true;
+  needsClientBuild ||= rebuildClient;
+  clearTimeout(timer);
+  timer = setTimeout(() => void reload(), 100);
+}
+
+const watchers = [
+  watch("public", { recursive: true }, () => scheduleReload(true)),
+  watch("src", { recursive: true }, (_event, filename) => {
+    const changed = filename?.toString().replaceAll("\\", "/");
+    scheduleReload(
+      !changed || changed === "shared" || changed.startsWith("shared/"),
+    );
   }),
-);
-const server = spawn(
-  process.execPath,
-  ["--import", "tsx", "--watch", "src/server.ts"],
-  { stdio: "inherit" },
-);
+];
+startServer();
+
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.once(signal, () => {
-    clearTimeout(timer);
-    watchers.forEach((watcher) => watcher.close());
-    server.kill(signal);
+    stopping = true;
+    closeWatchers();
+    void stopServer(signal);
   });
 }
-server.once("exit", (code) => {
-  watchers.forEach((watcher) => watcher.close());
-  process.exitCode = code ?? 1;
-});

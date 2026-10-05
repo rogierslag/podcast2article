@@ -71,7 +71,9 @@ Shared TypeScript helpers and API response schemas live in `src/shared/` and reu
 `yarn run typecheck` checks server and browser configurations independently, including dependency declarations, return paths, module boundaries, and unused code, while esbuild emits the browser JavaScript.
 Type-aware ESLint checks promise handling, assertions, and type-only imports throughout application code and TypeScript tests; production code also rejects unsafe `any` propagation at API and SDK boundaries.
 Unversioned script URLs serve compiled compatibility bundles from `dist/client-legacy/`; TypeScript source files are not served.
-The development launcher builds the client before starting the server and watches frontend and shared sources for rebuilds.
+The development launcher builds the client before starting the server and watches frontend and server sources.
+Frontend and shared-source edits stop the server before rebuilding assets, then restart it with the new catalog and templates; server-only edits restart without a client rebuild.
+A failed client build leaves the server stopped until a subsequent successful edit.
 Owner pages require authentication when configured; public reader assets and capability routes are registered before that boundary.
 After authentication, unknown page GET and HEAD requests redirect to `/articles`, including unknown HTML paths.
 Logged-out page visitors still go to `/login`; unmatched API or shared paths and unsupported methods do not use the overview redirect.
