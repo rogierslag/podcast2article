@@ -4,6 +4,7 @@ set -Eeuo pipefail
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 export YARN_CACHE_FOLDER=/var/cache/podcast2article-yarn
+export NODE_COMPILE_CACHE=/var/cache/podcast2article-node-compile
 export NODE_OPTIONS=--max-old-space-size=512
 
 repository="https://github.com/rogierslag/podcast2article.git"
@@ -122,14 +123,14 @@ if [[ -e "$new_release" ]]; then
 fi
 
 build_directory="$(mktemp -d /var/tmp/podcast2article-update.XXXXXX)"
-log "Validating ${remote_commit:0:12} in $build_directory"
+log "Building ${remote_commit:0:12} in $build_directory"
 git -C "$build_directory" init --quiet
 git -C "$build_directory" remote add origin "$repository"
 git -C "$build_directory" fetch --quiet --depth=1 origin "$remote_commit"
 git -C "$build_directory" checkout --quiet --detach FETCH_HEAD
 
 corepack yarn --cwd "$build_directory" install --frozen-lockfile --non-interactive
-corepack yarn --cwd "$build_directory" run check
+corepack yarn --cwd "$build_directory" run build
 
 install -d -o root -g root -m 0755 "$new_release"
 rsync -rlpt \

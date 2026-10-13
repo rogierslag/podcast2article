@@ -6,7 +6,7 @@ There is no separate worker process or distributed queue.
 
 ## Drain protocol
 
-After building and validating the new release, `scripts/update-production.sh` creates `data/deployment-drain.json` with a unique deployment ID.
+After building the new release and passing its production media preflight, `scripts/update-production.sh` creates `data/deployment-drain.json` with a unique deployment ID.
 The running application checks this file every 250 milliseconds and closes admission before writing a matching `deployment-drain-status.json` acknowledgement.
 The active count includes each transcription HTTP attempt through chunk-result and accounting persistence, and each article submission through response-ID and accounting persistence.
 Provider retries must acquire admission again, so a retry waiting for admission does not delay deployment.

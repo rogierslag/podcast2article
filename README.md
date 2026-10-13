@@ -403,7 +403,8 @@ System libraries are still installed on every fresh runner, and the installer ve
 Both run the full suite for their project and retain HTML reports, screenshots, and failure traces for 14 days in `browser-regressions-desktop-chromium` and `browser-regressions-mobile-webkit` artifacts.
 The media job processes a synthetic recording with Ubuntu's FFmpeg through an explicit `FFMPEG_BIN` setting.
 It reuses `/usr/bin/ffmpeg` when available and installs it otherwise.
-Browser and media tests run separately from `yarn run check`, so existing production checks do not need to install browsers.
+Browser and media tests run separately from `yarn run check`.
+Production deployments build the release and run a media preflight with the installed runtime; they rely on CI before merging for formatting, lint, full type checks, and tests.
 
 ### Test limitations
 

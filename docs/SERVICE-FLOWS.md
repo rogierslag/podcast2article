@@ -248,7 +248,8 @@ Sources: [usage persistence](../src/services/jobs.ts), [request tracking and pri
 
 A signed push to `main` triggers the installed updater through an isolated webhook receiver and systemd.
 Five-minute reconciliation invokes the same updater.
-GitHub Actions runs separately; the updater does not wait for CI, so passing CI must be checked before merging.
+GitHub Actions runs formatting, lint, full type checks, and tests separately; the updater builds the release without repeating those checks.
+The updater does not wait for CI, so passing CI must be checked before merging.
 
 ```mermaid
 flowchart TD
@@ -262,7 +263,7 @@ flowchart TD
     Revision -->|Yes| Existing{"Service and HTTP health pass?"}
     Existing -->|Yes| Clear["Clear failure marker<br/>Keep current release"]
     Existing -->|No| Mark["Set deployment failure marker"]
-    Revision -->|No| Build["Fetch and install<br/>Run yarn check"]
+    Revision -->|No| Build["Fetch and install<br/>Run yarn build"]
     Build --> Release["Prepare release<br/>and link shared data"]
     Release --> Media["Media preflight<br/>as app user"]
     Build -.->|Failure| Mark
