@@ -16,6 +16,7 @@ import {
   shareLinkSchema,
   shareStatsSchema,
   articleSeriesSchema,
+  seriesEpisodePrefillSchema,
 } from "../src/shared/api.js";
 import {
   html,
@@ -38,6 +39,7 @@ import { articleHash, readArticleLocation } from "./article-location.js";
 import {
   sourcePrefill,
   prefillDestination,
+  seriesEpisodePrefill,
 } from "../src/shared/source-prefill.js";
 import { supportsIOSShortcutInstall } from "./ios-shortcut.js";
 
@@ -51,6 +53,7 @@ window.fetch = async (...arguments_) => {
       prefillDestination(
         document.querySelector<HTMLInputElement>("#source-url")?.value,
         "/login",
+        new URLSearchParams(location.search).get("seriesEpisode"),
       ),
     );
     throw new LocalizedError(t("error.sessionExpired"));
@@ -64,7 +67,6 @@ const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const articleReadingProgress = $("#article-reading-progress");
 const form = requiredElement("#job-form", HTMLFormElement);
-
 function finishInitialLoad() {
   document.documentElement.removeAttribute("data-loading-view");
 }
@@ -455,10 +457,31 @@ function showFormError(
   });
   formError.append(existingJobLink);
 }
+const incomingSeriesEpisode = seriesEpisodePrefill(
+  new URLSearchParams(location.search).get("seriesEpisode"),
+);
+let selectedSeriesEpisode:
+  z.infer<typeof seriesEpisodePrefillSchema> | undefined;
+let seriesEpisodeLoading = Boolean(incomingSeriesEpisode);
+
+function seriesEpisodeEndpoint() {
+  return incomingSeriesEpisode
+    ? `/api/subscriptions/${encodeURIComponent(incomingSeriesEpisode.subscriptionId)}/episodes/${encodeURIComponent(incomingSeriesEpisode.episodeKey)}`
+    : undefined;
+}
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   $("#form-error").textContent = "";
   const data = Object.fromEntries(new FormData(form));
+  if (seriesEpisodeLoading) {
+    showFormError(t("series.episodePrefillLoading"));
+    return;
+  }
+  if (incomingSeriesEpisode && !selectedSeriesEpisode) {
+    showFormError(t("series.errorEpisodeUnavailable"));
+    return;
+  }
   if (typeof data.sourceUrl !== "string") {
     showFormError(t("error.input"));
     return;
@@ -476,7 +499,11 @@ form.addEventListener("submit", async (event) => {
     return;
   }
   try {
-    const response = await localizedFetch("/api/jobs", {
+    const episodeEndpoint =
+      data.sourceUrl === selectedSeriesEpisode?.sourceUrl
+        ? seriesEpisodeEndpoint()
+        : undefined;
+    const response = await localizedFetch(episodeEndpoint || "/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -493,6 +520,11 @@ form.addEventListener("submit", async (event) => {
         return;
       }
       throw new LocalizedError(body.error || t("error.jobStart"));
+    }
+    if (episodeEndpoint) {
+      const job = z.object({ id: z.string() }).parse(responseBody);
+      openArticleJob(job.id);
+      return;
     }
     const job = jobSchema.parse(responseBody);
     showProgress(job);
@@ -1648,6 +1680,36 @@ const incomingSourceUrl = sourcePrefill(
 if (incomingSourceUrl && location.pathname === "/") {
   requiredElement("#source-url", HTMLInputElement).value = incomingSourceUrl;
   $("#source-prefill-note").classList.remove("hidden");
+}
+const incomingEpisodeEndpoint = seriesEpisodeEndpoint();
+if (incomingEpisodeEndpoint && location.pathname === "/") {
+  void loadSeriesEpisodePrefill(incomingEpisodeEndpoint);
+}
+async function loadSeriesEpisodePrefill(endpoint: string) {
+  try {
+    const response = await localizedFetch(endpoint);
+    if (!response.ok) {
+      const error = errorSchema.parse(await response.json());
+      throw new LocalizedError(
+        error.error || t("series.errorEpisodeUnavailable"),
+      );
+    }
+    selectedSeriesEpisode = await responseData(
+      response,
+      seriesEpisodePrefillSchema,
+    );
+    requiredElement("#source-url", HTMLInputElement).value =
+      selectedSeriesEpisode.sourceUrl;
+    requiredElement("[name=language]", HTMLSelectElement, form).value =
+      selectedSeriesEpisode.language;
+    requiredElement("[name=articleLength]", HTMLSelectElement, form).value =
+      selectedSeriesEpisode.articleLength;
+    $("#source-prefill-note").classList.remove("hidden");
+  } catch (error) {
+    showFormError(errorText(error));
+  } finally {
+    seriesEpisodeLoading = false;
+  }
 }
 showArticleRoute();
 let articleSeriesRequest = 0;

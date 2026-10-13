@@ -41,6 +41,7 @@ import {
   prefillDestination,
   sourcePrefill,
   sharedSourcePrefill,
+  seriesEpisodeReference,
 } from "./shared/source-prefill.js";
 import {
   createUserAuth,
@@ -503,7 +504,14 @@ app.get("/share-target", (request, response) => {
 app.get("/login", (request, response) => {
   response.setHeader("Cache-Control", "no-store");
   if (authenticatedUser(request.headers.cookie)) {
-    return response.redirect(303, prefillDestination(request.query.sourceUrl));
+    return response.redirect(
+      303,
+      prefillDestination(
+        request.query.sourceUrl,
+        "/",
+        request.query.seriesEpisode,
+      ),
+    );
   }
   if (request.originalUrl === "/login") {
     response.removeHeader("X-Robots-Tag");
@@ -513,7 +521,7 @@ app.get("/login", (request, response) => {
     renderPage(response, loginTemplate)
       .replace(
         "<!-- SOURCE_PREFILL -->",
-        `<input type="hidden" name="sourceUrl" value="${escapeHtml(sourcePrefill(request.query.sourceUrl))}">`,
+        `<input type="hidden" name="sourceUrl" value="${escapeHtml(sourcePrefill(request.query.sourceUrl))}"><input type="hidden" name="seriesEpisode" value="${escapeHtml(seriesEpisodeReference(request.query.seriesEpisode))}">`,
       )
       .replace("<!-- GIT_SHA -->", loginBuildMarkup(response)),
   );
@@ -542,21 +550,31 @@ app.post("/login", loginLimiter, async (request, response) => {
   const parsed = z.record(z.string(), z.unknown()).safeParse(request.body);
   const form = parsed.success ? parsed.data : {};
   if (!auth.enabled) {
-    return response.redirect(303, prefillDestination(form.sourceUrl));
+    return response.redirect(
+      303,
+      prefillDestination(form.sourceUrl, "/", form.seriesEpisode),
+    );
   }
   const username =
     typeof form.username === "string" ? form.username.trim().toLowerCase() : "";
   const password = typeof form.password === "string" ? form.password : "";
   const token = await auth.authenticate(username, password);
   if (!token) {
-    const destination = prefillDestination(form.sourceUrl, "/login");
+    const destination = prefillDestination(
+      form.sourceUrl,
+      "/login",
+      form.seriesEpisode,
+    );
     return response.redirect(
       303,
       `${destination}${destination.includes("?") ? "&" : "?"}error=1`,
     );
   }
   response.setHeader("Set-Cookie", sessionCookie(token, request.secure));
-  return response.redirect(303, prefillDestination(form.sourceUrl));
+  return response.redirect(
+    303,
+    prefillDestination(form.sourceUrl, "/", form.seriesEpisode),
+  );
 });
 
 app.use((request, response, next) => {
@@ -577,6 +595,7 @@ app.use((request, response, next) => {
         prefillDestination(
           request.path === "/" ? request.query.sourceUrl : undefined,
           "/login",
+          request.path === "/" ? request.query.seriesEpisode : undefined,
         ),
       )
     : response.status(401).send(localizeError(response, "error.loginRequired"));

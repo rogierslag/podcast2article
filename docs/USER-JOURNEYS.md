@@ -225,8 +225,11 @@ Opening the overview clears arrivals without marking articles as read; failed lo
 The badge refreshes every 30 seconds while visible and when returning to the app.
 Five unread, queued, or processing episodes in that series trigger an automatic pause.
 Reading frees capacity, and a series paused at the limit resumes automatically on the next check.
+Missed episodes are scheduled oldest first within the available capacity; the remainder is saved across pauses and restarts and processed before newer feed entries.
 Manually paused series remain paused until the reader explicitly resumes.
 Catch-up respects capacity and preserves a manual pause.
+Each series offers **Episodes without an article**, listing saved waiting entries and unscheduled feed releases since following began, while excluding already completed or processing sources in the same account.
+Episode quick links prefill **New article** with the series' saved language and article length for review before explicit submission.
 See [PR 51](https://github.com/rogierslag/podcast2article/pull/51) and [PR 52](https://github.com/rogierslag/podcast2article/pull/52).
 
 **Critical states and trust.**
@@ -234,6 +237,12 @@ Confirm the correct feed when discovery is ambiguous.
 Show the catch-up count, paid-processing implication, pause reason, capacity, and failed jobs.
 A manual pause stops future feed checks but does not cancel queued work.
 A limit pause stops scheduling until a later check finds capacity.
+Feed checks continue during a limit pause and save newly discovered episodes without starting paid processing.
+When the saved backlog exceeds the available capacity, series management warns with the waiting count and a link to articles; manually paused series with saved waiting episodes also show the warning.
+The count reflects the last successful feed check and cannot include episodes removed before discovery.
+Opening the episode list explicitly checks the current feed, including for a manually paused series, without scheduling work or changing the pause.
+When the feed is unavailable, the list distinguishes its saved waiting entries from a complete current inventory.
+Submitting a reviewed episode uses server-resolved metadata and the same capacity limit; it does not clear a manual pause.
 Failed jobs do not consume capacity and are not retried hourly; failed feed checks are retried.
 Catch-up offers only skipped episodes still in the feed’s latest three, never successive older batches.
 Previously confirmed pending selections remain queued.
@@ -243,6 +252,8 @@ Following is not a promise that unavailable or private content can be recovered.
 Follow only new episodes, request catch-up, reach the limit, read some items, and verify automatic resuming on the next check.
 Manually pause the series and verify that reading does not resume it.
 The reader should predict which episodes will be processed and why a control is disabled.
+Open an unscheduled episode's quick link, verify its prefilled source and options, change a setting, and confirm that no job starts until submission.
+Repeat while signed out and with a full series; sign-in should preserve the selection and a full series should explain how to free capacity.
 Evaluate whether automatic arrivals become useful reading; counting followed series alone can reward an unwanted backlog.
 
 ## Assessing a feature

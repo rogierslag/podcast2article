@@ -57,6 +57,79 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 describe("podcast subscriptions", () => {
+  it("lists unscheduled episodes since following without unpausing or starting work", async () => {
+    const subscription = await store.follow("alice", feed(2), "none", options);
+    await store.pause("alice", subscription.id, true);
+    const current = feed(4);
+    const latest = current.episodes[0];
+    if (!latest) {
+      throw new Error("Missing fixture episode");
+    }
+    current.episodes.push({
+      key: "old",
+      episode: { ...latest.episode, publishedAt: "2020-01-01T00:00:00Z" },
+    });
+    fetchFeed.mockResolvedValue(current);
+
+    const available = await store.availableEpisodes("alice", subscription.id);
+
+    expect(available.episodes.map((episode) => episode.key)).toEqual([
+      "episode-3",
+      "episode-4",
+    ]);
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(store.list("alice")[0]?.paused).toBe(true);
+    expect(store.list("alice")[0]?.pending).toEqual([]);
+    await expect(
+      store.availableEpisodes("bob", subscription.id),
+    ).rejects.toThrow("series.errorNotFound");
+  });
+  it("keeps saved selections accessible in a feed outage and schedules only the reviewed episode", async () => {
+    const subscription = await store.follow("alice", feed(3), "three", options);
+    await store.pause("alice", subscription.id, true);
+    fetchFeed.mockRejectedValue(new Error("Feed offline"));
+
+    const available = await store.availableEpisodes("alice", subscription.id);
+    await store.scheduleEpisode("alice", subscription.id, "episode-2", {
+      language: "en",
+      articleLength: "compact",
+    });
+
+    expect(available.feedAvailable).toBe(false);
+    expect(available.episodes).toHaveLength(3);
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1].key).toBe("episode-2");
+    expect(enqueue.mock.calls[0]?.[2]).toEqual({
+      language: "en",
+      articleLength: "compact",
+    });
+    const restarted = createStore();
+    await restarted.load(["alice"]);
+    expect(
+      restarted.list("alice")[0]?.pending.map((episode) => episode.key),
+    ).toEqual(["episode-3", "episode-1"]);
+    expect(restarted.list("alice")[0]?.seen).toContain("episode-2");
+    expect(restarted.list("alice")[0]?.paused).toBe(true);
+    await restarted.stop();
+  });
+  it("rejects episode scheduling beyond capacity, unavailable keys and disabled processing", async () => {
+    const subscription = await store.follow("alice", feed(3), "three", options);
+    outstanding.mockReturnValue(5);
+    await expect(
+      store.scheduleEpisode("alice", subscription.id, "episode-2", options),
+    ).rejects.toThrow("series.errorLimit");
+    outstanding.mockReturnValue(0);
+    await expect(
+      store.scheduleEpisode("alice", subscription.id, "unknown", options),
+    ).rejects.toThrow("series.errorEpisodeUnavailable");
+    enabled = false;
+    await expect(
+      store.scheduleEpisode("alice", subscription.id, "episode-2", options),
+    ).rejects.toThrow("error.creationUnavailable");
+
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(store.list("alice")[0]?.pending).toHaveLength(3);
+  });
   it("persists series artwork and refreshes legacy subscriptions on a feed check", async () => {
     const original = { ...feed(1), imageUrl: "https://example.com/cover.jpg" };
     await store.follow("alice", original, "none", options);
@@ -176,6 +249,112 @@ describe("podcast subscriptions", () => {
 });
 
 describe("subscription limits", () => {
+  it("uses saved pending episodes to recognize new undated entries while limit-paused", async () => {
+    await store.follow("alice", feed(1), "none", options);
+    outstanding.mockReturnValue(5);
+    fetchFeed.mockResolvedValue(feed(3));
+    await store.check("alice");
+    const shortenedFeed = feed(4);
+    shortenedFeed.episodes = shortenedFeed.episodes.slice(0, 2);
+    fetchFeed.mockResolvedValue(shortenedFeed);
+
+    await store.check("alice");
+    await store.check("alice");
+
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(
+      store.list("alice")[0]?.pending.map((episode) => episode.key),
+    ).toEqual(["episode-2", "episode-3", "episode-4"]);
+    expect(store.list("alice")[0]?.pauseReason).toBe("limit");
+  });
+  it.each(["dated", "undated"])(
+    "resumes ten missed %s episodes oldest first and preserves the remainder across restart and feed removal",
+    async (dates) => {
+      function missedFeed(count: number): PodcastFeed {
+        const result = feed(count);
+        if (dates === "dated") {
+          for (const [index, episode] of result.episodes.entries()) {
+            episode.episode.publishedAt = new Date(
+              Date.UTC(2100, 0, count - index),
+            ).toISOString();
+          }
+        }
+        return result;
+      }
+      const read = new Set<string>();
+      outstanding.mockImplementation(
+        (_username, ids: string[]) => ids.filter((id) => !read.has(id)).length,
+      );
+      await store.follow("alice", feed(1), "none", options);
+      fetchFeed.mockResolvedValue(missedFeed(6));
+      await store.check("alice");
+      expect(store.list("alice")[0]?.pauseReason).toBe("limit");
+
+      fetchFeed.mockResolvedValue(missedFeed(16));
+      await store.check("alice");
+      await store.check("alice");
+      expect(enqueue).toHaveBeenCalledTimes(5);
+      expect(store.list("alice")[0]?.pending).toHaveLength(10);
+      expect(store.list("alice")[0]?.checkedAt).toBeDefined();
+      fetchFeed.mockRejectedValueOnce(new Error("Feed offline"));
+      await store.check("alice");
+      expect(store.list("alice")[0]?.pending).toHaveLength(10);
+      expect(store.list("alice")[0]?.pauseReason).toBe("limit");
+      for (let episode = 2; episode <= 6; episode += 1) {
+        read.add(`episode-${episode}`);
+      }
+      enqueue.mockClear();
+      await store.check("alice");
+
+      expect(enqueue.mock.calls.map((call) => call[1].key)).toEqual([
+        "episode-7",
+        "episode-8",
+        "episode-9",
+        "episode-10",
+        "episode-11",
+      ]);
+      expect(
+        store.list("alice")[0]?.pending.map((episode) => episode.key),
+      ).toEqual([
+        "episode-12",
+        "episode-13",
+        "episode-14",
+        "episode-15",
+        "episode-16",
+      ]);
+      expect(store.list("alice")[0]?.pauseReason).toBe("limit");
+
+      const restarted = createStore();
+      await restarted.load(["alice"]);
+      // The saved backlog remains available even when the publisher removes it from RSS.
+      const shortenedFeed = missedFeed(17);
+      shortenedFeed.episodes = shortenedFeed.episodes.slice(0, 1);
+      shortenedFeed.episodes.push(...feed(1).episodes);
+      fetchFeed.mockResolvedValue(shortenedFeed);
+      for (let episode = 7; episode <= 11; episode += 1) {
+        read.add(`episode-${episode}`);
+      }
+      await restarted.check("alice");
+
+      expect(enqueue.mock.calls.map((call) => call[1].key)).toEqual([
+        "episode-7",
+        "episode-8",
+        "episode-9",
+        "episode-10",
+        "episode-11",
+        "episode-12",
+        "episode-13",
+        "episode-14",
+        "episode-15",
+        "episode-16",
+      ]);
+      expect(
+        restarted.list("alice")[0]?.pending.map((episode) => episode.key),
+      ).toEqual(["episode-17"]);
+      expect(restarted.list("alice")[0]?.pauseReason).toBe("limit");
+      await restarted.stop();
+    },
+  );
   it("automatically fills freed capacity after a limit pause without exceeding five", async () => {
     const read = new Set<string>();
     outstanding.mockImplementation(
@@ -319,9 +498,9 @@ describe("subscription limits", () => {
 
     expect(store.list("alice")[0]?.archiveKeys).toEqual([]);
     expect(enqueue.mock.calls.map((call) => call[1].key)).toEqual([
-      "episode-15",
-      "episode-14",
       "episode-13",
+      "episode-14",
+      "episode-15",
     ]);
   });
   it("does not download older entries newly exposed by an expanded feed", async () => {

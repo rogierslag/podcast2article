@@ -31,6 +31,30 @@ interface Dependencies {
   outstanding: (username: string, ids: string[], keys: string[]) => number;
 }
 
+function newEpisodes(
+  subscription: PodcastSubscription,
+  feed: PodcastFeed,
+): PodcastEpisode[] {
+  const known = new Set([
+    ...subscription.seen,
+    ...subscription.pending.map((episode) => episode.key),
+  ]);
+  const firstKnown = feed.episodes.findIndex((episode) =>
+    known.has(episode.key),
+  );
+  return feed.episodes
+    .filter((episode, index) => {
+      if (known.has(episode.key)) {
+        return false;
+      }
+      const published = Date.parse(episode.episode.publishedAt || "");
+      return Number.isFinite(published)
+        ? published > Date.parse(subscription.createdAt)
+        : firstKnown >= 0 && index < firstKnown;
+    })
+    .reverse();
+}
+
 export class SubscriptionStore {
   private subscriptions = new Map<string, PodcastSubscription[]>();
   private operations = new Map<string, Promise<unknown>>();
@@ -169,10 +193,10 @@ export class SubscriptionStore {
           continue;
         }
         try {
-          if (subscription.paused) {
-            if (this.outstanding(username, subscription) >= subscriptionLimit) {
-              continue;
-            }
+          if (
+            subscription.paused &&
+            this.outstanding(username, subscription) < subscriptionLimit
+          ) {
             subscription.paused = false;
             subscription.pauseReason = undefined;
             await this.save(username, items);
@@ -180,13 +204,13 @@ export class SubscriptionStore {
           if (!this.dependencies.canProcess()) {
             throw new DomainError("error.creationUnavailable");
           }
-          if (await this.pauseAtLimit(username, items, subscription)) {
-            continue;
-          }
+          await this.pauseAtLimit(username, items, subscription);
           // Commit the reviewed backlog before fetching again.
           // A feed outage must not lose it.
-          const scheduled = await this.drain(username, items, subscription);
-          if (subscription.paused || scheduled >= subscriptionLimit) {
+          const scheduled = subscription.paused
+            ? 0
+            : await this.drain(username, items, subscription);
+          if (this.stopped) {
             continue;
           }
           const feed = await this.dependencies.fetchFeed(subscription.feedUrl);
@@ -197,29 +221,20 @@ export class SubscriptionStore {
           subscription.archiveKeys = (subscription.archiveKeys || []).filter(
             (key) => latestKeys.has(key),
           );
-          const seen = new Set(subscription.seen);
-          // An expanded feed can expose old archive entries for the first time.
-          const firstKnown = feed.episodes.findIndex((episode) =>
-            seen.has(episode.key),
-          );
-          subscription.pending = feed.episodes.filter((episode, index) => {
-            if (seen.has(episode.key)) {
-              return false;
-            }
-            const published = Date.parse(episode.episode.publishedAt || "");
-            return Number.isFinite(published)
-              ? published > Date.parse(subscription.createdAt)
-              : firstKnown >= 0 && index < firstKnown;
-          });
+          const discovered = newEpisodes(subscription, feed);
+          // Keep saved episodes when they disappear from the feed during a limit pause.
+          subscription.pending.push(...discovered);
           subscription.checkedAt = new Date().toISOString();
           subscription.error = undefined;
           await this.save(username, items);
-          await this.drain(
-            username,
-            items,
-            subscription,
-            subscriptionLimit - scheduled,
-          );
+          if (!subscription.paused && !this.stopped) {
+            await this.drain(
+              username,
+              items,
+              subscription,
+              subscriptionLimit - scheduled,
+            );
+          }
         } catch (error) {
           subscription.error =
             error instanceof DomainError &&
@@ -231,6 +246,77 @@ export class SubscriptionStore {
           await this.save(username, items);
         }
       }
+    });
+  }
+
+  async availableEpisodes(username: string, id: string) {
+    const subscription = this.list(username).find((item) => item.id === id);
+    if (!subscription) {
+      throw new DomainError("series.errorNotFound");
+    }
+    let discovered: PodcastEpisode[] = [];
+    let feedAvailable = true;
+    try {
+      discovered = newEpisodes(
+        subscription,
+        await this.dependencies.fetchFeed(subscription.feedUrl),
+      );
+    } catch {
+      // A publisher outage must not hide episodes already saved in the backlog.
+      feedAvailable = false;
+    }
+    return {
+      subscription,
+      episodes: [...subscription.pending, ...discovered],
+      feedAvailable,
+    };
+  }
+
+  async scheduleEpisode(
+    username: string,
+    id: string,
+    key: string,
+    options: Pick<Job, "language" | "articleLength">,
+  ): Promise<Pick<Job, "id">> {
+    return this.exclusive(username, async () => {
+      const items = this.list(username);
+      const subscription = items.find((item) => item.id === id);
+      if (!subscription) {
+        throw new DomainError("series.errorNotFound");
+      }
+      if (!this.dependencies.canProcess()) {
+        throw new DomainError("error.creationUnavailable");
+      }
+      if (this.outstanding(username, subscription) >= subscriptionLimit) {
+        throw new DomainError("series.errorLimit");
+      }
+      const available = await this.availableEpisodes(username, id);
+      const selected = available.episodes.find(
+        (episode) => episode.key === key,
+      );
+      if (!selected) {
+        throw new DomainError(
+          available.feedAvailable
+            ? "series.errorEpisodeUnavailable"
+            : "series.errorCheck",
+        );
+      }
+      if (this.stopped) {
+        throw new DomainError("error.creationUnavailable");
+      }
+      const job = await this.dependencies.enqueue(username, selected, options);
+      if (!subscription.jobIds.includes(job.id)) {
+        subscription.jobIds.push(job.id);
+      }
+      if (!subscription.seen.includes(selected.key)) {
+        subscription.seen.push(selected.key);
+      }
+      subscription.pending = subscription.pending.filter(
+        (episode) => episode.key !== selected.key,
+      );
+      await this.save(username, items);
+      await this.pauseAtLimit(username, items, subscription);
+      return job;
     });
   }
 

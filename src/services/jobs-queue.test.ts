@@ -2,7 +2,7 @@ import type * as FsPromises from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProcessingEvent } from "../lib/processing-events.js";
-import type { ApiRequestUsage, Job } from "../types.js";
+import type { ApiRequestUsage, Job, PodcastEpisode } from "../types.js";
 import type * as Resolver from "./resolver.js";
 import type * as YouTube from "./youtube.js";
 
@@ -788,6 +788,48 @@ it("counts unread and queued podcast jobs, excluding read, deleted, failed and o
 
   expect(jobs.podcastOutstandingCount("owner", ids)).toBe(2);
   expect(jobs.podcastOutstandingCount("other", ids)).toBe(0);
+});
+
+it("excludes already articled or processing episode sources from quick links without mixing accounts", async () => {
+  const jobs = await import("./jobs.js");
+  const episodes: PodcastEpisode[] = [];
+  for (const [index, stage] of (
+    ["complete", "writing", "failed"] as const
+  ).entries()) {
+    const episode = {
+      key: `episode-${index}`,
+      episode: {
+        sourceType: "rss",
+        title: `Episode ${index}`,
+        sourceName: "Public podcast",
+        sourceUrl: `https://example.com/${index}`,
+        mediaUrl: `https://example.com/${index}.mp3`,
+      },
+    } satisfies PodcastEpisode;
+    episodes.push(episode);
+    const job = {
+      ...input,
+      id: `00000000-0000-4000-8000-00000000079${index}`,
+      sourceUrl: episode.episode.sourceUrl,
+      episode: episode.episode,
+      stage,
+      progress: 100,
+      message: "Test",
+      createdAt: "2026-09-01T10:00:00Z",
+      updatedAt: "2026-09-01T10:00:00Z",
+    } satisfies Job;
+    state.files.set(
+      path.resolve("data/users/owner/jobs", `${job.id}.json`),
+      JSON.stringify(job),
+    );
+    await jobs.getJob("owner", job.id);
+  }
+
+  const ownerLinks = jobs.unscheduledPodcastEpisodes("owner", episodes);
+  const otherLinks = jobs.unscheduledPodcastEpisodes("other", episodes);
+
+  expect(ownerLinks.map((episode) => episode.key)).toEqual(["episode-2"]);
+  expect(otherLinks).toEqual(episodes);
 });
 
 it("reserves account budget before concurrent paid requests and isolates other accounts", async () => {

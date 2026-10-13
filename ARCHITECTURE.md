@@ -345,13 +345,18 @@ See [article backups](docs/ARTICLE-BACKUPS.md).
 ### Podcast subscriptions
 
 `src/services/subscriptions.ts` persists subscription mutations atomically and serializes operations per user.
-Active feeds are checked at startup and hourly.
+Active and limit-paused feeds are checked at startup and hourly.
 Following defaults to future episodes only; explicit catch-up is limited to the feed's latest three.
 Polling excludes dated episodes published before following.
-Undated entries must precede a known episode in feed order to qualify as new.
+Undated entries must precede a previously seen or saved pending episode in feed order to qualify as new.
 
 Five unread, queued, or processing jobs pause a series.
-Read, deleted, and failed jobs free capacity, but resuming requires an explicit action.
+Read, deleted, and failed jobs free capacity; limit-paused series resume automatically on the next check, while manual pauses require explicit resuming.
+Limit-paused checks save newly discovered episodes without scheduling jobs and preserve existing pending selections when entries leave the feed.
+Newly discovered episodes are scheduled oldest first, and series management warns when the saved backlog exceeds available capacity.
+The on-demand episode inventory merges saved pending selections with eligible feed releases since following began and excludes completed or active matching sources within the same account.
+Quick links carry a validated subscription and episode reference through sign-in to prefill the source, language, and article length without starting processing.
+Explicit episode submission resolves metadata on the server, serializes with subscription checks, respects capacity and account budget, and updates the saved episode keys and job IDs without clearing a manual pause.
 Existing confirmed pending selections survive restarts; this policy change does not cancel jobs or previously confirmed selections.
 See [the series guide](README.md#following-podcast-series).
 
@@ -506,15 +511,18 @@ Owner and public responses use generic source fields only.
 
 Series routes are authenticated and scoped to the current user:
 
-| Method  | Path                              | Purpose                                         |
-| ------- | --------------------------------- | ----------------------------------------------- |
-| `GET`   | `/api/subscriptions`              | List followed series and capacity               |
-| `GET`   | `/api/subscriptions/article/:id`  | Resolve an article's follow status              |
-| `POST`  | `/api/subscriptions/discover`     | Find public podcast feeds                       |
-| `POST`  | `/api/subscriptions/preview`      | Review a feed before following                  |
-| `POST`  | `/api/subscriptions`              | Follow with `backfill: "none"` or `"three"`     |
-| `POST`  | `/api/subscriptions/:id/backfill` | Request eligible episodes from the latest three |
-| `PATCH` | `/api/subscriptions/:id`          | Pause or explicitly resume                      |
+| Method  | Path                                   | Purpose                                                        |
+| ------- | -------------------------------------- | -------------------------------------------------------------- |
+| `GET`   | `/api/subscriptions`                   | List followed series and capacity                              |
+| `GET`   | `/api/subscriptions/article/:id`       | Resolve an article's follow status                             |
+| `GET`   | `/api/subscriptions/:id/episodes`      | List unscheduled episodes since following and saved selections |
+| `GET`   | `/api/subscriptions/:id/episodes/:key` | Prepare an episode's source, language and length               |
+| `POST`  | `/api/subscriptions/:id/episodes/:key` | Explicitly schedule a server-resolved episode within capacity  |
+| `POST`  | `/api/subscriptions/discover`          | Find public podcast feeds                                      |
+| `POST`  | `/api/subscriptions/preview`           | Review a feed before following                                 |
+| `POST`  | `/api/subscriptions`                   | Follow with `backfill: "none"` or `"three"`                    |
+| `POST`  | `/api/subscriptions/:id/backfill`      | Request eligible episodes from the latest three                |
+| `PATCH` | `/api/subscriptions/:id`               | Pause or explicitly resume                                     |
 
 The former `latest` and `ten` backfill request values are rejected.
 Existing subscription files remain readable without a migration.
