@@ -397,7 +397,7 @@ The updater lock prevents overlap.
 4. creates an isolated build directory under `/var/tmp`;
 5. fetches the exact commit, detached;
 6. installs locked development dependencies;
-7. runs `yarn run check`: formatting, lint, TypeScript, Vitest, and Node tests;
+7. runs `yarn run build` to compile the server and bundle browser assets;
 8. creates a new immutable release directory;
 9. installs locked production dependencies;
 10. links `data` to `/var/lib/podcast2article`;
@@ -418,7 +418,7 @@ A media preflight failure or drain timeout leaves the existing symlink and proce
 The full updater has a separate 45-minute systemd timeout; draining itself remains capped at 15 minutes.
 An older running release without the drain protocol requires the [first-rollout procedure](DEPLOYMENT-RECOVERY.md#first-rollout-and-limitations).
 Applying this guard to an existing host requires explicitly reinstalling the infrastructure updater; application pushes do not replace it.
-The updater does not wait for GitHub Actions and does not run the Playwright browser suite.
+The updater does not wait for GitHub Actions or repeat formatting, lint, full type checks, unit tests, or browser tests.
 Those checks run independently in CI; verify them before merging.
 
 ### Logs
@@ -583,7 +583,8 @@ The main Node process starts with:
 A shared media slot prevents concurrent downloads and FFmpeg work.
 Three media/transcription jobs can overlap remote API calls and retain temporary audio at once, with three separate article slots.
 Interrupted or failed transcription workspaces remain for recovery, so concurrency does not impose a total disk quota.
-The updater uses a 512 MiB Node heap ceiling during validation and is assigned low CPU and I/O priority by systemd.
+The updater uses a 512 MiB Node heap ceiling during builds and is assigned low CPU and I/O priority by systemd.
+Its Node compilation cache lives on disk at `/var/cache/podcast2article-node-compile`, avoiding RAM-backed `/tmp`.
 
 Useful diagnostics:
 
