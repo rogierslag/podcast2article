@@ -2,17 +2,10 @@ import type OpenAI from "openai";
 import { z } from "zod";
 import type { Article, ArticleParagraph, TranscriptSegment } from "../types.js";
 import {
-  articleSnapshot,
-  retrieveArticleAnswer,
+  requestBackgroundArticle,
   type ArticleCheckpoint,
 } from "./background-article.js";
-import {
-  endpointRegion,
-  reserveApiCost,
-  trackedRequest,
-  type UsageRecorder,
-} from "./api-usage.js";
-import { paidRequestDrain } from "./deployment-drain.js";
+import type { UsageRecorder } from "./api-usage.js";
 import { articleReasoning } from "./article-model.js";
 
 function words(value: string): string[] {
@@ -117,9 +110,11 @@ export async function repairArticleQuotes(
     if (!invalid.length) {
       break;
     }
+    const repairModel =
+      checkpoint?.repairs?.[attempt]?.request.requestedModel ?? model;
     const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
-      model,
-      reasoning: articleReasoning(model),
+      model: repairModel,
+      reasoning: articleReasoning(repairModel),
       background: true,
       store: true,
       service_tier: serviceTier,
@@ -162,59 +157,21 @@ export async function repairArticleQuotes(
         },
       },
     };
-    let saved = checkpoint?.repairs?.[attempt];
+    const saved = checkpoint?.repairs?.[attempt];
     const repairCheckpoint: ArticleCheckpoint = {
       state: saved,
+      requests: checkpoint?.requests,
       save: async (state) => {
-        saved = state;
         await checkpoint?.saveRepair?.(attempt, state);
       },
     };
-    if (!saved) {
-      await trackedRequest<OpenAI.Responses.Response>(
-        {
-          stage: "article",
-          background: true,
-          acquire: (requestSignal) => paidRequestDrain.acquire(requestSignal),
-          saveResult: (response, request) =>
-            repairCheckpoint.save(
-              articleSnapshot(response, request, openai.baseURL),
-            ),
-          serviceTier,
-          model,
-          region: endpointRegion(openai.baseURL),
-          signal,
-          record: recordUsage,
-          reservedCostUsd: reserveApiCost(
-            model,
-            endpointRegion(openai.baseURL),
-            {
-              inputBytes: Buffer.byteLength(JSON.stringify(payload)),
-              outputTokens: 4096,
-            },
-          ),
-        },
-        (requestedTier) =>
-          openai.responses
-            .create(
-              { ...payload, service_tier: requestedTier },
-              { timeout: timeoutMs, signal, maxRetries: 0 },
-            )
-            .withResponse(),
-      );
-    }
-    if (!saved) {
-      throw new Error("Quote repair response was not saved");
-    }
-    const answer = await retrieveArticleAnswer(
-      openai,
-      saved,
-      repairCheckpoint,
+    const answer = await requestBackgroundArticle(openai, payload, {
+      serviceTier,
+      timeoutMs,
       signal,
-      repairCheckpoint.state || saved.status !== "completed"
-        ? recordUsage
-        : undefined,
-    );
+      recordUsage,
+      checkpoint: repairCheckpoint,
+    });
     let parsed: unknown;
     try {
       parsed = JSON.parse(answer);

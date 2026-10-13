@@ -79,6 +79,7 @@ export interface ApiRequestUsage {
   requestedModel: string;
   actualModel?: string;
   requestedServiceTier: string;
+  initialServiceTier?: string;
   actualServiceTier?: string;
   endpointRegion: "global" | "eu" | "us" | "custom";
   startedAt: string;
@@ -89,6 +90,7 @@ export interface ApiRequestUsage {
   httpStatus?: number;
   requestId?: string;
   errorCode?: string;
+  errorMessage?: string;
   usage?: ApiUsageMetrics;
   audioSeconds?: number;
   /** Persisted before sending; retained when the provider outcome is unknown. */
@@ -117,6 +119,8 @@ export interface BackgroundArticle {
   responseId: string;
   baseURL: string;
   status: string;
+  error?: { code: string; message: string };
+  incompleteReason?: string;
   answer?: string;
   request: ApiRequestUsage;
 }

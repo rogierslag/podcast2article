@@ -2,8 +2,7 @@ import { createReadStream } from "node:fs";
 import OpenAI from "openai";
 import { articleModel, articleReasoning } from "./article-model.js";
 import {
-  articleSnapshot,
-  retrieveArticleAnswer,
+  requestBackgroundArticle,
   type ArticleCheckpoint,
 } from "./background-article.js";
 import { repairArticleQuotes } from "./quote-repair.js";
@@ -389,20 +388,18 @@ export async function writeArticle(
     });
   }, 30_000);
   heartbeat.unref();
-  let savedResponse = checkpoint?.state;
   let answer: string;
   try {
-    if (!savedResponse) {
-      const model = articleModel();
-      // Preserve the coverage wording evaluated in docs/ARTICLE-COVERAGE-EVALUATION.md.
-      const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
-        model,
-        reasoning: articleReasoning(model),
-        background: true,
-        store: true,
-        service_tier: serviceTier,
-        max_output_tokens: 16_384,
-        instructions: `You are a careful editor. Write solely from the supplied transcript.
+    const model = checkpoint?.state?.request.requestedModel ?? articleModel();
+    // Preserve the coverage wording evaluated in docs/ARTICLE-COVERAGE-EVALUATION.md.
+    const payload: OpenAI.Responses.ResponseCreateParamsNonStreaming = {
+      model,
+      reasoning: articleReasoning(model),
+      background: true,
+      store: true,
+      service_tier: serviceTier,
+      max_output_tokens: 16_384,
+      instructions: `You are a careful editor. Write solely from the supplied transcript.
 
 ${articleLanguageInstruction(metadata.language)}
 
@@ -414,66 +411,28 @@ Each paragraph must contain 1-5 source IDs that directly support its entire cont
 
 COVERAGE REQUIREMENT: Before writing, survey the complete transcript and choose the main substantive topics across the beginning, middle and end. Preserve each central assertion, its defining example or qualification, important counterarguments, and substantive career or personal stories when these explain the episode. Do not let an attractive opening theme turn the article into a narrower essay that silently loses other major topics. Exclude ads, housekeeping and repetition. Allocate space across the topics before drafting; when space is tight, combine related themes and shorten explanations before dropping a distinct main topic. Internally check the finished article for accidental omissions and unsupported additions. Return only the final article JSON, not a plan or review. The transcript remains the only factual source; publisher writing and external knowledge must not be used.
 `,
-        input: [
-          {
-            role: "user",
-            content: `Source: ${metadata.sourceName}\nTitle: ${metadata.title}\n\nTRANSCRIPT (only factual source):\n${transcriptText}`,
-          },
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "source_linked_article",
-            strict: true,
-            schema: articleSchemaFor(validIds),
-          },
-        },
-      };
-      const reservedCostUsd = reserveApiCost(
-        model,
-        endpointRegion(openai.baseURL),
+      input: [
         {
-          inputBytes: Buffer.byteLength(JSON.stringify(payload)),
-          outputTokens: 16_384,
+          role: "user",
+          content: `Source: ${metadata.sourceName}\nTitle: ${metadata.title}\n\nTRANSCRIPT (only factual source):\n${transcriptText}`,
         },
-      );
-      await trackedRequest<OpenAI.Responses.Response>(
-        {
-          stage: "article",
-          background: true,
-          acquire: (requestSignal) => paidRequestDrain.acquire(requestSignal),
-          saveResult: async (response, request) => {
-            savedResponse = articleSnapshot(response, request, openai.baseURL);
-            await checkpoint?.save(savedResponse);
-          },
-          serviceTier,
-          reservedCostUsd,
-          model,
-          region: endpointRegion(openai.baseURL),
-          signal,
-          record: recordUsage,
+      ],
+      text: {
+        format: {
+          type: "json_schema",
+          name: "source_linked_article",
+          strict: true,
+          schema: articleSchemaFor(validIds),
         },
-        (requestedTier) =>
-          openai.responses
-            .create(
-              { ...payload, service_tier: requestedTier },
-              { timeout: timeoutMs, signal, maxRetries: 0 },
-            )
-            .withResponse(),
-      );
-    }
-    if (!savedResponse) {
-      throw new Error("Article response was not saved");
-    }
-    answer = await retrieveArticleAnswer(
-      openai,
-      savedResponse,
-      checkpoint,
+      },
+    };
+    answer = await requestBackgroundArticle(openai, payload, {
+      serviceTier,
+      timeoutMs,
       signal,
-      checkpoint?.state || savedResponse.status !== "completed"
-        ? recordUsage
-        : undefined,
-    );
+      recordUsage,
+      checkpoint,
+    });
   } finally {
     clearInterval(heartbeat);
   }

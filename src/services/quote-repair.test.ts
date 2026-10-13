@@ -479,3 +479,39 @@ describe("quote-only repair", () => {
     }
   });
 });
+
+it("retries a transient background quote-repair failure without replacing the article draft", async () => {
+  let calls = 0;
+  const original = structuredClone(draft);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      calls += 1;
+      if (calls === 1) {
+        return new Response(
+          JSON.stringify({
+            id: "resp-repair-failed",
+            object: "response",
+            status: "failed",
+            output: [],
+            error: { code: "server_error", message: "Temporary failure" },
+          }),
+          { headers: { "content-type": "application/json" } },
+        );
+      }
+      return providerResponse(repair(corrected));
+    }),
+  );
+
+  const result = await run();
+
+  expect(calls).toBe(2);
+  expect(result.sections[0]?.paragraphs[0]).toEqual(
+    original.sections[0]?.paragraphs[0],
+  );
+  expect(result.sections[0]?.paragraphs[1]?.text).toBe(corrected);
+  const attempts = records.filter((entry) => entry.status !== "pending");
+  expect(attempts.map((entry) => entry.attempt)).toEqual([1, 2]);
+  expect(new Set(attempts.map((entry) => entry.operationId)).size).toBe(1);
+  expect(saved[0]?.responseId).toBe("resp-repair");
+});

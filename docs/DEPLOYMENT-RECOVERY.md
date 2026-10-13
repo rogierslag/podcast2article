@@ -54,6 +54,13 @@ The original response endpoint must match the configured endpoint; an endpoint c
 
 The application retrieves outstanding responses immediately on recovery and polls every five seconds while waiting.
 Transient retrieval failures retry without submitting another generation.
+A confirmed terminal `failed` response with `server_error`, `server_is_overloaded`, `rate_limit_exceeded`, `slow_down`, or `flex_unavailable` may start a replacement submission after backoff.
+HTTP failures and terminal background failures share three Flex attempts followed by up to three standard attempts, or three attempts when configured for standard processing.
+Saved responses retain their operation ID, attempt number, original model, initial tier, and provider error details; recovery continues that retry position rather than resetting it.
+Recovery also checks ledger attempts recorded after the last saved failed response; an ambiguous replacement submission without a saved response ID stops for operator investigation.
+Each replacement reacquires deployment admission and budget approval; polling and backoff hold no admission reservation.
+Cancelled, incomplete, permanent, unknown, and legacy failures without an error code stop visibly.
+The same rules apply to quote-repair responses.
 Completed answers and usage are persisted before JSON parsing and source validation.
 Recovery can reconcile accounting from that saved response if the process stopped between saving the answer and updating the usage ledger.
 Owner-requested article regeneration explicitly starts a new response and retains the prior attempt ledger.

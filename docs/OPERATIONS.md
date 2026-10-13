@@ -924,6 +924,10 @@ Change that setting to `ARTICLE_MODEL=gpt-6.1-sol` in `/etc/podcast2article.env`
 Keep saved response checkpoints: generation and quote repair already submitted to an older model resume their original response IDs and accounting instead of submitting replacements.
 After three transient Flex failures, the same operation switches to `service_tier: "default"` for up to three standard attempts.
 Capacity errors, connection failures, timeouts and other retryable HTTP failures use the existing backoff and retry-header rules.
+HTTP failures and recognized transient background failures share the attempt limit for article generation and quote repair.
+Failed background responses retain provider error codes and messages in their owner-only checkpoints and request ledger.
+Only `server_error`, `server_is_overloaded`, `rate_limit_exceeded`, `slow_down`, and `flex_unavailable` trigger background resubmission; missing or unknown codes stop for investigation.
+Incomplete and cancelled responses stop without automatic resubmission.
 Cancellation and permanent errors stop without fallback.
 
 `OPENAI_ARTICLE_TIMEOUT_MS` applies separately to each background submission attempt (default 600000 ms), not to the lifetime of remote generation.

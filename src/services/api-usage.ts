@@ -184,6 +184,7 @@ interface TrackedRequest<T> {
   reservedCostUsd?: number;
   serviceTier?: "flex" | "default";
   background?: boolean;
+  previousRequest?: ApiRequestUsage;
   acquire?: (signal?: AbortSignal) => Promise<() => void>;
   saveResult?: (data: T, request: ApiRequestUsage) => Promise<void>;
 }
@@ -196,7 +197,7 @@ function errorHeader(error: unknown, name: string): string | null {
   return headers instanceof Headers ? headers.get(name) : null;
 }
 
-function retryDelay(error: unknown, attempt: number): number {
+export function retryDelay(error: unknown, attempt: number): number {
   const header = errorHeader(error, "retry-after");
   if (header) {
     const seconds = Number(header);
@@ -210,6 +211,32 @@ function retryDelay(error: unknown, attempt: number): number {
   return 500 * 2 ** (attempt - 1);
 }
 
+export function requestAttemptLimit(serviceTier: string): number {
+  return serviceTier === "flex" ? 6 : 3;
+}
+
+function billingError(code?: string): boolean {
+  return [
+    "insufficient_quota",
+    "credit_balance_exhausted",
+    "organization_spend_limit_exceeded",
+    "project_spend_limit_exceeded",
+    "organization_usage_limit_exceeded",
+  ].includes(code ?? "");
+}
+
+export function retryableHttpRequest(
+  request: Pick<ApiRequestUsage, "httpStatus" | "errorCode">,
+): boolean {
+  return (
+    !billingError(request.errorCode) &&
+    (request.httpStatus === 408 ||
+      request.httpStatus === 409 ||
+      request.httpStatus === 429 ||
+      (request.httpStatus !== undefined && request.httpStatus >= 500))
+  );
+}
+
 /** SDK retries are disabled at the call site so every HTTP attempt is recorded. */
 export async function trackedRequest<T>(
   options: TrackedRequest<T>,
@@ -219,12 +246,17 @@ export async function trackedRequest<T>(
     request_id: string | null;
   }>,
 ): Promise<T> {
-  const operationId = randomUUID();
+  const operationId = options.previousRequest?.operationId ?? randomUUID();
   const initialTier =
     options.serviceTier ?? (options.stage === "article" ? "auto" : "default");
   const useFlexFallback = options.stage === "article" && initialTier === "flex";
-  const maxAttempts = useFlexFallback ? 6 : 3;
-  for (let attempt = 1; ; attempt += 1) {
+  const maxAttempts =
+    options.stage === "article" ? requestAttemptLimit(initialTier) : 3;
+  const firstAttempt = (options.previousRequest?.attempt ?? 0) + 1;
+  if (firstAttempt > maxAttempts) {
+    throw new Error("API request retry limit reached");
+  }
+  for (let attempt = firstAttempt; ; attempt += 1) {
     options.signal?.throwIfAborted();
     const release = await options.acquire?.(options.signal);
     const started = Date.now();
@@ -238,6 +270,7 @@ export async function trackedRequest<T>(
       chunkNumber: options.chunkNumber,
       requestedModel: options.model,
       requestedServiceTier: serviceTier,
+      initialServiceTier: initialTier,
       endpointRegion: options.region,
       startedAt: new Date(started).toISOString(),
       status: "pending",
@@ -287,6 +320,15 @@ export async function trackedRequest<T>(
               : undefined;
         request.responseStatus =
           typeof data.status === "string" ? data.status : undefined;
+        const responseError = object(data.error);
+        request.errorCode =
+          typeof responseError.code === "string"
+            ? responseError.code
+            : undefined;
+        request.errorMessage =
+          typeof responseError.message === "string"
+            ? responseError.message
+            : undefined;
         request.usage = usageMetrics(data.usage);
         request.audioSeconds =
           count(object(data.usage).seconds) ?? count(data.duration);
@@ -306,16 +348,13 @@ export async function trackedRequest<T>(
       }
       request.cost = estimateApiCost(request);
       await options.record?.(request);
-      const status = request.httpStatus;
       const retryHeader = errorHeader(failure, "x-should-retry");
       const retryable =
-        retryHeader === "true" ||
-        (retryHeader !== "false" &&
-          (failure instanceof OpenAI.APIConnectionError ||
-            status === 408 ||
-            status === 409 ||
-            status === 429 ||
-            (status !== undefined && status >= 500)));
+        !billingError(request.errorCode) &&
+        (retryHeader === "true" ||
+          (retryHeader !== "false" &&
+            (failure instanceof OpenAI.APIConnectionError ||
+              retryableHttpRequest(request))));
       if (
         request.status === "aborted" ||
         attempt >= maxAttempts ||
