@@ -1310,6 +1310,7 @@ async function generateArticle(
     (request) => recordApiUsage(username, job, request),
     {
       state: job.backgroundArticle,
+      requests: job.apiUsage?.requests,
       repairs: job.articleQuoteRepairs,
       saveRepair: async (index, state) => {
         const repairs = [...(job.articleQuoteRepairs ?? [])];

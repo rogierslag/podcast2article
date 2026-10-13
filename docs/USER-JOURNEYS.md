@@ -95,6 +95,8 @@ Active jobs also appear in the library, with source metadata loaded separately.
 Three media/transcription slots and three separate article slots process jobs concurrently while media preparation stays serial.
 Usage attempts and known cost estimates are stored per job.
 Article generation starts with Flex and falls back to standard processing after three transient failures, with at most three further attempts.
+HTTP errors and recognized transient background failures share that limit for article generation and quote repair; pending remote work keeps its existing response ID.
+Billing errors and ambiguous replacement submissions stop visibly without automatic paid retries.
 The [4 October cost evaluation](API-COST-EVALUATION.md) reports costs and latency for 14 production Flex jobs, a six-transcript model screen, and a forty-draft prompt comparison supporting the 6.1 Sol default with the existing prompt.
 Pricing scenarios remain estimates, and Codex grading does not establish production equivalence.
 Budget checks may stop retries before fallback.

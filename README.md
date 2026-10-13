@@ -165,8 +165,10 @@ The same model and effort apply to new quote-repair requests.
 `ARTICLE_MODEL` overrides the default; other models retain their existing reasoning behavior.
 Existing deployments that pin a model must update their environment setting to select 6.1 Sol.
 Transient failures (including capacity errors and timeouts) receive up to three Flex attempts, then up to three standard-processing attempts with `service_tier: "default"`.
+HTTP failures and recognized transient background failures share this attempt limit, including quote repairs.
+Background retries require a confirmed `failed` response with a server, overload, capacity, or rate-limit error code; unknown errors, cancellations, and incomplete output stop without a new submission.
 Retries use exponential backoff and respect provider retry headers.
-Cancellation and permanent errors stop immediately.
+Cancellation and permanent errors stop immediately, including HTTP 429 responses that identify exhausted credits or spend/usage limits.
 Set `ARTICLE_SERVICE_TIER=default` to use standard processing from the first attempt.
 Transcription retains its existing three-attempt policy.
 Each article submission uses `OPENAI_ARTICLE_TIMEOUT_MS` (10 minutes by default); background generation continues independently and is polled until a terminal status is received.

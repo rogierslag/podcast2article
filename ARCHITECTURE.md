@@ -361,7 +361,11 @@ Each new job has an `apiUsage` ledger.
 The OpenAI boundary persists a pending attempt before sending and its usage immediately after receiving a response, before article parsing and validation.
 Each automatic retry is a separate attempt under the same operation ID; SDK retries are disabled to avoid invisible attempts.
 Article generation defaults to explicit `flex`: three attempts on transient failures, followed by up to three explicit `default` attempts.
-All six share an operation ID.
+HTTP submission failures and recognized transient terminal background failures share this limit and operation ID.
+Article generation and quote repair use the same background request helper, which retains the original model and tier policy when resuming a saved response.
+A new response replaces only a confirmed transient `failed` response; pending responses continue polling, and incomplete, cancelled, permanent, or unknown failures stop.
+Saved response checkpoints retain the attempt number, initial tier, provider error code/message, and incomplete-output reason.
+Polling and backoff do not hold deployment admission; every replacement submission reacquires it and checks the budget.
 `ARTICLE_SERVICE_TIER=default` disables Flex and permits three standard attempts.
 Transcription retains three attempts.
 The wrapper honors retry headers and exponential backoff; permanent errors and shutdown cancellation stop without fallback.
@@ -369,7 +373,8 @@ The per-attempt background submission timeout and budget checks apply to both ti
 A successful response that fails article validation is not retried here.
 
 The ledger stores numeric usage counters, reported audio duration, requested and actual model/tier, request IDs, timestamps, and HTTP outcomes.
-It excludes prompts, response text, credentials, and error bodies.
+It excludes prompts, generated response text, credentials, and full error bodies.
+Terminal background error codes and messages are retained for owner-only diagnosis.
 Job writes are serialized to prevent progress updates from overwriting accounting records.
 Article retries and restart recovery preserve the ledger.
 A hard stop leaves pending attempts with unknown cost.
