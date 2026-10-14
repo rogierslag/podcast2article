@@ -896,20 +896,8 @@ audio {
   border-bottom: 1px solid var(--line);
   scroll-margin-top: 20px;
 }
-.segment.flash {
-  animation: flash 2.5s;
-}
 .segment[hidden] {
   display: none;
-}
-@keyframes flash {
-  0%,
-  35% {
-    background: var(--transcript-flash);
-  }
-  100% {
-    background: transparent;
-  }
 }
 .timestamp {
   border: 0;
@@ -2153,7 +2141,6 @@ footer {
     animation: none;
     color: var(--accent-text);
   }
-  .segment.flash,
   .processing-wave i {
     animation: none;
   }

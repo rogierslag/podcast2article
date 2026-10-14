@@ -337,10 +337,6 @@ export const messages: Record<string, Record<UiLanguage, string>> = {
     nl: "Verder waar je gebleven was",
     en: "Pick up where you left off",
   },
-  "readingPosition.resumeLabel": {
-    nl: "Ga verder waar je gebleven was",
-    en: "Continue reading where you left off",
-  },
   "duplicate.openArticle": {
     nl: "Open bestaand artikel →",
     en: "Open existing article →",
@@ -1435,10 +1431,6 @@ export const messages: Record<string, Record<UiLanguage, string>> = {
   "overview.processing": {
     nl: "In verwerking",
     en: "In progress",
-  },
-  "overview.noProcessing": {
-    nl: "Er wordt op dit moment niets verwerkt.",
-    en: "Nothing is being processed right now.",
   },
   "overview.noArticles": {
     nl: "0 artikelen",

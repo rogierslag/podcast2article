@@ -98,7 +98,7 @@ These checks address [Label in Name](https://www.w3.org/WAI/WCAG22/Understanding
 
 ## Regression coverage
 
-`scripts/accessibility.node-test.mjs` checks the relevant text, placeholder, highlight, and control-boundary color combinations.
+`scripts/accessibility.node-test.mjs` checks the relevant text, placeholder, and control-boundary color combinations.
 The focused node tests passed during this review.
 
 `scripts/browser/accessibility.browser.mjs` covers both languages and themes, repeated article actions through state changes, login version opacity, numbered cover names, owner/shared continuation names and keyboard destinations, and 320px reflow with increased text spacing.
