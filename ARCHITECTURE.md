@@ -62,6 +62,8 @@ The VPS performs source resolution, download, audio normalization, chunking, orc
 ### 3.1 Browser interface
 
 The browser interface consists of static HTML, CSS, images, and vanilla TypeScript under `public/`.
+Owner and anonymous readers share pure HTML renderers in `public/article-render.ts` for article content, source attribution, and contents links.
+The renderer accepts only the citation IDs and timestamps it needs; each page supplies its byline and citation target mode and retains its own audio, navigation, and reading-state behavior.
 The build compiles browser TypeScript and bundles the generated JavaScript with shared ESM chunks, minifies and prefixes CSS for the documented browser baseline, and rewrites generated HTML templates to content-hashed `/assets/` URLs.
 The compiled server serves manifest-listed JavaScript and CSS from `dist/client/` before authentication, negotiating precompressed Brotli/gzip files with immutable caching.
 The file-serving handler is registered directly on the main Express app after its global request limiter; the asset helper only loads and validates the catalog.
