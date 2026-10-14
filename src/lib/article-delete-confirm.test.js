@@ -41,7 +41,7 @@ function setup(language, confirmed) {
     clearTimeout: vi.fn(),
     readingPositionSaveTimer: undefined,
     pendingReadingSectionIndex: 1,
-    hideContinueReading: vi.fn(),
+    readingView: { hideContinuation: vi.fn() },
   };
   // Exercise the real handler without booting unrelated page event listeners.
   const remove = runInNewContext(
