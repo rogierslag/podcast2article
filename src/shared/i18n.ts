@@ -58,8 +58,60 @@ export const messages: Record<string, Record<UiLanguage, string>> = {
     en: "{count} of at most 5 unread or processing episodes",
   },
   "series.limitPaused": {
-    nl: "Automatisch gepauzeerd bij 5 afleveringen. Lees eerst artikelen of markeer ze als gelezen. Daarna kun je zelf hervatten.",
-    en: "Automatically paused at 5 episodes. Read articles or mark them as read, then resume when you are ready.",
+    nl: "Automatisch gepauzeerd bij 5 afleveringen. Lees artikelen of markeer ze als gelezen. De serie hervat automatisch bij de volgende controle zodra er ruimte is.",
+    en: "Automatically paused at 5 episodes. Read articles or mark them as read. The series resumes automatically on the next check once there is room.",
+  },
+  "series.backlog": {
+    nl: "Je loopt achter: {count} afleveringen wachten.",
+    en: "You’re falling behind: {count} episodes are waiting.",
+  },
+  "series.backlogOne": {
+    nl: "Je loopt achter: 1 aflevering wacht.",
+    en: "You’re falling behind: 1 episode is waiting.",
+  },
+  "series.missingEpisodes": {
+    nl: "Afleveringen zonder artikel",
+    en: "Episodes without an article",
+  },
+  "series.episodesLoading": {
+    nl: "Afleveringen ophalen…",
+    en: "Loading episodes…",
+  },
+  "series.episodesHelp": {
+    nl: "Gemiste afleveringen sinds je deze serie volgt, plus je opgeslagen inhaalkeuze. Een link vult Nieuw artikel in; je controleert de instellingen voordat je begint.",
+    en: "Missed episodes since you followed this series, plus your saved catch-up selection. A link fills in New article; review the settings before starting.",
+  },
+  "series.episodesEmpty": {
+    nl: "Er zijn geen niet-ingeplande afleveringen beschikbaar in deze periode.",
+    en: "No unscheduled episodes are available in this period.",
+  },
+  "series.episodesFeedUnavailable": {
+    nl: "De feed is niet beschikbaar. Hieronder staan alleen opgeslagen wachtende afleveringen.",
+    en: "The feed is unavailable. Only saved waiting episodes are shown below.",
+  },
+  "series.episodesRetry": {
+    nl: "Probeer afleveringen opnieuw op te halen",
+    en: "Retry loading episodes",
+  },
+  "series.prepareEpisode": {
+    nl: "Vul Nieuw artikel in voor: {title}",
+    en: "Prepare New article for: {title}",
+  },
+  "series.episodePrefillLoading": {
+    nl: "De aflevering wordt nog gecontroleerd. Wacht even voordat je begint.",
+    en: "The episode is still being checked. Wait a moment before starting.",
+  },
+  "series.errorEpisodeUnavailable": {
+    nl: "Deze aflevering is al ingepland of niet meer beschikbaar. Controleer de serie opnieuw.",
+    en: "This episode is already scheduled or no longer available. Check the series again.",
+  },
+  "series.backlogHelp": {
+    nl: "Lees artikelen of markeer ze als gelezen om ruimte te maken. De oudste wachtende afleveringen worden eerst opgehaald.",
+    en: "Read articles or mark them as read to make room. The oldest waiting episodes are fetched first.",
+  },
+  "series.backlogManualHelp": {
+    nl: "Deze serie is handmatig gepauzeerd. Maak ruimte door artikelen te lezen en hervat wanneer je wilt. De oudste wachtende afleveringen worden eerst opgehaald.",
+    en: "This series is manually paused. Make room by reading articles, then resume when you are ready. The oldest waiting episodes are fetched first.",
   },
   "series.errorLimit": {
     nl: "De serie zit aan de grens van 5 ongelezen of nog te verwerken afleveringen. Lees eerst artikelen voordat je verdergaat.",
@@ -139,8 +191,8 @@ export const messages: Record<string, Record<UiLanguage, string>> = {
   },
   "series.following": { nl: "Gevolgde series", en: "Following" },
   "series.schedule": {
-    nl: "Nieuwe afleveringen worden elk uur gecontroleerd zolang de server draait. Bij 5 ongelezen of nog te verwerken afleveringen pauzeert de serie. Hervatten gaat nooit over die grens.",
-    en: "New episodes are checked hourly while the server is running. The series pauses at 5 unread or processing episodes. Resuming respects the same limit.",
+    nl: "Nieuwe afleveringen worden elk uur gecontroleerd zolang de server draait, ook bij een automatische pauze. Bij 5 ongelezen of nog te verwerken afleveringen stopt het inplannen. Gemiste afleveringen wachten tot er ruimte is en worden van oud naar nieuw opgehaald.",
+    en: "New episodes are checked hourly while the server is running, including during an automatic pause. Scheduling stops at 5 unread or processing episodes. Missed episodes wait for room and are fetched oldest first.",
   },
   "series.articles": {
     nl: "Bekijk artikelen en voortgang →",

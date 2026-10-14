@@ -65,6 +65,8 @@ const diagnostics = {
   "series.errorDuplicate": "series.errorDuplicate",
   "series.errorLimit": "series.errorLimit",
   "series.errorNoHistory": "series.errorNoHistory",
+  "series.errorEpisodeUnavailable": "series.errorEpisodeUnavailable",
+  "series.errorCheck": "series.errorCheck",
   "error.youtubeLinkRequired": "Plak een publieke YouTube-videolink.",
   "error.youtubeTitleMissing": "YouTube gaf geen titel voor deze video terug.",
   "error.youtubePrivate": "Deze YouTube-video is niet openbaar beschikbaar.",

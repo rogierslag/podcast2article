@@ -4,6 +4,7 @@ import {
   seriesPreviewSchema,
   seriesCandidateSchema,
   subscriptionSummarySchema,
+  seriesEpisodeListSchema,
 } from "../src/shared/api.js";
 import { requiredElement } from "./dom.js";
 import {
@@ -26,6 +27,91 @@ const statusMessage = requiredElement("#series-status", HTMLElement);
 const backfillSelect = requiredElement("#series-backfill", HTMLSelectElement);
 let preview: z.infer<typeof seriesPreviewSchema> | undefined;
 let busy = false;
+const expandedEpisodeLists = new Set<string>();
+const episodeLists = new Map<
+  string,
+  { loadedAt: number; result: z.infer<typeof seriesEpisodeListSchema> }
+>();
+
+function episodeQuickLinks(subscriptionId: string) {
+  const details = element("details", "", "series-episodes");
+  const summary = element("summary", t("series.missingEpisodes"));
+  const content = element("div");
+  details.append(summary, content);
+  async function loadEpisodes(force = false) {
+    content.replaceChildren(element("p", t("series.episodesLoading")));
+    try {
+      const cached = episodeLists.get(subscriptionId);
+      const result =
+        !force && cached && Date.now() - cached.loadedAt < 60000
+          ? cached.result
+          : seriesEpisodeListSchema.parse(
+              await api(
+                `/api/subscriptions/${encodeURIComponent(subscriptionId)}/episodes`,
+              ),
+            );
+      episodeLists.set(subscriptionId, { loadedAt: Date.now(), result });
+      content.replaceChildren(
+        element("p", t("series.episodesHelp"), "series-hint"),
+      );
+      if (!result.feedAvailable) {
+        content.append(
+          element("p", t("series.episodesFeedUnavailable"), "error"),
+        );
+      }
+      if (!result.episodes.length) {
+        content.append(element("p", t("series.episodesEmpty")));
+        return;
+      }
+      const list = element("ol");
+      for (const episode of result.episodes) {
+        const item = element("li");
+        const link = element("a", episode.title);
+        link.href = `/?${new URLSearchParams({ sourceUrl: episode.sourceUrl, seriesEpisode: `${subscriptionId}:${episode.key}` })}`;
+        link.setAttribute(
+          "aria-label",
+          t("series.prepareEpisode", { title: episode.title }),
+        );
+        item.append(link);
+        if (episode.publishedAt) {
+          const date = new Date(episode.publishedAt);
+          if (Number.isFinite(date.getTime())) {
+            const time = element(
+              "time",
+              date.toLocaleDateString(locale, { dateStyle: "medium" }),
+            );
+            time.dateTime = episode.publishedAt;
+            item.append(time);
+          }
+        }
+        list.append(item);
+      }
+      content.append(list);
+    } catch (error) {
+      content.replaceChildren(element("p", errorText(error), "error"));
+      const retry = element(
+        "button",
+        t("series.episodesRetry"),
+        "series-control",
+      );
+      retry.type = "button";
+      retry.addEventListener("click", () => {
+        void loadEpisodes(true);
+      });
+      content.append(retry);
+    }
+  }
+  details.open = expandedEpisodeLists.has(subscriptionId);
+  details.addEventListener("toggle", () => {
+    if (details.open) {
+      expandedEpisodeLists.add(subscriptionId);
+      void loadEpisodes();
+    } else {
+      expandedEpisodeLists.delete(subscriptionId);
+    }
+  });
+  return details;
+}
 
 async function api(
   url: string,
@@ -271,6 +357,39 @@ async function refresh() {
           element("p", t("series.limitPaused"), "series-limit-note"),
         );
       }
+      if (
+        subscription.pendingCount > 0 &&
+        (subscription.paused ||
+          subscription.pendingCount > Math.max(0, 5 - subscription.outstanding))
+      ) {
+        const warning = element("div", "", "series-backlog");
+        warning.append(
+          element(
+            "p",
+            t(
+              subscription.pendingCount === 1
+                ? "series.backlogOne"
+                : "series.backlog",
+              { count: subscription.pendingCount },
+            ),
+            "series-backlog-title",
+          ),
+          element(
+            "p",
+            t(
+              subscription.paused && subscription.pauseReason !== "limit"
+                ? "series.backlogManualHelp"
+                : "series.backlogHelp",
+            ),
+          ),
+        );
+        const articles = element("a", t("series.articles"));
+        articles.href = "/articles";
+        const action = element("p");
+        action.append(articles);
+        warning.append(action);
+        content.append(warning);
+      }
       if (subscription.checkedAt) {
         content.append(
           element(
@@ -306,6 +425,7 @@ async function refresh() {
         paragraph.append(link);
         content.append(paragraph);
       }
+      content.append(episodeQuickLinks(subscription.id));
       const button = element(
         "button",
         t(subscription.paused ? "series.resume" : "series.pause"),

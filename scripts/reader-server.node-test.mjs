@@ -542,11 +542,26 @@ test("shared reader assets are public while owner routes require authentication"
     "/api/subscriptions",
     "/api/subscriptions/article/00000000-0000-4000-8000-000000000931",
     "/api/subscriptions/preview",
+    "/api/subscriptions/00000000-0000-4000-8000-000000000771/episodes",
+    "/api/subscriptions/00000000-0000-4000-8000-000000000771/episodes/episode-14",
     "/api/jobs",
     `/api/jobs/${articleId}/audio`,
   ]) {
     assert.equal((await fetch(origin + route)).status, 401, route);
   }
+  assert.equal(
+    (
+      await fetch(
+        `${origin}/api/subscriptions/00000000-0000-4000-8000-000000000771/episodes/episode-14`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ language: "en", articleLength: "compact" }),
+        },
+      )
+    ).status,
+    401,
+  );
 });
 
 test("TypeScript sources cannot be fetched through public or owner asset routes", async () => {

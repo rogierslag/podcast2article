@@ -3,9 +3,41 @@ import {
   prefillDestination,
   sourcePrefill,
   sharedSourcePrefill,
+  seriesEpisodePrefill,
 } from "../shared/source-prefill.js";
 
 describe("incoming source links", () => {
+  it("accepts only a bounded series episode reference", () => {
+    const id = "00000000-0000-4000-8000-000000000771";
+    expect(seriesEpisodePrefill(`${id}:episode-1`)).toEqual({
+      subscriptionId: id,
+      episodeKey: "episode-1",
+    });
+    for (const hash of [
+      "other:one",
+      `${id}:../private`,
+      `${id}:javascript:alert(1)`,
+      `${id}:${"a".repeat(201)}`,
+    ]) {
+      expect(seriesEpisodePrefill(hash)).toBeUndefined();
+    }
+  });
+  it("keeps a validated episode reference through login without allowing an arbitrary destination", () => {
+    const reference = "00000000-0000-4000-8000-000000000771:episode-1";
+    const destination = prefillDestination(
+      "https://example.com/episode",
+      "/login",
+      reference,
+    );
+    expect(
+      new URL(destination, "https://reads.example").searchParams.get(
+        "seriesEpisode",
+      ),
+    ).toBe(reference);
+    expect(
+      prefillDestination(undefined, "/login", "https://evil.example"),
+    ).toBe("/login");
+  });
   it("round-trips nested URL parameters through login without treating them as navigation", () => {
     const source =
       'https://open.spotify.com/episode/example?si=abc&title="test"#chapter';

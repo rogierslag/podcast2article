@@ -437,8 +437,19 @@ Each new processing job uses the configured paid transcription and article model
 The server checks active series at startup and every hour after that.
 It must keep running; no external cron job is required.
 The queue has three media/transcription slots and three separate article slots, while media preparation remains serial.
-**Pause** stops new checks; jobs already in the processing queue still complete.
+**Pause** stops new checks when chosen manually; jobs already in the processing queue still complete.
 **Resume** also retrieves episodes missed during the pause, provided they are still in the feed.
+Missed episodes are scheduled oldest first, filling only the available slots.
+The remaining detected episodes are saved and processed before newly discovered episodes, including after a restart or removal from the feed.
+During an automatic limit pause, feed checks continue to save newly discovered episodes without scheduling paid processing.
+Series management warns when episodes are waiting beyond the available capacity, shows the saved backlog count and links to articles so you can make room.
+The count reflects the last successful check, not a live count of the publisher's feed.
+Expand **Episodes without an article** in a followed series to see saved waiting episodes and unscheduled releases since following began, rather than older archive entries.
+The list checks the current feed on demand, excludes episodes already completed or processing in your account, and falls back to saved waiting entries when the feed is unavailable.
+Each episode title is a quick link to **New article**, with its source and the series' saved language and article length filled in.
+Review those settings and submit explicitly; opening the list or a quick link never starts paid work.
+RSS quick links use authenticated, server-resolved episode metadata when submitted and respect the same five-episode capacity limit.
+A manually paused series stays paused after submitting a single reviewed episode.
 
 Series, skipped episodes, and episodes awaiting scheduling are stored per user in `data/users/<username>/subscriptions.json`.
 This state is saved atomically and survives restarts.
@@ -462,7 +473,7 @@ Feeds use the same public-network checks as other sources, with a 10 MB limit; D
 Catch-up only offers episodes still in the feed's latest three, within the remaining capacity.
 It never walks backward through the archive.
 New feed entries published before you followed are excluded from automatic processing.
-For undated entries, only entries before a previously seen episode in feed order are treated as new; when there is no known episode to compare against, they are not scheduled automatically.
+For undated entries, only entries before a previously seen or saved pending episode in feed order are treated as new; when there is no known episode to compare against, they are not scheduled automatically.
 
 A series pauses automatically at five unread, queued, or processing episodes.
 Read, deleted, and failed jobs do not count.

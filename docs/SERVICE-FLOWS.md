@@ -112,22 +112,25 @@ flowchart TD
     Paused -->|Yes| Skip["Skip automatic processing"]
     Paused -->|No| AutoLimit{"Limit-paused?"}
     AutoLimit -->|Yes| Capacity{"Below 5 outstanding?"}
-    Capacity -->|No| Skip
+    Capacity -->|No| Available
     Capacity -->|Yes| Resume["Persist resumed subscription"]
     Resume --> Available
     AutoLimit -->|No| Available{"Processing available?"}
     Available -->|No| Error["Save error<br/>Keep pending episodes"]
     Available -->|Yes| Limit{"5 outstanding articles?"}
     Limit -->|Yes| Pause["Persist pause with limit reason"]
+    Pause --> Feed
     Limit -->|No| Pending["Drain saved backlog<br/>within limit"]
     Pending --> Room{"Still unpaused<br/>and check has room?"}
-    Room -->|No| Done["Wait for next check or owner action"]
+    Room -->|No| Feed
     Room -->|Yes| Feed["Fetch feed<br/>Find new episodes"]
-    Feed --> Save["Save pending episodes<br/>and check time"]
-    Save --> Enqueue["Enqueue within<br/>remaining allowance"]
+    Feed --> Save["Append unseen episodes<br/>Keep saved backlog and check time"]
+    Save --> Scheduling{"Unpaused and check has room?"}
+    Scheduling -->|Yes| Enqueue["Enqueue within<br/>remaining allowance"]
+    Scheduling -->|No| Done["Wait for next check or owner action"]
     Enqueue --> Commit["Save each job ID<br/>and seen episode key"]
     Commit --> EndLimit{"5 outstanding articles?"}
-    EndLimit -->|Yes| Pause
+    EndLimit -->|Yes| Done
     EndLimit -->|No| Done
     Feed -.->|Fetch failure| Error
     Pending -.->|Enqueue failure or budget exhausted| Error
@@ -137,9 +140,18 @@ flowchart TD
 Outstanding means active jobs plus unread completed articles for the series; failed and deleted jobs do not count.
 When capacity drops below five, a series paused at the limit resumes automatically on the next startup, hourly, or API-requested check.
 Manual pauses remain in effect until the owner explicitly resumes.
+Limit-paused series continue checking the feed and saving newly discovered episodes, without scheduling paid processing while capacity is full.
+The series page warns when saved waiting episodes exceed available capacity and links to articles so the reader can make room.
+The waiting count reflects the last successful check; manually paused series with saved waiting episodes also show a warning but do not fetch new entries.
 Episode identity deduplication prevents a crash between job creation and subscription persistence from creating the same job again.
 New-episode selection checks publication time against the follow date, or feed order relative to known episodes when dates are missing.
+Newly detected episodes are scheduled oldest first, reversing the feed's newest-first order.
+Detected episodes beyond the available capacity remain persisted and are scheduled before newly discovered entries, even if they have since left the feed.
 Explicit catch-up can process selected archive entries without clearing a manual pause.
+The episode quick-link inventory explicitly reads the current feed and merges unscheduled releases since following began with saved pending selections; it does not mutate subscription state or enqueue work.
+Completed and active matching episode sources are excluded within the owner's account, and feed outages leave saved waiting entries available with a warning that the inventory is incomplete.
+Quick links prefill the source and saved series options in **New article**, including through sign-in.
+Only explicit submission schedules the selected episode, using server-resolved metadata and the same serialized capacity checks; it removes that entry from pending, records its key and job ID, and preserves a manual pause.
 
 Sources: [subscription store](../src/services/subscriptions.ts), [subscription routes](../src/services/subscription-routes.ts), and [podcast job creation and outstanding counts](../src/services/jobs.ts).
 

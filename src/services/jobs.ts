@@ -413,6 +413,26 @@ export function podcastJobStatus(username: string, ids: string[]) {
   };
 }
 
+export function unscheduledPodcastEpisodes(
+  username: string,
+  episodes: PodcastEpisode[],
+): PodcastEpisode[] {
+  userDirectory(username);
+  const jobs = [...memory.entries()]
+    .filter(([key]) => key.startsWith(`${username}/`))
+    .map(([, job]) => job);
+  return episodes.filter(
+    (item) =>
+      !jobs.some(
+        (job) =>
+          job.stage !== "failed" &&
+          (job.podcastEpisodeKey === item.key ||
+            job.episode?.mediaUrl === item.episode.mediaUrl ||
+            job.sourceUrl === item.episode.sourceUrl),
+      ),
+  );
+}
+
 async function getStoredJob(
   username: string,
   id: string,

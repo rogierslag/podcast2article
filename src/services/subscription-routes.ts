@@ -8,7 +8,11 @@ import { requestLanguage, translateDomainError } from "../lib/i18n.js";
 import type { PodcastFeed } from "../types.js";
 import { discoverPodcastFeeds, fetchPodcastFeed } from "./podcast-feeds.js";
 import { findEpisodeFeed } from "./resolver.js";
-import { getJob, podcastJobStatus } from "./jobs.js";
+import {
+  getJob,
+  podcastJobStatus,
+  unscheduledPodcastEpisodes,
+} from "./jobs.js";
 import type { SubscriptionStore } from "./subscriptions.js";
 
 export function subscriptionRouter(store: SubscriptionStore) {
@@ -82,6 +86,69 @@ export function subscriptionRouter(store: SubscriptionStore) {
         ? { id: subscription.id, paused: subscription.paused }
         : null,
     });
+  });
+  router.get("/:id/episodes", async (request, response) => {
+    const id = z.string().uuid().parse(request.params.id);
+    const { episodes, feedAvailable } = await store.availableEpisodes(
+      ownerUsername(response),
+      id,
+    );
+    response.json({
+      feedAvailable,
+      episodes: unscheduledPodcastEpisodes(
+        ownerUsername(response),
+        episodes,
+      ).map(({ key, episode }) => ({
+        key,
+        title: episode.title,
+        sourceUrl: episode.sourceUrl,
+        publishedAt: episode.publishedAt,
+      })),
+    });
+  });
+  router.get("/:id/episodes/:key", async (request, response) => {
+    const id = z.string().uuid().parse(request.params.id);
+    const key = z
+      .string()
+      .regex(/^[a-zA-Z0-9_-]{1,200}$/)
+      .parse(request.params.key);
+    const { episodes, subscription, feedAvailable } =
+      await store.availableEpisodes(ownerUsername(response), id);
+    const selected = unscheduledPodcastEpisodes(
+      ownerUsername(response),
+      episodes,
+    ).find((episode) => episode.key === key);
+    if (!selected) {
+      throw new DomainError(
+        feedAvailable ? "series.errorEpisodeUnavailable" : "series.errorCheck",
+      );
+    }
+    response.json({
+      sourceUrl: selected.episode.sourceUrl,
+      title: selected.episode.title,
+      language: subscription.language,
+      articleLength: subscription.articleLength,
+    });
+  });
+  router.post("/:id/episodes/:key", async (request, response) => {
+    const id = z.string().uuid().parse(request.params.id);
+    const key = z
+      .string()
+      .regex(/^[a-zA-Z0-9_-]{1,200}$/)
+      .parse(request.params.key);
+    const options = z
+      .object({
+        language: z.enum(["auto", "nl", "en", "de", "fr", "es"]),
+        articleLength: z.enum(["compact", "standard", "long"]),
+      })
+      .parse(request.body);
+    const job = await store.scheduleEpisode(
+      ownerUsername(response),
+      id,
+      key,
+      options,
+    );
+    response.status(202).json({ id: job.id });
   });
   router.post("/discover", async (request, response) => {
     const input = urlSchema.parse(request.body);

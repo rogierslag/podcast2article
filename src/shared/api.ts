@@ -215,6 +215,23 @@ export const articleSeriesSchema = z.object({
   feedUrl: z.string(),
   subscription: z.nullable(z.object({ id: z.string(), paused: z.boolean() })),
 });
+export const seriesEpisodeListSchema = z.object({
+  feedAvailable: z.boolean(),
+  episodes: z.array(
+    z.object({
+      key: z.string(),
+      title: z.string(),
+      sourceUrl: z.string(),
+      publishedAt: z.optional(z.string()),
+    }),
+  ),
+});
+export const seriesEpisodePrefillSchema = z.object({
+  sourceUrl: z.string(),
+  title: z.string(),
+  language: z.enum(["auto", "nl", "en", "de", "fr", "es"]),
+  articleLength: z.enum(["compact", "standard", "long"]),
+});
 /** JSON is untrusted even when it comes from our own API. */
 export async function responseData<T>(
   response: Response,

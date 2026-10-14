@@ -14,6 +14,214 @@ const preview = {
     { title: "De stille revolutie in onze batterijen" },
   ],
 };
+for (const language of ["nl", "en"]) {
+  test(`series: episode quick links prefill New article and wait for review in ${language}`, async ({
+    page,
+  }, testInfo) => {
+    const sourceUrl =
+      "https://example.com/podcast/why-we-sleep?episode=14&from=rss";
+    let submissions = 0;
+    const episodeEndpoint = `**/api/subscriptions/${previewId}/episodes/episode-14`;
+    await page.route("**/api/subscriptions", (route) =>
+      route.fulfill({
+        json: [
+          {
+            id: previewId,
+            title: "The Science of Everyday Life",
+            paused: true,
+            pauseReason: "limit",
+            complete: 5,
+            processing: 0,
+            outstanding: 5,
+            pendingCount: 2,
+            archiveCount: 0,
+            failed: [],
+          },
+        ],
+      }),
+    );
+    await page.route(`**/api/subscriptions/${previewId}/episodes`, (route) =>
+      route.fulfill({
+        json: {
+          feedAvailable: language === "en",
+          episodes: [
+            {
+              key: "episode-14",
+              title: "Why we sleep: a conversation about memory and attention",
+              sourceUrl,
+              publishedAt: "2026-10-10T12:00:00Z",
+            },
+            {
+              key: "episode-15",
+              title:
+                language === "nl"
+                  ? '<img src=x onerror="window.injected=true">'
+                  : "What the North Sea tells us about a changing climate",
+              sourceUrl: "https://example.com/next",
+              publishedAt: "2026-10-11T12:00:00Z",
+            },
+          ],
+        },
+      }),
+    );
+    await page.route(episodeEndpoint, (route) => {
+      if (route.request().method() === "POST") {
+        submissions += 1;
+        expect(route.request().postDataJSON()).toMatchObject({
+          sourceUrl,
+          language: "en",
+          articleLength: "compact",
+        });
+        return route.fulfill({
+          status: 400,
+          json: { error: "Read articles before continuing." },
+        });
+      }
+      return route.fulfill({
+        json: {
+          title: "Why we sleep",
+          sourceUrl,
+          language: "en",
+          articleLength: "compact",
+        },
+      });
+    });
+    await page.goto("/series");
+    await page.locator(`[data-ui-language="${language}"]`).click();
+    const details = page.locator(".series-episodes");
+    await details.locator("summary").click();
+    const link = details.getByRole("link").first();
+    await expect(link).toHaveText(
+      "Why we sleep: a conversation about memory and attention",
+    );
+    await expect(details.locator("img")).toHaveCount(0);
+    if (language === "nl") {
+      await expect(details).toContainText(
+        "Hieronder staan alleen opgeslagen wachtende afleveringen.",
+      );
+    }
+    expect(await page.evaluate(() => window.injected)).toBeUndefined();
+    await link.focus();
+    await expect(link).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    if (language === "en") {
+      await page.screenshot({
+        path: `/tmp/p2a-backlog-media/${testInfo.project.name}-quick-links.png`,
+        fullPage: true,
+      });
+      await page.emulateMedia({ colorScheme: "dark" });
+      await page.screenshot({
+        path: `/tmp/p2a-backlog-media/${testInfo.project.name}-quick-links-dark.png`,
+        fullPage: true,
+      });
+      await page.emulateMedia({ colorScheme: "light" });
+    }
+
+    await link.press("Enter");
+
+    await expect(page.locator("#source-url")).toHaveValue(sourceUrl);
+    await expect(page.locator("#job-form [name=language]")).toHaveValue("en");
+    await expect(page.locator("#job-form [name=articleLength]")).toHaveValue(
+      "compact",
+    );
+    await expect(page.locator("#source-prefill-note")).toBeVisible();
+    expect(submissions).toBe(0);
+    if (language === "en") {
+      await page.screenshot({
+        path: `/tmp/p2a-backlog-media/${testInfo.project.name}-episode-prefill.png`,
+        fullPage: true,
+      });
+    }
+    await page.locator("#job-form button[type=submit]").click();
+    await expect(page.locator("#form-error")).toHaveText(
+      "Read articles before continuing.",
+    );
+    expect(submissions).toBe(1);
+  });
+}
+for (const language of ["nl", "en"]) {
+  test(`series: backlog warning reflects capacity and pause state in ${language}`, async ({
+    page,
+  }, testInfo) => {
+    let subscription = {
+      id: previewId,
+      title: "The Science of Everyday Life",
+      paused: true,
+      pauseReason: "limit",
+      complete: 5,
+      processing: 0,
+      outstanding: 5,
+      pendingCount: 10,
+      archiveCount: 0,
+      checkedAt: "2026-10-13T12:00:00Z",
+      failed: [],
+    };
+    await page.route("**/api/subscriptions", (route) =>
+      route.fulfill({ json: [subscription] }),
+    );
+    await page.goto("/series");
+    await page.locator(`[data-ui-language="${language}"]`).click();
+
+    const warning = page.locator(".series-backlog");
+    await expect(warning).toContainText(
+      language === "nl"
+        ? "Je loopt achter: 10 afleveringen wachten."
+        : "You’re falling behind: 10 episodes are waiting.",
+    );
+    await expect(warning).toContainText(
+      language === "nl"
+        ? "De oudste wachtende afleveringen worden eerst opgehaald."
+        : "The oldest waiting episodes are fetched first.",
+    );
+    await expect(warning.getByRole("link")).toHaveAttribute(
+      "href",
+      "/articles",
+    );
+    await warning.getByRole("link").focus();
+    await expect(warning.getByRole("link")).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    if (language === "en") {
+      await page.screenshot({
+        path: `/tmp/p2a-backlog-media/${testInfo.project.name}-after.png`,
+        fullPage: true,
+      });
+      await page.emulateMedia({ colorScheme: "dark" });
+      await page.screenshot({
+        path: `/tmp/p2a-backlog-media/${testInfo.project.name}-dark.png`,
+        fullPage: true,
+      });
+      await page.emulateMedia({ colorScheme: "light" });
+    }
+
+    subscription = { ...subscription, pendingCount: 1 };
+    await page.reload();
+    await expect(warning).toContainText(
+      language === "nl" ? "1 aflevering wacht." : "1 episode is waiting.",
+    );
+    subscription = { ...subscription, pauseReason: undefined };
+    await page.reload();
+    await expect(warning).toContainText(
+      language === "nl" ? "handmatig gepauzeerd" : "manually paused",
+    );
+    subscription = { ...subscription, paused: false, outstanding: 4 };
+    await page.reload();
+    await expect(warning).toHaveCount(0);
+    subscription = { ...subscription, pendingCount: 2 };
+    await page.reload();
+    await expect(warning).toBeVisible();
+    subscription = { ...subscription, pendingCount: 0 };
+    await page.reload();
+    await expect(warning).toHaveCount(0);
+  });
+}
 test.beforeEach(async ({ page }) => {
   await page.route(/^https?:\/\/(?!127\.0\.0\.1:4317)/, (route) =>
     route.abort(),
@@ -21,6 +229,79 @@ test.beforeEach(async ({ page }) => {
   await page.request.post("/login", {
     form: { username: "regression", password },
   });
+});
+test("series: a failed episode inventory can be retried without starting work", async ({
+  page,
+}) => {
+  let attempts = 0;
+  await page.route("**/api/subscriptions", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: previewId,
+          title: "Public podcast",
+          paused: false,
+          complete: 0,
+          processing: 0,
+          outstanding: 0,
+          pendingCount: 0,
+          archiveCount: 0,
+          failed: [],
+        },
+      ],
+    }),
+  );
+  await page.route(`**/api/subscriptions/${previewId}/episodes`, (route) => {
+    attempts += 1;
+    return attempts === 1
+      ? route.fulfill({ status: 500, json: { error: "Feed unavailable" } })
+      : route.fulfill({ json: { feedAvailable: true, episodes: [] } });
+  });
+  await page.goto("/series");
+  await page.locator(".series-episodes summary").click();
+  await expect(page.locator(".series-episodes .error")).toHaveText(
+    "Feed unavailable",
+  );
+  await page.locator(".series-episodes button").click();
+  await expect(page.locator(".series-episodes")).toContainText(
+    "Er zijn geen niet-ingeplande afleveringen beschikbaar",
+  );
+  expect(attempts).toBe(2);
+});
+test("series: episode quick links survive login and do not submit automatically", async ({
+  page,
+  context,
+}) => {
+  await context.clearCookies();
+  const sourceUrl = "https://example.com/podcast/episode";
+  const seriesEpisode = `${previewId}:episode-14`;
+  await page.route(
+    `**/api/subscriptions/${previewId}/episodes/episode-14`,
+    (route) =>
+      route.fulfill({
+        json: {
+          title: "Episode 14",
+          sourceUrl,
+          language: "en",
+          articleLength: "compact",
+        },
+      }),
+  );
+  await page.goto(`/?${new URLSearchParams({ sourceUrl, seriesEpisode })}`);
+  await expect(page).toHaveURL(/\/login\?/);
+  await expect(page.locator("#username")).toBeFocused();
+  await page.locator("#username").fill("regression");
+  await page.locator("#password").fill(password);
+  await page.locator("button[type=submit]").click();
+
+  await expect(page.locator("#job-form [name=language]")).toHaveValue("en");
+  await expect(page.locator("#job-form [name=articleLength]")).toHaveValue(
+    "compact",
+  );
+  await expect(page.locator("#source-url")).toHaveValue(sourceUrl);
+  expect(new URL(page.url()).searchParams.get("seriesEpisode")).toBe(
+    seriesEpisode,
+  );
 });
 test("series: preview, backlog confirmation and pause/resume remain usable on desktop and mobile", async ({
   page,

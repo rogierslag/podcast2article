@@ -19,6 +19,9 @@ vi.mock("./resolver.js", () => ({ findEpisodeFeed: vi.fn() }));
 vi.mock("./jobs.js", () => ({
   getJob: vi.fn(),
   podcastJobStatus: vi.fn(() => ({ complete: 0, processing: 0, failed: [] })),
+  unscheduledPodcastEpisodes: vi.fn(
+    (_username: string, episodes: PodcastFeed["episodes"]) => episodes,
+  ),
 }));
 let server: Server;
 let base: string;
@@ -97,6 +100,111 @@ afterEach(async () => {
   vi.unstubAllEnvs();
 });
 describe("subscription API", () => {
+  it("returns only unscheduled episode summaries and prefills without starting paid work", async () => {
+    const subscription = await store.follow("alice", feed, "none", {
+      language: "en",
+      articleLength: "compact",
+    });
+    const fresh = {
+      key: "new",
+      episode: {
+        ...feed.episodes[0].episode,
+        title: "New episode",
+        sourceUrl: "https://example.com/new",
+        mediaUrl: "https://example.com/new.mp3",
+      },
+    };
+    vi.mocked(fetchPodcastFeed).mockResolvedValue({
+      ...feed,
+      episodes: [fresh, ...feed.episodes],
+    });
+
+    const listed = await (await request(`/${subscription.id}/episodes`)).json();
+    const prepared = await (
+      await request(`/${subscription.id}/episodes/new`)
+    ).json();
+
+    expect(listed).toEqual({
+      feedAvailable: true,
+      episodes: [
+        {
+          key: "new",
+          title: "New episode",
+          sourceUrl: "https://example.com/new",
+        },
+      ],
+    });
+    expect(prepared).toEqual({
+      title: "New episode",
+      sourceUrl: "https://example.com/new",
+      language: "en",
+      articleLength: "compact",
+    });
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(
+      (await request(`/${subscription.id}/episodes`, "GET", undefined, "bob"))
+        .status,
+    ).toBe(404);
+    expect(
+      (
+        await request(
+          `/${subscription.id}/episodes/new`,
+          "GET",
+          undefined,
+          "bob",
+        )
+      ).status,
+    ).toBe(404);
+  });
+  it("schedules server-resolved metadata only after explicit submission and excludes already scheduled episodes", async () => {
+    const subscription = await store.follow("alice", feed, "three", {
+      language: "en",
+      articleLength: "compact",
+    });
+    const body = {
+      language: "nl",
+      articleLength: "long",
+      episode: { mediaUrl: "http://localhost/private" },
+      sourceUrl: "http://localhost/private",
+    };
+    expect(
+      (await request(`/${subscription.id}/episodes/one`, "POST", body, "bob"))
+        .status,
+    ).toBe(404);
+
+    const submitted = await request(
+      `/${subscription.id}/episodes/one`,
+      "POST",
+      body,
+    );
+    const repeated = await request(
+      `/${subscription.id}/episodes/one`,
+      "POST",
+      body,
+    );
+
+    expect(submitted.status).toBe(202);
+    expect(repeated.status).toBe(400);
+    expect(enqueue).toHaveBeenCalledTimes(1);
+    expect(enqueue.mock.calls[0]?.[1].episode.mediaUrl).toBe(
+      feed.episodes[0].episode.mediaUrl,
+    );
+    expect(enqueue.mock.calls[0]?.[2]).toEqual({
+      language: "nl",
+      articleLength: "long",
+    });
+    expect(
+      (await (await request(`/${subscription.id}/episodes`)).json()).episodes,
+    ).toEqual([]);
+    expect(
+      (
+        await request(`/${subscription.id}/episodes/one`, "POST", {
+          language: "bad",
+          articleLength: "long",
+        })
+      ).status,
+    ).toBe(400);
+  });
   it("requires a server-owned preview scoped to the current account", async () => {
     const previewResponse = await request("/preview", "POST", {
       url: feed.url,
