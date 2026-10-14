@@ -1,10 +1,9 @@
+import { formatTimestamp as time } from "./article-format.js";
 import {
-  html,
-  escapeHtml,
-  formatTimestamp as time,
-  articleSectionId as slug,
-} from "./article-format.js";
-import type { ArticleParagraph, TranscriptSegment } from "../src/types.js";
+  renderArticle,
+  renderContents,
+  renderSourceAttribution,
+} from "./article-render.js";
 import type { SharedArticle } from "../src/shared/api.js";
 import {
   responseData,
@@ -13,7 +12,7 @@ import {
   readingPositionSchema,
 } from "../src/shared/api.js";
 import { requiredElement } from "./dom.js";
-import { t, countText, locale, localizedFetch } from "./localize.js";
+import { t, countText, language, localizedFetch } from "./localize.js";
 
 import { createShareTracker } from "./share-analytics.js";
 
@@ -285,152 +284,17 @@ pageScroll.addEventListener(
 );
 window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
 
-function sourceButtons(
-  ids: string[],
-  sources: Pick<TranscriptSegment, "id" | "start">[],
-) {
-  const buttons = ids
-    .map((id) => {
-      const source = sources.find((item) => item.id === id);
-      return source
-        ? html`
-            <button
-              class="source-link"
-              data-time="${source.start}"
-              aria-label="${escapeHtml(
-                t("source.listen", { time: time(source.start) }),
-              )}"
-              title="${escapeHtml(
-                t("source.listen", { time: time(source.start) }),
-              )}"
-            >
-              ${time(source.start)}
-            </button>
-          `
-        : "";
-    })
-    .filter(Boolean)
-    .join(" ");
-  return buttons ? html`<span class="sources">${buttons}</span>` : "";
-}
-
-function articleBlock(
-  block: ArticleParagraph,
-  sources: Pick<TranscriptSegment, "id" | "start">[],
-) {
-  if (block.kind === "quote") {
-    return html`
-      <blockquote>
-        <p>
-          ${escapeHtml(block.text)} ${sourceButtons(block.sources, sources)}
-        </p>
-      </blockquote>
-    `;
-  }
-  return html`
-    <p>${escapeHtml(block.text)} ${sourceButtons(block.sources, sources)}</p>
-  `;
-}
-
 function renderSharedArticle(shared: SharedArticle, token: string) {
   const { episode, article, sources } = shared;
-  const details = [
-    episode.publishedAt
-      ? new Date(episode.publishedAt).toLocaleDateString(locale, {
-          dateStyle: "long",
-        })
-      : "",
-    episode.durationSeconds
-      ? countText("duration", Math.round(episode.durationSeconds / 60))
-      : "",
-  ].filter(Boolean);
-  const sourceLabel =
-    episode.sourceType === "google-drive"
-      ? t("source.viewDrive")
-      : episode.sourceType === "youtube"
-        ? t("source.viewYoutube")
-        : episode.sourceType === "fathom"
-          ? t("source.viewFathom")
-          : episode.sourceType === "rss"
-            ? t("source.viewPodcast")
-            : t("source.viewSpotify");
-  $("#episode-hero").innerHTML = html`
-    ${
-      episode.imageUrl
-        ? html`
-            <img
-              class="source-attribution-image"
-              src="${escapeHtml(episode.imageUrl)}"
-              alt="${escapeHtml(t("source.image", { name: episode.sourceName }))}"
-            />
-          `
-        : ""
-    }
-    <div class="source-attribution-body">
-      <span class="source-attribution-publication"
-        >${escapeHtml(episode.sourceName)}</span
-      >
-      <p class="source-attribution-title">${escapeHtml(episode.title)}</p>
-      <p class="source-attribution-meta">
-        ${escapeHtml(details.join(" · "))}${details.length ? " · " : ""}
-        <a
-          href="${escapeHtml(episode.sourceUrl)}"
-          target="_blank"
-          rel="noreferrer"
-        >
-          ${sourceLabel}
-        </a>
-      </p>
-    </div>
-  `;
-  const sections = article.sections
-    .map((section, index) => {
-      const id = slug(section.heading, index);
-      return html`
-        <section>
-          <h2 id="${id}">${escapeHtml(section.heading)}</h2>
-          ${section.paragraphs
-            .map((paragraph) => articleBlock(paragraph, sources))
-            .join("")}
-        </section>
-      `;
-    })
-    .join("");
-  $("#article").innerHTML = html`
-    <h1>${escapeHtml(article.title)}</h1>
-    <p class="dek">${escapeHtml(article.dek)}</p>
-    <p class="byline">
-      ${escapeHtml(
-        t("shared.byline", {
-          reading: countText("reading", article.readingTimeMinutes),
-        }),
-      )}
-    </p>
-    ${sections}
-    <div class="takeaways">
-      <h2>${t("article.takeaways")}</h2>
-      <ul>
-        ${article.takeaways
-          .map(
-            (item) => html`
-              <li>
-                ${escapeHtml(item.text)} ${sourceButtons(item.sources, sources)}
-              </li>
-            `,
-          )
-          .join("")}
-      </ul>
-    </div>
-  `;
-  $("#toc").innerHTML = article.sections
-    .map(
-      (section, index) => html`
-        <a href="#${slug(section.heading, index)}">
-          ${escapeHtml(section.heading)}
-        </a>
-      `,
-    )
-    .join("");
+  $("#episode-hero").innerHTML = renderSourceAttribution(episode, language);
+  $("#article").innerHTML = renderArticle(article, sources, {
+    language,
+    citationMode: "time",
+    byline: t("shared.byline", {
+      reading: countText("reading", article.readingTimeMinutes),
+    }),
+  });
+  $("#toc").innerHTML = renderContents(article, (sectionId) => `#${sectionId}`);
   requiredElement("#audio", HTMLAudioElement).src =
     `/api/shared/${encodeURIComponent(token)}/audio`;
   $("#shared-loading").classList.add("hidden");

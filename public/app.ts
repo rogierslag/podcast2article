@@ -2,7 +2,6 @@ import * as z from "zod/mini";
 import type {
   ArticleSummary,
   ProcessingJobSummary,
-  ArticleParagraph,
   ArticleReadingPosition,
   TranscriptSegment,
 } from "../src/types.js";
@@ -18,18 +17,19 @@ import {
   articleSeriesSchema,
   seriesEpisodePrefillSchema,
 } from "../src/shared/api.js";
+import { html, escapeHtml, formatTimestamp as time } from "./article-format.js";
 import {
-  html,
-  escapeHtml,
-  formatTimestamp as time,
-  articleSectionId as slug,
-} from "./article-format.js";
+  renderArticle,
+  renderContents,
+  renderSourceAttribution,
+} from "./article-render.js";
 import { requiredElement } from "./dom.js";
 import { acknowledgeArticleVisit } from "./article-arrivals.js";
 import {
   t,
   countText,
   locale,
+  language,
   localizedFetch,
   errorText,
   LocalizedError,
@@ -755,46 +755,6 @@ async function poll(id: string, version = ++routeVersion) {
   }
 }
 
-function sourceButtons(ids: string[], transcript: TranscriptSegment[]) {
-  const buttons = ids
-    .map((id) => {
-      const item = transcript.find((part) => part.id === id);
-      return item
-        ? html`
-            <button
-              class="source-link"
-              data-source="${id}"
-              aria-label="${escapeHtml(t("source.jump", { time: time(item.start) }))}"
-              title="${escapeHtml(t("source.jump", { time: time(item.start) }))}"
-            >
-              ${time(item.start)}
-            </button>
-          `
-        : "";
-    })
-    .filter(Boolean)
-    .join(" ");
-  return buttons ? html`<span class="sources">${buttons}</span>` : "";
-}
-
-function articleBlock(
-  block: ArticleParagraph,
-  transcript: TranscriptSegment[],
-) {
-  if (block.kind === "quote") {
-    return html`
-      <blockquote>
-        <p>
-          ${escapeHtml(block.text)} ${sourceButtons(block.sources, transcript)}
-        </p>
-      </blockquote>
-    `;
-  }
-  return html`
-    <p>${escapeHtml(block.text)} ${sourceButtons(block.sources, transcript)}</p>
-  `;
-}
-
 function renderResult(job: ClientJob) {
   if (!job.episode || !job.article || !job.transcript) {
     throw new Error("Incomplete article response");
@@ -816,103 +776,21 @@ function renderResult(job: ClientJob) {
   const episode = job.episode,
     article = job.article,
     transcript = job.transcript;
-  const sourceName = episode.sourceName || t("source.original");
-  const sourceUrl = episode.sourceUrl;
-  const sourceLinkLabel =
-    episode.sourceType === "google-drive"
-      ? t("source.viewDrive")
-      : episode.sourceType === "youtube"
-        ? t("source.viewYoutube")
-        : episode.sourceType === "fathom"
-          ? t("source.viewFathom")
-          : episode.sourceType === "rss"
-            ? t("source.viewPodcast")
-            : t("source.viewSpotify");
-  const details = [
-    episode.publishedAt
-      ? new Date(episode.publishedAt).toLocaleDateString(locale, {
-          dateStyle: "long",
-        })
-      : "",
-    episode.durationSeconds
-      ? countText("duration", Math.round(episode.durationSeconds / 60))
-      : "",
-  ].filter(Boolean);
-  $("#episode-hero").innerHTML = html`
-    ${
-      episode.imageUrl
-        ? html`
-            <img
-              class="source-attribution-image"
-              src="${escapeHtml(episode.imageUrl)}"
-              alt="${escapeHtml(t("source.image", { name: sourceName }))}"
-            />
-          `
-        : ""
-    }
-    <div class="source-attribution-body">
-      <span class="source-attribution-publication"
-        >${escapeHtml(sourceName)}</span
-      >
-      <p class="source-attribution-title">${escapeHtml(episode.title)}</p>
-      <p class="source-attribution-meta">
-        ${escapeHtml(details.join(" · "))}${details.length ? " · " : ""}
-        <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">
-          ${sourceLinkLabel}
-        </a>
-      </p>
-    </div>
-  `;
-  const sections = article.sections
-    .map((section, index) => {
-      const id = slug(section.heading, index);
-      return html`
-        <section>
-          <h2 id="${id}">${escapeHtml(section.heading)}</h2>
-          ${section.paragraphs
-            .map((paragraph) => articleBlock(paragraph, transcript))
-            .join("")}
-        </section>
-      `;
-    })
-    .join("");
-  $("#article").innerHTML = html`
-    <h1>${escapeHtml(article.title)}</h1>
-    <p class="dek">${escapeHtml(article.dek)}</p>
-    <p class="byline">
-      ${escapeHtml(
-        t("article.byline", {
-          reading: countText("reading", article.readingTimeMinutes),
-          sources: countText("sources", transcript.length),
-        }),
-      )}
-    </p>
-    ${sections}
-    <div class="takeaways">
-      <h2>${t("article.takeaways")}</h2>
-      <ul>
-        ${article.takeaways
-          .map(
-            (item) => html`
-              <li>
-                ${escapeHtml(item.text)}
-                ${sourceButtons(item.sources, transcript)}
-              </li>
-            `,
-          )
-          .join("")}
-      </ul>
-    </div>
-  `;
-  $("#toc").innerHTML = article.sections
-    .map(
-      (section, index) => html`
-        <a href="${articleHash(job.id, slug(section.heading, index))}">
-          ${escapeHtml(section.heading)}
-        </a>
-      `,
-    )
-    .join("");
+  $("#episode-hero").innerHTML = renderSourceAttribution(
+    { ...episode, sourceName: episode.sourceName || t("source.original") },
+    language,
+  );
+  $("#article").innerHTML = renderArticle(article, transcript, {
+    language,
+    citationMode: "source",
+    byline: t("article.byline", {
+      reading: countText("reading", article.readingTimeMinutes),
+      sources: countText("sources", transcript.length),
+    }),
+  });
+  $("#toc").innerHTML = renderContents(article, (sectionId) =>
+    articleHash(job.id, sectionId),
+  );
   requiredElement("#audio", HTMLAudioElement).src =
     episode.playbackUrl || episode.mediaUrl;
   const requestedTime = readArticleLocation(location.hash).time;
