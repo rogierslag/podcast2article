@@ -8,9 +8,9 @@ import {
   articleLanguageInstruction,
   openAIBaseURL,
   transcribeChunks,
-  validateArticleQuotes,
   validateArticleSources,
 } from "./openai.js";
+import { validateArticleQuotes } from "./quote-repair.js";
 import type { Article } from "../types.js";
 
 const article = {

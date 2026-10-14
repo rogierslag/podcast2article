@@ -19,8 +19,6 @@ import { formatArticleWordRange } from "../shared/article-length.js";
 import { audioChunkSeconds } from "./audio.js";
 import type { Article, TranscriptSegment } from "../types.js";
 
-export { validateArticleQuotes } from "./quote-repair.js";
-
 const OPENAI_REGION_BASE_URLS = {
   eu: "https://eu.api.openai.com/v1",
   us: "https://us.api.openai.com/v1",
