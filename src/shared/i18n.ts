@@ -54,12 +54,12 @@ export const messages: Record<string, Record<UiLanguage, string>> = {
     en: "Get the latest 3 episodes",
   },
   "series.outstanding": {
-    nl: "{count} van maximaal 5 ongelezen of nog te verwerken afleveringen",
-    en: "{count} of at most 5 unread or processing episodes",
+    nl: "{count} van maximaal 8 ongelezen of nog te verwerken afleveringen",
+    en: "{count} of at most 8 unread or processing episodes",
   },
   "series.limitPaused": {
-    nl: "Automatisch gepauzeerd bij 5 afleveringen. Lees artikelen of markeer ze als gelezen. De serie hervat automatisch bij de volgende controle zodra er ruimte is.",
-    en: "Automatically paused at 5 episodes. Read articles or mark them as read. The series resumes automatically on the next check once there is room.",
+    nl: "Automatisch gepauzeerd bij 8 afleveringen. Lees artikelen of markeer ze als gelezen. De serie hervat automatisch bij de volgende controle zodra er ruimte is.",
+    en: "Automatically paused at 8 episodes. Read articles or mark them as read. The series resumes automatically on the next check once there is room.",
   },
   "series.backlog": {
     nl: "Je loopt achter: {count} afleveringen wachten.",
@@ -114,8 +114,8 @@ export const messages: Record<string, Record<UiLanguage, string>> = {
     en: "This series is manually paused. Make room by reading articles, then resume when you are ready. The oldest waiting episodes are fetched first.",
   },
   "series.errorLimit": {
-    nl: "De serie zit aan de grens van 5 ongelezen of nog te verwerken afleveringen. Lees eerst artikelen voordat je verdergaat.",
-    en: "This series has reached the limit of 5 unread or processing episodes. Read articles before continuing.",
+    nl: "De serie zit aan de grens van 8 ongelezen of nog te verwerken afleveringen. Lees eerst artikelen voordat je verdergaat.",
+    en: "This series has reached the limit of 8 unread or processing episodes. Read articles before continuing.",
   },
   "series.errorNoHistory": {
     nl: "Er zijn geen overgeslagen afleveringen meer beschikbaar in de openbare feed.",
@@ -191,8 +191,8 @@ export const messages: Record<string, Record<UiLanguage, string>> = {
   },
   "series.following": { nl: "Gevolgde series", en: "Following" },
   "series.schedule": {
-    nl: "Nieuwe afleveringen worden elk uur gecontroleerd zolang de server draait, ook bij een automatische pauze. Bij 5 ongelezen of nog te verwerken afleveringen stopt het inplannen. Gemiste afleveringen wachten tot er ruimte is en worden van oud naar nieuw opgehaald.",
-    en: "New episodes are checked hourly while the server is running, including during an automatic pause. Scheduling stops at 5 unread or processing episodes. Missed episodes wait for room and are fetched oldest first.",
+    nl: "Nieuwe afleveringen worden elk uur gecontroleerd zolang de server draait, ook bij een automatische pauze. Bij 8 ongelezen of nog te verwerken afleveringen stopt het inplannen. Gemiste afleveringen wachten tot er ruimte is en worden van oud naar nieuw opgehaald.",
+    en: "New episodes are checked hourly while the server is running, including during an automatic pause. Scheduling stops at 8 unread or processing episodes. Missed episodes wait for room and are fetched oldest first.",
   },
   "series.articles": {
     nl: "Bekijk artikelen en voortgang →",

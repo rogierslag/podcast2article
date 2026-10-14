@@ -448,7 +448,7 @@ Expand **Episodes without an article** in a followed series to see saved waiting
 The list checks the current feed on demand, excludes episodes already completed or processing in your account, and falls back to saved waiting entries when the feed is unavailable.
 Each episode title is a quick link to **New article**, with its source and the series' saved language and article length filled in.
 Review those settings and submit explicitly; opening the list or a quick link never starts paid work.
-RSS quick links use authenticated, server-resolved episode metadata when submitted and respect the same five-episode capacity limit.
+RSS quick links use authenticated, server-resolved episode metadata when submitted and respect the same eight-episode capacity limit.
 A manually paused series stays paused after submitting a single reviewed episode.
 
 Series, skipped episodes, and episodes awaiting scheduling are stored per user in `data/users/<username>/subscriptions.json`.
@@ -475,9 +475,9 @@ It never walks backward through the archive.
 New feed entries published before you followed are excluded from automatic processing.
 For undated entries, only entries before a previously seen or saved pending episode in feed order are treated as new; when there is no known episode to compare against, they are not scheduled automatically.
 
-A series pauses automatically at five unread, queued, or processing episodes.
+A series pauses automatically at eight unread, queued, or processing episodes.
 Read, deleted, and failed jobs do not count.
-Once capacity drops below five, a limit-paused series resumes automatically on the next startup, hourly, or API-requested check.
+Once capacity drops below eight, a limit-paused series resumes automatically on the next startup, hourly, or API-requested check.
 Manually paused series require explicit resuming; resuming respects the same limit.
 Already scheduled jobs are not cancelled, including previously confirmed catch-up still awaiting scheduling.
 The latest-three action preserves a manual pause.

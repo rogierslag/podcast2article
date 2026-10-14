@@ -30,9 +30,9 @@ for (const language of ["nl", "en"]) {
             title: "The Science of Everyday Life",
             paused: true,
             pauseReason: "limit",
-            complete: 5,
+            complete: 8,
             processing: 0,
-            outstanding: 5,
+            outstanding: 8,
             pendingCount: 2,
             archiveCount: 0,
             failed: [],
@@ -152,9 +152,9 @@ for (const language of ["nl", "en"]) {
       title: "The Science of Everyday Life",
       paused: true,
       pauseReason: "limit",
-      complete: 5,
+      complete: 8,
       processing: 0,
-      outstanding: 5,
+      outstanding: 8,
       pendingCount: 10,
       archiveCount: 0,
       checkedAt: "2026-10-13T12:00:00Z",
@@ -211,7 +211,7 @@ for (const language of ["nl", "en"]) {
     await expect(warning).toContainText(
       language === "nl" ? "handmatig gepauzeerd" : "manually paused",
     );
-    subscription = { ...subscription, paused: false, outstanding: 4 };
+    subscription = { ...subscription, paused: false, outstanding: 7 };
     await page.reload();
     await expect(warning).toHaveCount(0);
     subscription = { ...subscription, pendingCount: 2 };
@@ -230,6 +230,49 @@ test.beforeEach(async ({ page }) => {
     form: { username: "regression", password },
   });
 });
+for (const language of ["nl", "en"]) {
+  test(`series: controls allow seven outstanding episodes and stop at eight in ${language}`, async ({
+    page,
+  }) => {
+    let outstanding = 5;
+    await page.route("**/api/subscriptions", (route) =>
+      route.fulfill({
+        json: [
+          {
+            id: previewId,
+            title: preview.title,
+            paused: true,
+            complete: outstanding,
+            processing: 0,
+            outstanding,
+            pendingCount: 0,
+            archiveCount: 3,
+            failed: [],
+          },
+        ],
+      }),
+    );
+    await page.goto("/series");
+    await page.locator(`[data-ui-language="${language}"]`).click();
+    const controls = page.locator(".series-control");
+    await expect(controls.nth(0)).toBeEnabled();
+    await expect(controls.nth(1)).toBeEnabled();
+
+    outstanding = 7;
+    await page.reload();
+    await expect(controls.nth(0)).toBeEnabled();
+    await expect(controls.nth(1)).toBeEnabled();
+    await expect(controls.nth(1)).toContainText("1");
+    await expect(page.locator(".series-item")).toContainText(
+      language === "nl" ? "7 van maximaal 8" : "7 of at most 8",
+    );
+
+    outstanding = 8;
+    await page.reload();
+    await expect(controls.nth(0)).toBeDisabled();
+    await expect(controls.nth(1)).toBeDisabled();
+  });
+}
 test("series: a failed episode inventory can be retried without starting work", async ({
   page,
 }) => {
@@ -309,7 +352,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
   let followed = false;
   let paused = false;
   let submitted;
-  let outstanding = 5;
+  let outstanding = 8;
   await page.route("**/api/subscriptions**", async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
@@ -322,7 +365,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
       return route.fulfill({ json: preview });
     }
     if (pathname.endsWith("/backfill")) {
-      outstanding = 5;
+      outstanding = 8;
       paused = true;
       return route.fulfill({ status: 202, json: { count: 3 } });
     }
@@ -400,7 +443,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
     articleLength: "standard",
   });
   await expect(page.locator(".series-limit-note")).toContainText(
-    "Automatisch gepauzeerd bij 5",
+    "Automatisch gepauzeerd bij 8",
   );
   await expect(
     page.getByRole("button", { name: `Hervat: ${preview.title}`, exact: true }),
@@ -410,7 +453,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
     contentType: "image/png",
   });
   // Simulate reading three articles through the existing reader, then refresh the list.
-  outstanding = 2;
+  outstanding = 5;
   await page.reload();
   await page
     .getByRole("button", { name: `Hervat: ${preview.title}`, exact: true })
@@ -648,7 +691,7 @@ for (const language of ["nl", "en"]) {
             pauseReason: "limit",
             complete: 7,
             processing: 3,
-            outstanding: 5,
+            outstanding: 8,
             archiveCount: 3,
             pendingCount: 0,
             failed: [],
