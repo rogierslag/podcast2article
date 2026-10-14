@@ -5,6 +5,10 @@ import { translate } from "../src/shared/i18n.ts";
 
 // Run the reading controller without loading jobs or starting network requests.
 // Native iOS status-bar gestures and safe-area painting require simulator tests.
+const readingViewSource = browserSource("public/reading-view.ts").replace(
+  /^export /gm,
+  "",
+);
 const controller = browserSource("public/app.ts")
   .replace(/^import\s*\{[^}]*\}\s*from "[^"\n]+";\s*/gm, "")
   .split('localizedFetch("/api/auth")')[0];
@@ -16,7 +20,9 @@ function setupReadingController(
 ) {
   vi.useFakeTimers();
   const listeners = new Map<string, (event?: object) => void>();
-  const frames: Array<() => void> = [];
+  const frames: Array<(now?: number) => void> = [];
+  const pendingFrames = new Set<number>();
+  let nextFrame = 0;
   const attributes = new Map<string, string>();
   const progressValue = { style: { transform: "" } };
   const hidden = new Set<string>();
@@ -31,10 +37,14 @@ function setupReadingController(
   };
   const article = {
     offsetHeight: 3000,
+    querySelectorAll: () => headings,
     getBoundingClientRect: () => ({ top: 600 - window.scrollY }),
   };
   const headings = [900, 1700, 2500].map((top) => ({
     textContent: `Section ${top}`,
+    classList: { add: vi.fn(), remove: vi.fn() },
+    setAttribute: vi.fn(),
+    focus: vi.fn(),
     getBoundingClientRect: () => ({ top: top - window.scrollY }),
   }));
   const elements = new Map<string, unknown>([
@@ -63,6 +73,8 @@ function setupReadingController(
     ["#continue-reading-heading", { textContent: "" }],
   ]);
   const context = createContext({
+    language: "nl",
+    translate,
     HTMLElement: class {},
     HTMLButtonElement: class {},
     HTMLFormElement: class {},
@@ -87,9 +99,18 @@ function setupReadingController(
       querySelectorAll: (selector: string) =>
         selector === "#article section > h2" ? headings : [],
     },
-    requestAnimationFrame: (callback: () => void) => {
-      frames.push(callback);
-      return frames.length;
+    requestAnimationFrame: (callback: (now: number) => void) => {
+      const id = ++nextFrame;
+      pendingFrames.add(id);
+      frames.push((now = 160) => {
+        if (pendingFrames.delete(id)) {
+          callback(now);
+        }
+      });
+      return id;
+    },
+    cancelAnimationFrame: (id: number) => {
+      pendingFrames.delete(id);
     },
     clearTimeout,
     setTimeout,
@@ -97,11 +118,13 @@ function setupReadingController(
     getComputedStyle: () => ({ scrollMarginTop: `${30 + safeAreaTop}px` }),
     performance: { now: () => 0 },
   });
+  runInContext(readingViewSource, context);
   runInContext(controller ?? "", context);
   return {
     window,
     fetch,
     article,
+    headings,
     attributes,
     progressValue,
     listeners,
@@ -272,7 +295,7 @@ describe("article native scrolling", () => {
         [end + 400, 100],
       ]) {
         reader.window.scrollY = scrollTop;
-        reader.run("updateArticleReadingProgress()");
+        reader.run("readingView.update()");
 
         expect(reader.attributes.get("aria-valuenow")).toBe(String(percentage));
         expect(reader.progressValue.style.transform).toBe(
@@ -295,7 +318,7 @@ describe("article native scrolling", () => {
   it("recalculates completion when the viewport grows", () => {
     const reader = setupReadingController();
     reader.window.scrollY = 2600;
-    reader.run("updateArticleReadingProgress()");
+    reader.run("readingView.update()");
     expect(Number(reader.attributes.get("aria-valuenow"))).toBeLessThan(100);
 
     reader.window.innerHeight = 1000;
@@ -310,10 +333,10 @@ describe("article native scrolling", () => {
     reader.article.offsetHeight = 400;
 
     reader.window.scrollY = 599;
-    reader.run("updateArticleReadingProgress()");
+    reader.run("readingView.update()");
     expect(reader.attributes.get("aria-valuenow")).toBe("0");
     reader.window.scrollY = 600;
-    reader.run("updateArticleReadingProgress()");
+    reader.run("readingView.update()");
 
     expect(reader.attributes.get("aria-valuenow")).toBe("100");
   });
@@ -350,7 +373,7 @@ describe("article native scrolling", () => {
     const reader = setupReadingController();
     reader.window.scrollY = 1450;
 
-    const section = reader.run("visibleReadingSectionIndex()");
+    const section = reader.run("readingView.visibleSectionIndex()");
 
     expect(section).toBe(1);
   });
@@ -366,5 +389,29 @@ describe("article native scrolling", () => {
       top: 1608,
       behavior: "smooth",
     });
+  });
+  it("cancels queued progress updates when leaving the article", () => {
+    const reader = setupReadingController();
+    reader.window.scrollY = 1700;
+    reader.listeners.get("scroll")?.();
+
+    reader.run("readingView.cancel()");
+    reader.frames.shift()?.();
+
+    expect(reader.attributes.has("aria-valuenow")).toBe(false);
+  });
+
+  it("cancels a pending resume before it can focus a previous article", () => {
+    const reader = setupReadingController();
+    reader.run("showContinueReading({ sectionIndex: 1 })");
+    reader.listeners.get("continue:click")?.();
+
+    reader.run("readingView.cancel()");
+    for (let frame = 0; frame < 6; frame += 1) {
+      reader.frames.shift()?.(160 + frame * 40);
+    }
+
+    expect(reader.headings[1]?.focus).not.toHaveBeenCalled();
+    expect(reader.run("readingView.restoring")).toBe(false);
   });
 });

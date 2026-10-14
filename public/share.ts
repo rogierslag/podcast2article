@@ -11,6 +11,7 @@ import {
   savedArticleSchema,
   readingPositionSchema,
 } from "../src/shared/api.js";
+import { createReadingView, elementReadingViewport } from "./reading-view.js";
 import { requiredElement } from "./dom.js";
 import { t, countText, language, localizedFetch } from "./localize.js";
 
@@ -21,50 +22,29 @@ import { createSourcePreview } from "./source-preview.js";
 const $ = (selector: string) => requiredElement(selector, HTMLElement);
 const articleReadingProgress = $("#article-reading-progress");
 const pageScroll = $(".page-scroll");
-let readingProgressFrame: number | undefined;
-let readingPositionTrackingRequested = false;
 let lastSavedReadingSectionIndex: number | undefined;
 let readingTrackingOrigin = 0;
 let readingTrackingEnabled = false;
-let restoringReadingPosition = false;
-let continuationSectionIndex: number | undefined;
 let sharedReadingStorageKey: string | undefined;
 const materialScrollDistance = 120;
-
-function articleSectionHeadings() {
-  return [...document.querySelectorAll<HTMLElement>("#article section > h2")];
-}
-
-function visibleReadingSectionIndex() {
-  const headings = articleSectionHeadings();
-  const scrollViewportTop = pageScroll.getBoundingClientRect().top;
-  const readingLine =
-    scrollViewportTop + Math.min(pageScroll.clientHeight * 0.42, 320);
-  let sectionIndex;
-  headings.forEach((heading, index) => {
-    if (heading.getBoundingClientRect().top <= readingLine) {
-      sectionIndex = index;
-    }
-  });
-  return sectionIndex;
-}
-
-function hideContinueReading() {
-  requiredElement("#continue-reading", HTMLButtonElement).classList.add(
-    "hidden",
-  );
-  continuationSectionIndex = undefined;
-}
+const readingView = createReadingView({
+  viewport: elementReadingViewport(pageScroll),
+  result: $("#shared-result"),
+  language,
+  trackPosition: trackReadingPosition,
+  beforeResume() {
+    readingTrackingEnabled = false;
+  },
+  afterResume() {
+    readingTrackingOrigin = pageScroll.scrollTop;
+    readingTrackingEnabled = false;
+  },
+});
 
 function resetArticleScroll() {
-  readingPositionTrackingRequested = false;
   readingTrackingEnabled = false;
-  restoringReadingPosition = false;
   readingTrackingOrigin = 0;
-  const previousScrollBehavior = pageScroll.style.scrollBehavior;
-  pageScroll.style.scrollBehavior = "auto";
-  pageScroll.scrollTop = 0;
-  pageScroll.style.scrollBehavior = previousScrollBehavior;
+  readingView.reset();
 }
 
 function storedReadingPosition() {
@@ -99,15 +79,12 @@ function persistReadingPosition(sectionIndex: number) {
 }
 
 function trackReadingPosition() {
-  if (restoringReadingPosition) {
+  if (readingView.restoring) {
     return;
   }
   const scrollDistance = Math.abs(pageScroll.scrollTop - readingTrackingOrigin);
-  if (
-    continuationSectionIndex !== undefined &&
-    scrollDistance >= materialScrollDistance
-  ) {
-    hideContinueReading();
+  if (readingView.hasContinuation && scrollDistance >= materialScrollDistance) {
+    readingView.hideContinuation();
   }
   if (scrollDistance >= 40) {
     readingTrackingEnabled = true;
@@ -118,7 +95,7 @@ function trackReadingPosition() {
   ) {
     return;
   }
-  const sectionIndex = visibleReadingSectionIndex();
+  const sectionIndex = readingView.visibleSectionIndex();
   if (sectionIndex !== undefined) {
     persistReadingPosition(sectionIndex);
   }
@@ -128,161 +105,13 @@ function showContinueReading(readingPosition?: { sectionIndex: number }) {
   lastSavedReadingSectionIndex = readingPosition?.sectionIndex;
   readingTrackingOrigin = pageScroll.scrollTop;
   readingTrackingEnabled = false;
-  const heading = readingPosition
-    ? articleSectionHeadings()[readingPosition.sectionIndex]
-    : undefined;
-  if (!heading || !readingPosition) {
-    hideContinueReading();
-    return;
-  }
-  continuationSectionIndex = readingPosition.sectionIndex;
-  $("#continue-reading-heading").textContent = heading.textContent;
-  requiredElement("#continue-reading", HTMLButtonElement).classList.remove(
-    "hidden",
-  );
+  readingView.showContinuation(readingPosition);
 }
 
-function drawAttentionToHeading(heading: HTMLElement) {
-  heading.classList.remove("resume-highlight");
-  void heading.offsetWidth;
-  heading.classList.add("resume-highlight");
-  heading.setAttribute("tabindex", "-1");
-  heading.focus({ preventScroll: true });
-  setTimeout(() => {
-    heading.classList.remove("resume-highlight");
-  }, 2200);
-}
-
-function afterReadingScroll(callback: () => void) {
-  const startedAt = performance.now();
-  let previousScrollTop = pageScroll.scrollTop;
-  let stableFrames = 0;
-
-  function checkPosition(now: number) {
-    const currentScrollTop = pageScroll.scrollTop;
-    stableFrames =
-      Math.abs(currentScrollTop - previousScrollTop) < 1 ? stableFrames + 1 : 0;
-    previousScrollTop = currentScrollTop;
-    const elapsed = now - startedAt;
-    if ((elapsed >= 120 && stableFrames >= 4) || elapsed >= 1800) {
-      callback();
-      return;
-    }
-    requestAnimationFrame(checkPosition);
-  }
-
-  requestAnimationFrame(checkPosition);
-}
-
-requiredElement("#continue-reading", HTMLButtonElement).addEventListener(
-  "click",
-  () => {
-    const heading =
-      continuationSectionIndex === undefined
-        ? undefined
-        : articleSectionHeadings()[continuationSectionIndex];
-    if (!heading) {
-      hideContinueReading();
-      return;
-    }
-    hideContinueReading();
-    readingTrackingEnabled = false;
-    restoringReadingPosition = true;
-    const reducedMotion = matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const headingTop =
-      heading.getBoundingClientRect().top -
-      pageScroll.getBoundingClientRect().top +
-      pageScroll.scrollTop -
-      30;
-    pageScroll.scrollTo({
-      top: Math.max(0, headingTop),
-      behavior: reducedMotion ? "auto" : "smooth",
-    });
-    afterReadingScroll(() => {
-      drawAttentionToHeading(heading);
-      readingPositionTrackingRequested = false;
-      readingTrackingOrigin = pageScroll.scrollTop;
-      readingTrackingEnabled = false;
-      restoringReadingPosition = false;
-    });
-  },
-);
-
-function updateArticleReadingProgress() {
-  readingProgressFrame = undefined;
-  const shouldTrackReadingPosition = readingPositionTrackingRequested;
-  readingPositionTrackingRequested = false;
-  const article = $("#article");
-  if (
-    !article ||
-    articleReadingProgress.classList.contains("hidden") ||
-    $("#shared-result").classList.contains("hidden")
-  ) {
-    return;
-  }
-
-  const pageScrollRect = pageScroll.getBoundingClientRect();
-  const articleTop =
-    article.getBoundingClientRect().top -
-    pageScrollRect.top +
-    pageScroll.scrollTop;
-  const articleEnd = Math.max(
-    articleTop,
-    articleTop + article.offsetHeight - pageScroll.clientHeight,
-  );
-  const progressRatio =
-    articleEnd === articleTop
-      ? Number(pageScroll.scrollTop >= articleTop)
-      : (pageScroll.scrollTop - articleTop) / (articleEnd - articleTop);
-  const progressPercentage = Math.round(
-    Math.min(1, Math.max(0, progressRatio)) * 100,
-  );
-
-  requiredElement(
-    ".reading-progress-value",
-    HTMLElement,
-    articleReadingProgress,
-  ).style.transform = `scaleX(${progressPercentage / 100})`;
-  articleReadingProgress.setAttribute(
-    "aria-valuenow",
-    String(progressPercentage),
-  );
-  articleReadingProgress.setAttribute(
-    "aria-valuetext",
-    t("progress.read", { count: progressPercentage }),
-  );
-  const sectionIndex = visibleReadingSectionIndex();
-  document.querySelectorAll<HTMLElement>("#toc a").forEach((link, index) => {
-    if (index === sectionIndex) {
-      link.setAttribute("aria-current", "location");
-    } else {
-      link.removeAttribute("aria-current");
-    }
-  });
-  if (shouldTrackReadingPosition) {
-    trackReadingPosition();
-  }
-}
-
-function scheduleArticleReadingProgressUpdate(trackPosition = false) {
-  if (trackPosition) {
-    readingPositionTrackingRequested = true;
-  }
-  if (readingProgressFrame === undefined) {
-    readingProgressFrame = requestAnimationFrame(updateArticleReadingProgress);
-  }
-}
-
-pageScroll.addEventListener(
-  "scroll",
-  () => scheduleArticleReadingProgressUpdate(true),
-  {
-    passive: true,
-  },
-);
-window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
+pageScroll.addEventListener("scroll", () => readingView.scheduleUpdate(true), {
+  passive: true,
+});
+window.addEventListener("resize", () => readingView.scheduleUpdate());
 
 function renderSharedArticle(shared: SharedArticle, token: string) {
   const { episode, article, sources } = shared;
@@ -303,15 +132,15 @@ function renderSharedArticle(shared: SharedArticle, token: string) {
   sharedReadingStorageKey = `podcast2article:reading-position:${token}`;
   resetArticleScroll();
   showContinueReading(storedReadingPosition());
-  const heading = articleSectionHeadings().find(
-    (item) => `#${item.id}` === location.hash,
-  );
+  const heading = readingView
+    .headings()
+    .find((item) => `#${item.id}` === location.hash);
   if (heading) {
-    hideContinueReading();
+    readingView.hideContinuation();
     heading.scrollIntoView({ behavior: "instant", block: "start" });
-    drawAttentionToHeading(heading);
+    readingView.highlight(heading);
   }
-  scheduleArticleReadingProgressUpdate();
+  readingView.scheduleUpdate();
 }
 
 $("#shared-main").addEventListener("click", (event) => {

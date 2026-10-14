@@ -23,6 +23,7 @@ import {
   renderContents,
   renderSourceAttribution,
 } from "./article-render.js";
+import { createReadingView, documentReadingViewport } from "./reading-view.js";
 import { requiredElement } from "./dom.js";
 import { acknowledgeArticleVisit } from "./article-arrivals.js";
 import {
@@ -74,25 +75,35 @@ let currentJob: CompletedClientJob | undefined;
 let articlesState: ArticleSummary[] = [];
 let processingState: ProcessingJobSummary[] = [];
 let overviewRefreshTimer: number | undefined;
-let readingProgressFrame: number | undefined;
-let readingPositionTrackingRequested = false;
 let readingPositionSaveTimer: number | undefined;
 let pendingReadingSectionIndex: number | undefined;
 let lastSavedReadingSectionIndex: number | undefined;
 let readingTrackingOrigin = 0;
 let readingTrackingEnabled = false;
-let restoringReadingPosition = false;
-let continuationSectionIndex: number | undefined;
 let naturalReadingScroll = false;
 let naturalReadingScrollMoved = false;
 let readingScrollEndTimer: number | undefined;
 const materialScrollDistance = 120;
+const readingView = createReadingView({
+  viewport: documentReadingViewport(),
+  result: resultView,
+  language,
+  trackPosition: () => trackReadingPosition(),
+  beforeResume() {
+    stopNaturalReadingScroll();
+    readingTrackingEnabled = false;
+  },
+  afterResume() {
+    readingTrackingOrigin = window.scrollY;
+    readingTrackingEnabled = false;
+  },
+});
 
 function stopNaturalReadingScroll() {
   clearTimeout(readingScrollEndTimer);
   naturalReadingScroll = false;
   naturalReadingScrollMoved = false;
-  readingPositionTrackingRequested = false;
+  readingView.discardTracking();
 }
 
 function finishNaturalReadingScroll() {
@@ -104,7 +115,7 @@ function finishNaturalReadingScroll() {
 }
 
 function beginNaturalReadingScroll(event: Event) {
-  if (event.defaultPrevented || restoringReadingPosition) {
+  if (event.defaultPrevented || readingView.restoring) {
     return;
   }
   naturalReadingScroll = true;
@@ -134,36 +145,11 @@ function handleReadingScrollKey(event: KeyboardEvent) {
   }
 }
 
-function articleSectionHeadings() {
-  return [...document.querySelectorAll<HTMLElement>("#article section > h2")];
-}
-
-function visibleReadingSectionIndex() {
-  const headings = articleSectionHeadings();
-  const readingLine = Math.min(window.innerHeight * 0.42, 320);
-  let sectionIndex;
-  headings.forEach((heading, index) => {
-    if (heading.getBoundingClientRect().top <= readingLine) {
-      sectionIndex = index;
-    }
-  });
-  return sectionIndex;
-}
-
-function hideContinueReading() {
-  requiredElement("#continue-reading", HTMLButtonElement).classList.add(
-    "hidden",
-  );
-  continuationSectionIndex = undefined;
-}
-
 function resetArticleScroll() {
   stopNaturalReadingScroll();
-  readingPositionTrackingRequested = false;
   readingTrackingEnabled = false;
-  restoringReadingPosition = false;
   readingTrackingOrigin = 0;
-  window.scrollTo({ top: 0, behavior: "instant" });
+  readingView.reset();
 }
 
 function persistReadingPosition(sectionIndex: number) {
@@ -208,15 +194,12 @@ window.addEventListener("pagehide", () => {
 });
 
 function trackReadingPosition(savePosition = false) {
-  if (restoringReadingPosition) {
+  if (readingView.restoring) {
     return;
   }
   const scrollDistance = Math.abs(window.scrollY - readingTrackingOrigin);
-  if (
-    continuationSectionIndex !== undefined &&
-    scrollDistance >= materialScrollDistance
-  ) {
-    hideContinueReading();
+  if (readingView.hasContinuation && scrollDistance >= materialScrollDistance) {
+    readingView.hideContinuation();
   }
   if (scrollDistance >= 40) {
     readingTrackingEnabled = true;
@@ -224,7 +207,7 @@ function trackReadingPosition(savePosition = false) {
   if (!readingTrackingEnabled || resultView.classList.contains("hidden")) {
     return;
   }
-  const sectionIndex = visibleReadingSectionIndex();
+  const sectionIndex = readingView.visibleSectionIndex();
   if (savePosition && sectionIndex !== undefined) {
     persistReadingPosition(sectionIndex);
   }
@@ -237,146 +220,11 @@ function showContinueReading(readingPosition?: ArticleReadingPosition) {
   lastSavedReadingSectionIndex = readingPosition?.sectionIndex;
   readingTrackingOrigin = window.scrollY;
   readingTrackingEnabled = false;
-  const heading = readingPosition
-    ? articleSectionHeadings()[readingPosition.sectionIndex]
-    : undefined;
-  if (!heading || !readingPosition) {
-    hideContinueReading();
-    return;
-  }
-  continuationSectionIndex = readingPosition.sectionIndex;
-  $("#continue-reading-heading").textContent = heading.textContent;
-  requiredElement("#continue-reading", HTMLButtonElement).classList.remove(
-    "hidden",
-  );
-}
-
-function drawAttentionToHeading(heading: HTMLElement) {
-  heading.classList.remove("resume-highlight");
-  void heading.offsetWidth;
-  heading.classList.add("resume-highlight");
-  heading.setAttribute("tabindex", "-1");
-  heading.focus({ preventScroll: true });
-  setTimeout(() => {
-    heading.classList.remove("resume-highlight");
-  }, 2200);
-}
-
-function afterReadingScroll(callback: () => void) {
-  const startedAt = performance.now();
-  let previousScrollTop = window.scrollY;
-  let stableFrames = 0;
-  function checkPosition(now: number) {
-    const currentScrollTop = window.scrollY;
-    stableFrames =
-      Math.abs(currentScrollTop - previousScrollTop) < 1 ? stableFrames + 1 : 0;
-    previousScrollTop = currentScrollTop;
-    const elapsed = now - startedAt;
-    if ((elapsed >= 120 && stableFrames >= 4) || elapsed >= 1800) {
-      callback();
-      return;
-    }
-    requestAnimationFrame(checkPosition);
-  }
-  requestAnimationFrame(checkPosition);
-}
-requiredElement("#continue-reading", HTMLButtonElement).addEventListener(
-  "click",
-  () => {
-    const heading =
-      continuationSectionIndex === undefined
-        ? undefined
-        : articleSectionHeadings()[continuationSectionIndex];
-    if (!heading) {
-      hideContinueReading();
-      return;
-    }
-    hideContinueReading();
-    stopNaturalReadingScroll();
-    readingTrackingEnabled = false;
-    restoringReadingPosition = true;
-    const reducedMotion = matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const headingOffset =
-      parseFloat(getComputedStyle(heading).scrollMarginTop) || 30;
-    const headingTop =
-      heading.getBoundingClientRect().top + window.scrollY - headingOffset;
-    window.scrollTo({
-      top: Math.max(0, headingTop),
-      behavior: reducedMotion ? "instant" : "smooth",
-    });
-    afterReadingScroll(() => {
-      drawAttentionToHeading(heading);
-      readingPositionTrackingRequested = false;
-      readingTrackingOrigin = window.scrollY;
-      readingTrackingEnabled = false;
-      restoringReadingPosition = false;
-    });
-  },
-);
-
-function updateArticleReadingProgress() {
-  readingProgressFrame = undefined;
-  const shouldTrackReadingPosition = readingPositionTrackingRequested;
-  readingPositionTrackingRequested = false;
-  const article = $("#article");
-  if (
-    !article ||
-    articleReadingProgress.classList.contains("hidden") ||
-    resultView.classList.contains("hidden")
-  ) {
-    return;
-  }
-  const articleTop = article.getBoundingClientRect().top + window.scrollY;
-  const articleEnd = Math.max(
-    articleTop,
-    articleTop + article.offsetHeight - window.innerHeight,
-  );
-  const progressRatio =
-    articleEnd === articleTop
-      ? Number(window.scrollY >= articleTop)
-      : (window.scrollY - articleTop) / (articleEnd - articleTop);
-  const progressPercentage = Math.round(
-    Math.min(1, Math.max(0, progressRatio)) * 100,
-  );
-  requiredElement(
-    ".reading-progress-value",
-    HTMLElement,
-    articleReadingProgress,
-  ).style.transform = `scaleX(${progressPercentage / 100})`;
-  articleReadingProgress.setAttribute(
-    "aria-valuenow",
-    String(progressPercentage),
-  );
-  articleReadingProgress.setAttribute(
-    "aria-valuetext",
-    t("progress.read", { count: progressPercentage }),
-  );
-  const sectionIndex = visibleReadingSectionIndex();
-  document.querySelectorAll<HTMLElement>("#toc a").forEach((link, index) => {
-    if (index === sectionIndex) {
-      link.setAttribute("aria-current", "location");
-    } else {
-      link.removeAttribute("aria-current");
-    }
-  });
-  if (shouldTrackReadingPosition) {
-    trackReadingPosition();
-  }
-}
-
-function scheduleArticleReadingProgressUpdate(trackPosition = false) {
-  if (trackPosition) {
-    readingPositionTrackingRequested = true;
-  }
-  if (readingProgressFrame === undefined) {
-    readingProgressFrame = requestAnimationFrame(updateArticleReadingProgress);
-  }
+  readingView.showContinuation(readingPosition);
 }
 
 function handleArticleScroll() {
-  scheduleArticleReadingProgressUpdate(naturalReadingScroll);
+  readingView.scheduleUpdate(naturalReadingScroll);
   if (naturalReadingScroll) {
     naturalReadingScrollMoved = true;
     clearTimeout(readingScrollEndTimer);
@@ -405,7 +253,7 @@ window.addEventListener("scrollend", finishNaturalReadingScroll);
 
 window.addEventListener("scroll", handleArticleScroll, { passive: true });
 
-window.addEventListener("resize", () => scheduleArticleReadingProgressUpdate());
+window.addEventListener("resize", () => readingView.scheduleUpdate());
 localizedFetch("/api/auth")
   .then((response) =>
     responseData(response, z.object({ enabled: z.boolean() })),
@@ -822,7 +670,7 @@ function renderResult(job: ClientJob) {
   resetArticleScroll();
   showContinueReading(job.readingPosition);
   restoreArticleSection();
-  scheduleArticleReadingProgressUpdate();
+  readingView.scheduleUpdate();
 }
 
 function renderTranscript(transcript: TranscriptSegment[], query: string) {
@@ -1179,7 +1027,7 @@ async function deleteCurrentArticle() {
     requiredElement("#audio", HTMLAudioElement).pause();
     clearTimeout(readingPositionSaveTimer);
     pendingReadingSectionIndex = undefined;
-    hideContinueReading();
+    readingView.hideContinuation();
     currentJob = undefined;
     location.replace("/articles");
   } catch (error) {
@@ -1437,6 +1285,7 @@ async function refreshDeploymentAlert() {
 }
 
 async function showArticles(showLoading = true) {
+  readingView.cancel();
   const version = routeVersion;
   void refreshDeploymentAlert();
   landing.classList.add("hidden");
@@ -1493,16 +1342,14 @@ async function showArticles(showLoading = true) {
 
 function restoreArticleSection() {
   const sectionId = readArticleLocation(location.hash).sectionId;
-  const heading = articleSectionHeadings().find(
-    (item) => item.id === sectionId,
-  );
+  const heading = readingView.headings().find((item) => item.id === sectionId);
   if (!heading) {
     return false;
   }
-  hideContinueReading();
+  readingView.hideContinuation();
   stopNaturalReadingScroll();
   heading.scrollIntoView({ behavior: "instant", block: "start" });
-  drawAttentionToHeading(heading);
+  readingView.highlight(heading);
   return true;
 }
 
@@ -1525,6 +1372,8 @@ function showArticleRoute() {
     }
   });
   sourcePreview.close();
+  readingView.cancel();
+  stopNaturalReadingScroll();
   const { jobId } = readArticleLocation(location.hash);
   if (jobId) {
     if (currentJob?.id === jobId && !resultView.classList.contains("hidden")) {
