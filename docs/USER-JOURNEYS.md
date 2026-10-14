@@ -223,7 +223,7 @@ The Articles menu badge counts completed articles from currently followed series
 The checkpoint is stored per account across devices; the first visit establishes a baseline without flagging the existing backlog.
 Opening the overview clears arrivals without marking articles as read; failed loads do not clear them.
 The badge refreshes every 30 seconds while visible and when returning to the app.
-Five unread, queued, or processing episodes in that series trigger an automatic pause.
+Eight unread, queued, or processing episodes in that series trigger an automatic pause.
 Reading frees capacity, and a series paused at the limit resumes automatically on the next check.
 Missed episodes are scheduled oldest first within the available capacity; the remainder is saved across pauses and restarts and processed before newer feed entries.
 Manually paused series remain paused until the reader explicitly resumes.

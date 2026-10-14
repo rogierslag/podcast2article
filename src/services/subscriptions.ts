@@ -10,7 +10,7 @@ import type {
   PodcastSubscription,
 } from "../types.js";
 
-export const subscriptionLimit = 5;
+export const subscriptionLimit = 8;
 export const subscriptionIntervalMs = 60 * 60 * 1000;
 export function backfillEpisodes(
   feed: PodcastFeed,

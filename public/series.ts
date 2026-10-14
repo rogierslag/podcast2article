@@ -360,7 +360,7 @@ async function refresh() {
       if (
         subscription.pendingCount > 0 &&
         (subscription.paused ||
-          subscription.pendingCount > Math.max(0, 5 - subscription.outstanding))
+          subscription.pendingCount > Math.max(0, 8 - subscription.outstanding))
       ) {
         const warning = element("div", "", "series-backlog");
         warning.append(
@@ -433,7 +433,7 @@ async function refresh() {
       );
       button.type = "button";
       button.dataset.limitDisabled = String(
-        subscription.paused && subscription.outstanding >= 5,
+        subscription.paused && subscription.outstanding >= 8,
       );
       button.disabled = button.dataset.limitDisabled === "true";
       button.setAttribute(
@@ -469,7 +469,7 @@ async function refresh() {
           Math.min(
             3,
             subscription.archiveCount,
-            5 - (subscription.outstanding || 0) - subscription.pendingCount,
+            8 - (subscription.outstanding || 0) - subscription.pendingCount,
           ),
         );
         const more = element(

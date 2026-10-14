@@ -111,13 +111,13 @@ flowchart TD
     Check --> Paused{"Manually paused or stopping?"}
     Paused -->|Yes| Skip["Skip automatic processing"]
     Paused -->|No| AutoLimit{"Limit-paused?"}
-    AutoLimit -->|Yes| Capacity{"Below 5 outstanding?"}
+    AutoLimit -->|Yes| Capacity{"Below 8 outstanding?"}
     Capacity -->|No| Available
     Capacity -->|Yes| Resume["Persist resumed subscription"]
     Resume --> Available
     AutoLimit -->|No| Available{"Processing available?"}
     Available -->|No| Error["Save error<br/>Keep pending episodes"]
-    Available -->|Yes| Limit{"5 outstanding articles?"}
+    Available -->|Yes| Limit{"8 outstanding articles?"}
     Limit -->|Yes| Pause["Persist pause with limit reason"]
     Pause --> Feed
     Limit -->|No| Pending["Drain saved backlog<br/>within limit"]
@@ -129,7 +129,7 @@ flowchart TD
     Scheduling -->|Yes| Enqueue["Enqueue within<br/>remaining allowance"]
     Scheduling -->|No| Done["Wait for next check or owner action"]
     Enqueue --> Commit["Save each job ID<br/>and seen episode key"]
-    Commit --> EndLimit{"5 outstanding articles?"}
+    Commit --> EndLimit{"8 outstanding articles?"}
     EndLimit -->|Yes| Done
     EndLimit -->|No| Done
     Feed -.->|Fetch failure| Error
@@ -138,7 +138,7 @@ flowchart TD
 ```
 
 Outstanding means active jobs plus unread completed articles for the series; failed and deleted jobs do not count.
-When capacity drops below five, a series paused at the limit resumes automatically on the next startup, hourly, or API-requested check.
+When capacity drops below eight, a series paused at the limit resumes automatically on the next startup, hourly, or API-requested check.
 Manual pauses remain in effect until the owner explicitly resumes.
 Limit-paused series continue checking the feed and saving newly discovered episodes, without scheduling paid processing while capacity is full.
 The series page warns when saved waiting episodes exceed available capacity and links to articles so the reader can make room.
