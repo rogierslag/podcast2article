@@ -291,6 +291,9 @@ button:disabled {
   accent-color: var(--green);
 }
 @media (max-width: 600px) {
+  .nav:has(.reading-preferences) {
+    position: relative;
+  }
   .nav:has(.reading-preferences) .brand {
     padding-right: 56px;
   }

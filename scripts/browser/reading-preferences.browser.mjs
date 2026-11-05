@@ -7,6 +7,44 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+for (const reader of ["owner", "shared"]) {
+  test(`${reader}: reading preferences scroll out of view with the header`, async ({
+    page,
+  }) => {
+    await page.goto(reader === "owner" ? `/#job=${articleId}` : `/s/${token}`);
+    await expect(page.locator("#article > h1")).toBeVisible();
+    const preferences = page.locator(".reading-preferences summary");
+    await expect(preferences).toBeInViewport();
+    const initialTop = await preferences.evaluate(
+      (element) => element.getBoundingClientRect().top,
+    );
+    const headerTop = await page
+      .locator("header.nav")
+      .evaluate((element) => element.getBoundingClientRect().top);
+
+    await page
+      .locator("#article section > h2")
+      .first()
+      .evaluate((heading) => {
+        heading.scrollIntoView({ behavior: "instant", block: "start" });
+      });
+
+    await expect
+      .poll(() =>
+        preferences.evaluate(
+          (element) => element.getBoundingClientRect().bottom,
+        ),
+      )
+      .toBeLessThan(0);
+    const offset = await preferences.evaluate(
+      (element) =>
+        element.getBoundingClientRect().top -
+        element.closest("header.nav").getBoundingClientRect().top,
+    );
+    expect(offset).toBeCloseTo(initialTop - headerTop, 0);
+  });
+}
+
 test("reading preferences persist across owner and anonymous pages without changing article content", async ({
   page,
   context,
