@@ -43,6 +43,7 @@ import {
   completeFile,
   readManifest,
   chunkCheckpoint,
+  ProcessingPersistenceError,
   type ChunkManifest,
 } from "./processing-artifacts.js";
 import { transcribeChunks, writeArticle } from "./openai.js";
@@ -56,6 +57,7 @@ import type {
   ArticleSummary,
   ArticleJob,
   Job,
+  JobApiUsage,
   ProcessingJobSummary,
   PodcastEpisode,
 } from "../types.js";
@@ -64,6 +66,7 @@ const root = path.resolve("data");
 const memory = new Map<string, Job>();
 const accountsWithStorageErrors = new Set<string>();
 const pendingWrites = new Map<string, Promise<void>>();
+const pendingBudgetReservations = new Map<string, ApiRequestUsage>();
 const activeRuns = new Map<
   string,
   { controller: AbortController; promise: Promise<void> }
@@ -129,7 +132,11 @@ export function playbackFileForJob(
     : undefined;
 }
 
-async function persist(username: string, job: Job): Promise<void> {
+async function persist(
+  username: string,
+  job: Job,
+  patch?: Partial<Job>,
+): Promise<void> {
   const key = jobKey(username, job.id);
   const previous = pendingWrites.get(key) ?? Promise.resolve();
   // Progress callbacks and request accounting can persist the same job concurrently.
@@ -139,11 +146,16 @@ async function persist(username: string, job: Job): Promise<void> {
     .then(async () => {
       const jobDirectory = path.join(userDirectory(username), "jobs");
       await mkdir(jobDirectory, { recursive: true });
-      job.updatedAt = new Date().toISOString();
+      const snapshot = {
+        ...job,
+        ...patch,
+        updatedAt: new Date().toISOString(),
+      };
       const destination = path.join(jobDirectory, `${job.id}.json`);
       const temporary = `${destination}.tmp`;
-      await writeFile(temporary, serializeStoredJob(username, job));
+      await writeFile(temporary, serializeStoredJob(username, snapshot));
       await rename(temporary, destination);
+      Object.assign(job, patch, { updatedAt: snapshot.updatedAt });
       memory.set(key, job);
       if (job.stage === "complete") {
         requestArticleBackup();
@@ -182,7 +194,17 @@ export function getAccountBudget(username: string): AccountBudget {
 function checkAccountBudget(username: string, reservation = 0): void {
   assertAccountHistory(username);
   if (!spendingLimitExempt(username)) {
-    assertAccountBudget(accountJobs(username), reservation);
+    const jobs = accountJobs(username);
+    for (const job of jobs) {
+      const pending = pendingBudgetReservations.get(jobKey(username, job.id));
+      if (
+        pending &&
+        !job.apiUsage?.requests.some(({ id }) => id === pending.id)
+      ) {
+        reservation += pending.reservedCostUsd ?? accountLimitUsd;
+      }
+    }
+    assertAccountBudget(jobs, reservation);
   }
 }
 
@@ -191,6 +213,8 @@ async function recordApiUsage(
   job: Job,
   request: ApiRequestUsage,
 ): Promise<void> {
+  const key = jobKey(username, job.id);
+  let reserved = false;
   if (request.status === "pending") {
     assertAccountHistory(username);
     if (request.reservedCostUsd === undefined) {
@@ -201,15 +225,18 @@ async function recordApiUsage(
       // Revoking an exemption must not make those requests historical.
       request.reservedCostUsd = accountLimitUsd;
     }
-    // No await between checking and updating the in-memory reservation: parallel jobs in this server cannot both consume the same remaining allowance.
+    // Hold the budget while writing the reservation so concurrent jobs cannot spend it.
     if (!job.apiUsage?.requests.some((entry) => entry.id === request.id)) {
       checkAccountBudget(username, request.reservedCostUsd);
+      pendingBudgetReservations.set(key, request);
+      reserved = true;
     }
   }
-  const usage = job.apiUsage ?? {
-    trackingStartedAt: new Date().toISOString(),
-    coverage: "partial" as const,
-    requests: [],
+  const usage: JobApiUsage = {
+    trackingStartedAt:
+      job.apiUsage?.trackingStartedAt ?? new Date().toISOString(),
+    coverage: job.apiUsage?.coverage ?? "partial",
+    requests: [...(job.apiUsage?.requests ?? [])],
     knownEstimatedCostUsd: 0,
     unknownCostRequests: 0,
   };
@@ -227,7 +254,13 @@ async function recordApiUsage(
   usage.unknownCostRequests = usage.requests.filter(
     (entry) => entry.cost.amount === null,
   ).length;
-  await update(username, job, { apiUsage: usage });
+  try {
+    await updateProcessing(username, job, { apiUsage: usage });
+  } finally {
+    if (reserved) {
+      pendingBudgetReservations.delete(key);
+    }
+  }
 }
 
 async function update(
@@ -240,6 +273,29 @@ async function update(
   }
   Object.assign(job, patch);
   await persist(username, job);
+}
+
+async function updateProcessing(
+  username: string,
+  job: Job,
+  patch: Partial<Job>,
+  target = "job state",
+): Promise<void> {
+  try {
+    await persist(username, job, {
+      ...(patch.message !== undefined ? { messageValues: undefined } : {}),
+      ...patch,
+    });
+  } catch (error) {
+    throw new ProcessingPersistenceError(target, error);
+  }
+}
+
+function saveProgress(username: string, job: Job, patch: Partial<Job>): void {
+  const stage = job.stage;
+  void updateProcessing(username, job, patch, "job progress").catch((error) =>
+    jobError(job.id, stage, error),
+  );
 }
 
 function canonicalSourceUrl(value: string): string | undefined {
@@ -1064,7 +1120,7 @@ async function processArticleRetry(
       episode,
       signal,
     );
-    await update(username, job, {
+    await updateProcessing(username, job, {
       article,
       stage: "complete",
       progress: 100,
@@ -1077,16 +1133,18 @@ async function processArticleRetry(
   } catch (error) {
     const message =
       error instanceof DomainError ? error.code : "error.processing";
+    if (error instanceof ProcessingPersistenceError || !signal.aborted) {
+      jobError(job.id, job.stage, error);
+    }
     if (signal.aborted) {
-      await update(username, job, {
+      await updateProcessing(username, job, {
         stage: "queued",
         progress: 82,
         message: "job.retryPaused",
         error: undefined,
       });
     } else {
-      jobError(job.id, job.stage, error);
-      await update(username, job, {
+      await updateProcessing(username, job, {
         failedStage: job.stage,
         stage: "failed",
         error: message,
@@ -1113,8 +1171,9 @@ export async function shutdownJobs(
     run.controller.abort(new DOMException(reason, "AbortError"));
   }
   await Promise.allSettled(active.map(([, run]) => run.promise));
+  await Promise.allSettled(pendingWrites.values());
   console.log(
-    `${new Date().toISOString()} INFO  Shutdown · alle actieve jobs gestopt en opgeslagen`,
+    `${new Date().toISOString()} INFO  Shutdown · alle actieve jobs gestopt en schrijfacties afgehandeld`,
   );
 }
 
@@ -1169,7 +1228,7 @@ async function prepareAudio(
       }
       await rename(partial, input);
     }
-    await update(username, job, {
+    await updateProcessing(username, job, {
       progress: 28,
       message: "job.extractingAudio",
     });
@@ -1182,7 +1241,10 @@ async function prepareAudio(
   const staging = path.join(workspace, "splitting");
   await rm(staging, { recursive: true, force: true });
   await mkdir(staging, { recursive: true });
-  await update(username, job, { progress: 32, message: "job.splittingAudio" });
+  await updateProcessing(username, job, {
+    progress: 32,
+    message: "job.splittingAudio",
+  });
   jobLog(job.id, "downloading", "FFmpeg maakt transcriptiefragmenten", {
     chunkSeconds,
   });
@@ -1225,7 +1287,7 @@ async function processJob(
     // Final artifacts and completed chunk transcripts are recovery checkpoints.
     await mkdir(workspace, { recursive: true });
     jobLog(job.id, "resolving", "Publieke bron zoeken");
-    await update(username, job, {
+    await updateProcessing(username, job, {
       stage: "resolving",
       progress: 8,
       message: "job.checkingSource",
@@ -1248,7 +1310,7 @@ async function processJob(
       sourceType: episode.sourceType,
       durationSeconds: episode.durationSeconds,
     });
-    await update(username, job, {
+    await updateProcessing(username, job, {
       episode,
       stage: "queued",
       progress: 18,
@@ -1258,7 +1320,7 @@ async function processJob(
     releaseProcessing = await processingSlots.acquire(signal);
     releaseMedia = await mediaSlots.acquire(signal);
 
-    await update(username, job, {
+    await updateProcessing(username, job, {
       stage: "downloading",
       progress: 22,
       message: "job.downloading",
@@ -1274,7 +1336,7 @@ async function processJob(
     releaseMedia();
     releaseMedia = undefined;
 
-    await update(username, job, {
+    await updateProcessing(username, job, {
       stage: "transcribing",
       progress: 36,
       message: "progress.start",
@@ -1284,7 +1346,7 @@ async function processJob(
       chunks,
       job.language,
       (done, total) => {
-        void update(username, job, {
+        saveProgress(username, job, {
           progress: 36 + Math.round((done / total) * 40),
           message: "progress.transcription",
           messageValues: { done, total },
@@ -1294,7 +1356,7 @@ async function processJob(
         jobLog(job.id, "transcribing", event.message, event.data);
         const progress = processingProgress(event);
         if (progress) {
-          void update(username, job, progress);
+          saveProgress(username, job, progress);
         }
       },
       signal,
@@ -1305,7 +1367,7 @@ async function processJob(
       segments: transcript.length,
     });
 
-    await update(username, job, {
+    await updateProcessing(username, job, {
       transcript,
       progress: 78,
       message: "job.transcriptComplete",
@@ -1321,7 +1383,7 @@ async function processJob(
       episode,
       signal,
     );
-    await update(username, job, {
+    await updateProcessing(username, job, {
       article,
       stage: "complete",
       progress: 100,
@@ -1335,21 +1397,23 @@ async function processJob(
   } catch (error) {
     const message =
       error instanceof DomainError ? error.code : "error.processing";
+    if (error instanceof ProcessingPersistenceError || !signal.aborted) {
+      jobError(job.id, job.stage, error);
+    }
     if (signal.aborted) {
-      jobLog(
-        job.id,
-        "shutdown",
-        "Opdracht onderbroken en klaargezet voor hervatten",
-      );
-      await update(username, job, {
+      await updateProcessing(username, job, {
         stage: "queued",
         progress: 2,
         message: "job.paused",
         error: undefined,
       });
+      jobLog(
+        job.id,
+        "shutdown",
+        "Opdracht onderbroken en klaargezet voor hervatten",
+      );
     } else {
-      jobError(job.id, job.stage, error);
-      await update(username, job, {
+      await updateProcessing(username, job, {
         failedStage: job.stage,
         stage: "failed",
         error: message,
@@ -1371,7 +1435,7 @@ async function generateArticle(
   episode: NonNullable<Job["episode"]>,
   signal: AbortSignal,
 ) {
-  await update(username, job, {
+  await updateProcessing(username, job, {
     stage: "writing",
     progress: 82,
     message: "job.writing",
@@ -1391,7 +1455,7 @@ async function generateArticle(
       jobLog(job.id, "writing", event.message, event.data);
       const progress = processingProgress(event);
       if (progress) {
-        void update(username, job, progress);
+        saveProgress(username, job, progress);
       }
     },
     signal,
@@ -1403,9 +1467,10 @@ async function generateArticle(
       saveRepair: async (index, state) => {
         const repairs = [...(job.articleQuoteRepairs ?? [])];
         repairs[index] = state;
-        await update(username, job, { articleQuoteRepairs: repairs });
+        await updateProcessing(username, job, { articleQuoteRepairs: repairs });
       },
-      save: (backgroundArticle) => update(username, job, { backgroundArticle }),
+      save: (backgroundArticle) =>
+        updateProcessing(username, job, { backgroundArticle }),
     },
   );
 }

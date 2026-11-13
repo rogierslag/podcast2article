@@ -273,7 +273,6 @@ export async function requestBackgroundArticle(
           : undefined,
       );
     } catch (error) {
-      signal?.throwIfAborted();
       if (
         !(error instanceof BackgroundArticleError) ||
         !error.retryable ||
@@ -281,6 +280,7 @@ export async function requestBackgroundArticle(
       ) {
         throw error;
       }
+      signal?.throwIfAborted();
       previousRequest =
         recoveredRequest &&
         recoveredRequest.attempt > error.state.request.attempt

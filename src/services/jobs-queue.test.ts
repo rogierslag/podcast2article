@@ -1,6 +1,7 @@
 import type * as FsPromises from "node:fs/promises";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { jobError } from "../lib/logger.js";
 import type { ProcessingEvent } from "../lib/processing-events.js";
 import type { ApiRequestUsage, Job, PodcastEpisode } from "../types.js";
 import type * as Resolver from "./resolver.js";
@@ -11,6 +12,7 @@ const state = vi.hoisted(() => ({
   resolveSource: vi.fn(),
   requestBackup: vi.fn(),
   writeFile: vi.fn(),
+  rename: vi.fn(),
   download: vi.fn(),
   normalize: vi.fn(),
   transcribe: vi.fn(),
@@ -26,13 +28,7 @@ vi.mock("node:fs/promises", async (original) => ({
     }
     return { size: 1024 };
   }),
-  rename: vi.fn(async (source: string, destination: string) => {
-    const content = state.files.get(source);
-    if (content !== undefined) {
-      state.files.set(destination, content);
-      state.files.delete(source);
-    }
-  }),
+  rename: state.rename,
   rm: vi.fn(async (target: string) => {
     for (const file of state.files.keys()) {
       if (file === target || file.startsWith(`${target}/`)) {
@@ -96,6 +92,7 @@ const input = {
 
 beforeEach(() => {
   vi.resetModules();
+  vi.mocked(jobError).mockClear();
   vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "");
   state.files.clear();
   state.requestBackup.mockReset().mockImplementation(() => {
@@ -129,6 +126,15 @@ beforeEach(() => {
     .mockReset()
     .mockImplementation(async (file: string, content: string) => {
       state.files.set(file, content);
+    });
+  state.rename
+    .mockReset()
+    .mockImplementation(async (source: string, destination: string) => {
+      const content = state.files.get(source);
+      if (content !== undefined) {
+        state.files.set(destination, content);
+        state.files.delete(source);
+      }
     });
   // Hold processing at the network boundary.
   // Shutdown must cancel this request.
@@ -209,11 +215,10 @@ describe("processing reservations and concurrent queue", () => {
       second.id,
     ]);
     failFirst(new Error("source unavailable"));
-    await vi.waitFor(() =>
-      expect(state.resolveSource).toHaveBeenCalledTimes(2),
+    await vi.waitFor(async () =>
+      expect((await jobs.getJob("owner", first.id))?.stage).toBe("failed"),
     );
 
-    expect((await jobs.getJob("owner", first.id))?.stage).toBe("failed");
     expect((await jobs.getJob("other", second.id))?.stage).toBe("resolving");
   });
 
@@ -1017,6 +1022,8 @@ it("does not send paid work when persisting its budget reservation fails", async
     expect((await jobs.getJob("owner", job.id))?.stage).toBe("failed"),
   );
   expect(sent).not.toHaveBeenCalled();
+  expect(job.apiUsage?.requests).toEqual([]);
+  expect(jobs.getAccountBudget("owner").reservedUsd).toBe(0);
 });
 
 it("exempt accounts can keep processing above the limit while costs remain tracked", async () => {
@@ -1126,6 +1133,234 @@ it("persists typed waiting events with reworded diagnostics through both process
   );
   finishArticle({ title: "Article", sections: [] });
   await vi.waitFor(() => expect(job.stage).toBe("complete"));
+});
+
+const transcript = [
+  { id: "t-00001", start: 0, end: 1, text: "Private speech", speaker: "Alice" },
+];
+function holdWrite() {
+  let start = () => {};
+  let fail = (_error: Error) => {};
+  const started = new Promise<void>((resolve) => {
+    start = resolve;
+  });
+  return {
+    started,
+    write: () =>
+      new Promise<void>((_resolve, reject) => {
+        fail = reject;
+        start();
+      }),
+    reject: (error: Error) => fail(error),
+  };
+}
+
+it.each([
+  ["transcribing", "writeFile"],
+  ["transcribing", "rename"],
+  ["writing", "writeFile"],
+  ["writing", "rename"],
+] as const)(
+  "recovers from a failed %s progress %s",
+  async (stage, operation) => {
+    resolveMetadata();
+    const failure = Object.assign(
+      new Error("Private speech https://example.com/?signature=secret"),
+      {
+        code: "ENOSPC",
+      },
+    );
+    state.transcribe
+      .mockResolvedValue(transcript)
+      .mockImplementationOnce(async (_files, _language, onProgress) => {
+        if (stage === "transcribing") {
+          state[operation].mockRejectedValueOnce(failure);
+          onProgress(1, 2);
+        }
+        onProgress(2, 2);
+        return transcript;
+      });
+    state.writeArticle
+      .mockResolvedValue(article)
+      .mockImplementationOnce(async (_transcript, _metadata, onStatus) => {
+        if (stage === "writing") {
+          state[operation].mockRejectedValueOnce(failure);
+        }
+        onStatus({
+          type: "article.waiting",
+          message: "Waiting for article",
+          data: { waitingSeconds: 60 },
+        } satisfies ProcessingEvent);
+        return article;
+      });
+    const jobs = await import("./jobs.js");
+
+    const affected = await jobs.createJob("owner", input);
+    await vi.waitFor(() =>
+      expect(jobError).toHaveBeenCalledWith(
+        affected.id,
+        stage,
+        expect.objectContaining({
+          message: "Could not persist job progress (ENOSPC)",
+        }),
+      ),
+    );
+    const unrelated = await jobs.createJob("other", input);
+    await vi.waitFor(() => {
+      expect(affected.stage).toBe("complete");
+      expect(unrelated.stage).toBe("complete");
+    });
+
+    expect(jobError).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      failure,
+    );
+    for (const [username, job] of [
+      ["owner", affected],
+      ["other", unrelated],
+    ] as const) {
+      const file = path.join(
+        jobs.userDirectory(username),
+        "jobs",
+        `${job.id}.json`,
+      );
+      expect(JSON.parse(state.files.get(file) ?? "{}")).toMatchObject({
+        stage: "complete",
+        message: "job.complete",
+        article,
+      });
+    }
+  },
+);
+
+it("waits for a pending heartbeat write during shutdown and resumes the saved transcript", async () => {
+  resolveMetadata();
+  state.transcribe.mockResolvedValue(transcript);
+  const heartbeatWrite = holdWrite();
+  state.writeArticle.mockImplementationOnce(
+    (_transcript, _metadata, onStatus, signal: AbortSignal) => {
+      state.writeFile.mockImplementationOnce(heartbeatWrite.write);
+      onStatus({
+        type: "article.waiting",
+        message: "Waiting for article",
+        data: { waitingSeconds: 60 },
+      } satisfies ProcessingEvent);
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      });
+    },
+  );
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+  await heartbeatWrite.started;
+
+  const stopped = vi.fn();
+  const shutdown = jobs.shutdownJobs().then(stopped);
+  try {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(stopped).not.toHaveBeenCalled();
+  } finally {
+    heartbeatWrite.reject(
+      Object.assign(new Error("Disk full"), { code: "ENOSPC" }),
+    );
+    await shutdown;
+  }
+
+  const file = path.join(jobs.userDirectory("owner"), "jobs", `${job.id}.json`);
+  expect(JSON.parse(state.files.get(file) ?? "{}")).toMatchObject({
+    stage: "queued",
+    message: "job.paused",
+    transcript,
+  });
+  expect(jobError).toHaveBeenCalledWith(
+    job.id,
+    "writing",
+    expect.objectContaining({
+      message: "Could not persist job progress (ENOSPC)",
+    }),
+  );
+
+  vi.resetModules();
+  state.writeArticle.mockResolvedValue(article);
+  const restarted = await import("./jobs.js");
+  await restarted.resumeIncompleteJobs(["owner"]);
+
+  await vi.waitFor(async () =>
+    expect(await restarted.getJob("owner", job.id)).toMatchObject({
+      stage: "complete",
+      article,
+    }),
+  );
+  expect(state.transcribe).toHaveBeenCalledTimes(1);
+});
+
+it("publishes completion only after the final rename succeeds", async () => {
+  resolveMetadata();
+  state.transcribe.mockResolvedValue(transcript);
+  const completionRename = holdWrite();
+  state.writeArticle.mockImplementationOnce(async () => {
+    state.rename.mockImplementationOnce(completionRename.write);
+    return article;
+  });
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+  await completionRename.started;
+
+  try {
+    expect((await jobs.getJob("owner", job.id))?.stage).toBe("writing");
+    expect(jobs.listReadyArticles("owner")).toEqual([]);
+  } finally {
+    completionRename.reject(
+      Object.assign(new Error("Permission denied"), { code: "EACCES" }),
+    );
+  }
+
+  await vi.waitFor(() => expect(job.stage).toBe("failed"));
+  const file = path.join(jobs.userDirectory("owner"), "jobs", `${job.id}.json`);
+  const stored = JSON.parse(state.files.get(file) ?? "{}");
+  expect(stored).toMatchObject({
+    stage: "failed",
+    failedStage: "writing",
+    error: "error.processing",
+  });
+  expect(stored).not.toHaveProperty("article");
+  expect(stored).not.toHaveProperty("completedAt");
+  expect(state.requestBackup).not.toHaveBeenCalled();
+});
+
+it("recovers the last saved state when both the result and failure status cannot be written", async () => {
+  resolveMetadata();
+  state.transcribe.mockResolvedValue(transcript);
+  state.writeArticle.mockImplementationOnce(async () => {
+    const failure = Object.assign(new Error("Disk full"), { code: "ENOSPC" });
+    state.writeFile
+      .mockRejectedValueOnce(failure)
+      .mockRejectedValueOnce(failure);
+    return article;
+  });
+  const jobs = await import("./jobs.js");
+  const job = await jobs.createJob("owner", input);
+
+  await vi.waitFor(() => expect(jobError).toHaveBeenCalledTimes(2));
+  await jobs.shutdownJobs();
+
+  expect(job.stage).toBe("writing");
+  expect(job.article).toBeUndefined();
+  expect(state.requestBackup).not.toHaveBeenCalled();
+  vi.resetModules();
+  const restarted = await import("./jobs.js");
+  await restarted.resumeIncompleteJobs(["owner"]);
+
+  await vi.waitFor(async () =>
+    expect(await restarted.getJob("owner", job.id)).toMatchObject({
+      stage: "complete",
+      transcript,
+    }),
+  );
+  expect(state.transcribe).toHaveBeenCalledTimes(1);
 });
 
 it.each([true, false])(

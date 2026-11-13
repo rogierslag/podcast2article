@@ -16,6 +16,19 @@ export const chunkTranscriptSchema = z
   .refine((value) => value.segments !== undefined || value.text !== undefined);
 export type ChunkTranscript = z.infer<typeof chunkTranscriptSchema>;
 
+export class ProcessingPersistenceError extends Error {
+  constructor(target: string, error: unknown) {
+    const code =
+      error instanceof Error && "code" in error ? error.code : undefined;
+    const detail =
+      typeof code === "string" && /^E[A-Z0-9]{1,20}$/.test(code)
+        ? ` (${code})`
+        : "";
+    super(`Could not persist ${target}${detail}`);
+    this.name = "ProcessingPersistenceError";
+  }
+}
+
 const manifestSchema = z.object({
   version: z.literal(1),
   chunkSeconds: z.number().int().min(60).max(1200),
@@ -26,9 +39,13 @@ const manifestSchema = z.object({
 export type ChunkManifest = z.infer<typeof manifestSchema>;
 
 export async function atomicJson(file: string, value: unknown): Promise<void> {
-  await mkdir(path.dirname(file), { recursive: true });
-  await writeFile(`${file}.tmp`, JSON.stringify(value));
-  await rename(`${file}.tmp`, file);
+  try {
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(`${file}.tmp`, JSON.stringify(value));
+    await rename(`${file}.tmp`, file);
+  } catch (error) {
+    throw new ProcessingPersistenceError("processing checkpoint", error);
+  }
 }
 
 export async function readJson(file: string): Promise<unknown | undefined> {
