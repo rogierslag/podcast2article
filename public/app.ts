@@ -67,11 +67,20 @@ const deploymentAlert = $("#deployment-alert");
 const progressView = $("#progress-view");
 const resultView = $("#result-view");
 const articleReadingProgress = $("#article-reading-progress");
+const transcriptSegments = $("#transcript-segments");
+const transcriptSearch = requiredElement(
+  "#transcript-search",
+  HTMLInputElement,
+);
+const transcriptEmpty = $("#transcript-empty");
+const transcriptSearchStatus = $("#transcript-search-status");
 const form = requiredElement("#job-form", HTMLFormElement);
 function finishInitialLoad() {
   document.documentElement.removeAttribute("data-loading-view");
 }
 let currentJob: CompletedClientJob | undefined;
+let transcriptRows: TranscriptRow[] = [];
+let transcriptQuery = "";
 let articlesState: ArticleSummary[] = [];
 let processingState: ProcessingJobSummary[] = [];
 let overviewRefreshTimer: number | undefined;
@@ -657,7 +666,7 @@ function renderResult(job: ClientJob) {
   }
   setArticleActionStatus("");
   updateReadButtons();
-  renderTranscript(transcript, "");
+  renderTranscript(transcript);
   $(".transcript-head").classList.toggle("hidden", Boolean(job.savedShareKey));
   $("#transcript").classList.toggle("hidden", Boolean(job.savedShareKey));
   requiredElement("#toggle-transcript", HTMLButtonElement).setAttribute(
@@ -673,28 +682,19 @@ function renderResult(job: ClientJob) {
   readingView.scheduleUpdate();
 }
 
-function renderTranscript(transcript: TranscriptSegment[], query: string) {
-  const normalized = query.trim().toLowerCase();
-  let matchCount = 0;
-  $("#transcript-segments").innerHTML = transcript
-    .map((part) => {
-      const match =
-        !normalized ||
-        part.text.toLowerCase().includes(normalized) ||
-        part.speaker.toLowerCase().includes(normalized);
-      if (match) {
-        matchCount += 1;
-      }
-      let textValue = escapeHtml(part.text);
-      if (normalized && match) {
-        const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        textValue = textValue.replace(
-          new RegExp(`(${escaped})`, "ig"),
-          "<mark>$1</mark>",
-        );
-      }
-      return html`
-        <div class="segment" id="${part.id}" ${match ? "" : "hidden"}>
+interface TranscriptRow {
+  element: HTMLElement;
+  paragraph: HTMLParagraphElement;
+  text: string;
+  searchableText: string;
+  searchableSpeaker: string;
+}
+
+function renderTranscript(transcript: TranscriptSegment[]) {
+  transcriptSegments.innerHTML = transcript
+    .map(
+      (part) => html`
+        <div class="segment" id="${escapeHtml(part.id)}">
           <button
             class="timestamp"
             data-time="${part.start}"
@@ -703,16 +703,76 @@ function renderTranscript(transcript: TranscriptSegment[], query: string) {
             ${time(part.start)}
           </button>
           <span class="speaker">${escapeHtml(part.speaker)}</span>
-          <p>${textValue}</p>
+          <p>${escapeHtml(part.text)}</p>
         </div>
-      `;
-    })
+      `,
+    )
     .join("");
-  const noResults = Boolean(normalized) && matchCount === 0;
-  $("#transcript-empty").hidden = !noResults;
-  $("#transcript-search-status").textContent = noResults
+  transcriptRows = Array.from(
+    transcriptSegments.querySelectorAll<HTMLElement>(".segment"),
+    (element) => {
+      const paragraph = requiredElement("p", HTMLParagraphElement, element);
+      const text = paragraph.textContent;
+      return {
+        element,
+        paragraph,
+        text,
+        searchableText: text.toLowerCase(),
+        searchableSpeaker: requiredElement(
+          ".speaker",
+          HTMLSpanElement,
+          element,
+        ).textContent.toLowerCase(),
+      };
+    },
+  );
+  transcriptSearch.value = "";
+  transcriptQuery = "";
+  showTranscriptNoResults(false);
+}
+
+function showTranscriptNoResults(noResults: boolean) {
+  transcriptEmpty.hidden = !noResults;
+  transcriptSearchStatus.textContent = noResults
     ? t("transcript.noResults")
     : "";
+}
+
+function filterTranscript(query: string) {
+  const normalized = query.trim().toLowerCase();
+  if (normalized === transcriptQuery) {
+    return;
+  }
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const highlight = normalized ? new RegExp(`(${escaped})`, "ig") : undefined;
+  let hasMatches = false;
+  for (const row of transcriptRows) {
+    const textMatches = row.searchableText.includes(normalized);
+    const visible = textMatches || row.searchableSpeaker.includes(normalized);
+    if (row.element.hidden === visible) {
+      row.element.hidden = !visible;
+    }
+    hasMatches ||= visible;
+
+    if (highlight && textMatches) {
+      const parts = row.text.split(highlight);
+      const contents = document.createDocumentFragment();
+      for (const [index, part] of parts.entries()) {
+        if (index % 2 === 0) {
+          contents.append(part);
+        } else {
+          const mark = document.createElement("mark");
+          mark.textContent = part;
+          contents.append(mark);
+        }
+      }
+      row.paragraph.replaceChildren(contents);
+    } else if (row.paragraph.childElementCount > 0) {
+      row.paragraph.textContent = row.text;
+    }
+  }
+  transcriptQuery = normalized;
+  showTranscriptNoResults(Boolean(normalized) && !hasMatches);
 }
 
 function sourceClick(event: MouseEvent) {
@@ -884,22 +944,15 @@ async function shareArticle() {
 }
 
 resultView.addEventListener("click", sourceClick);
-requiredElement("#transcript-search", HTMLInputElement).addEventListener(
-  "input",
-  (event) =>
-    currentJob &&
-    event.target instanceof HTMLInputElement &&
-    renderTranscript(currentJob.transcript, event.target.value),
+transcriptSearch.addEventListener("input", () =>
+  filterTranscript(transcriptSearch.value),
 );
 requiredElement("#clear-transcript-search", HTMLButtonElement).addEventListener(
   "click",
   () => {
-    const search = requiredElement("#transcript-search", HTMLInputElement);
-    search.value = "";
-    if (currentJob) {
-      renderTranscript(currentJob.transcript, "");
-    }
-    search.focus({ preventScroll: true });
+    transcriptSearch.value = "";
+    filterTranscript("");
+    transcriptSearch.focus({ preventScroll: true });
   },
 );
 requiredElement("#toggle-transcript", HTMLButtonElement).addEventListener(

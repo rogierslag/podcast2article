@@ -184,6 +184,9 @@ const saveButtons = [
 const saveStatuses = [
   ...document.querySelectorAll<HTMLElement>("[data-save-status]"),
 ];
+const saveActions = [
+  ...document.querySelectorAll<HTMLElement>(".shared-save-actions"),
+];
 
 function showSavedArticle(articleId: string) {
   saveButtons.forEach((button) => {
@@ -202,6 +205,9 @@ function showSavedArticle(articleId: string) {
 }
 
 async function loadSaveState() {
+  if (document.documentElement.dataset.sharedSave !== "true") {
+    return;
+  }
   try {
     const response = await localizedFetch(
       `/api/saved-shares/${encodeURIComponent(token)}`,
@@ -210,14 +216,15 @@ async function loadSaveState() {
       return;
     }
     const { articleId } = await responseData(response, savedArticleSchema);
-    document
-      .querySelectorAll<HTMLElement>(".shared-save-actions")
-      .forEach((actions) => actions.classList.remove("hidden"));
     if (articleId) {
       showSavedArticle(articleId);
     }
   } catch {
-    // Account lookup must not interrupt anonymous reading.
+    // Saving can still be retried if the lookup failed.
+  } finally {
+    saveActions.forEach((actions) =>
+      actions.removeAttribute("data-save-pending"),
+    );
   }
 }
 

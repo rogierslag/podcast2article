@@ -323,11 +323,23 @@ app.get("/s/:token", async (request, response) => {
     path.join(client.templateDirectory, "share.html"),
     "utf8",
   );
-  // Revalidate HTML so a deployment cannot leave cached pages pointing at old asset hashes.
-  response.setHeader("Cache-Control", "public, no-cache");
+  const canSave = authenticatedUser(request.headers.cookie) !== undefined;
+  // The signed-in shell reserves space for save actions. Account-specific links stay in the private API.
+  response.setHeader(
+    "Cache-Control",
+    canSave ? "private, no-store" : "public, no-cache",
+  );
   response.type("html");
   return response.send(
-    renderPage(response, template)
+    renderPage(
+      response,
+      canSave
+        ? template.replace(
+            'data-shared-save="false"',
+            'data-shared-save="true"',
+          )
+        : template,
+    )
       .replace("<!-- SHARE_METADATA -->", metadata)
       .replace(
         '<meta name="robots" content="noindex, nofollow" />',

@@ -181,7 +181,7 @@ sequenceDiagram
     alt Token does not resolve
         Public-->>Reader: Public 404, without login redirect
     else Valid token
-        Public-->>Reader: Reader HTML with server-rendered social metadata
+        Public-->>Reader: Reader HTML with social metadata and save space for signed-in readers
         Reader->>Public: GET /api/shared/:token
         Public-->>Reader: Article, selected episode fields, source IDs and start times
         Reader->>Public: GET /api/shared/:token/audio
@@ -207,7 +207,8 @@ sequenceDiagram
     Private-->>Owner: Shared loads and estimated shared reads in article footer
 ```
 
-Public payloads omit the username, internal job ID, token, reading state, usage ledger, monitoring statistics, and transcript text.
+Public API payloads omit the username, internal job ID, token, reading state, usage ledger, monitoring statistics, and transcript text.
+The signed-in HTML uses private, no-store caching and leaves the saved copy link to the authenticated saved-share API.
 Saved copies retain only source IDs and timestamps, not the private transcript, original owner's costs, or analytics.
 Owner-only actions include marking read, saving reading position, PDF export, and soft deletion.
 Soft deletion hides the original from token lookup; public responses already cached may remain available until their cache lifetime expires.

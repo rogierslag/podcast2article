@@ -384,7 +384,8 @@ Shared translations, source-link helpers, and API response schemas live in `src/
 Browser schemas validate incoming JSON and reuse the domain types in `src/types.ts`; esbuild compilation does not replace TypeScript type-checking.
 Compatible unversioned JavaScript assets are compiled into `dist/client-legacy/` so existing asset URLs keep working; TypeScript source files are not served.
 Built pages use content-hashed `/assets/` URLs with one-year immutable caching and precompressed Brotli/gzip variants selected through `Accept-Encoding`.
-Shared HTML revalidates on each request so a deployment does not leave cached pages pointing at old asset hashes.
+Anonymous shared HTML revalidates on each request so a deployment does not leave cached pages pointing at old asset hashes.
+Signed-in shared HTML reserves space for save controls and is served with `Cache-Control: private, no-store`.
 Only JavaScript and CSS listed in the build manifest are public under `/assets/`; templates, manifests, and compression sidecars cannot be fetched directly.
 Built assets share the same global request quota as other routes; their handler stays on the main Express app so static analysis can see that boundary.
 Shared assets do not change authentication requirements for owner APIs or article data.
