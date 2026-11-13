@@ -895,6 +895,8 @@ audio {
   padding: 20px 8px;
   border-bottom: 1px solid var(--line);
   scroll-margin-top: 20px;
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 72px;
 }
 .segment[hidden] {
   display: none;

@@ -55,6 +55,59 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
+test("shared loading keeps the footer out of view and leaves anonymous readers no save controls", async ({
+  page,
+}) => {
+  const article = Promise.withResolvers();
+  await page.route(`**/api/shared/${token}`, async (route) => {
+    await article.promise;
+    await route.continue();
+  });
+  let saveLookups = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith(`/api/saved-shares/${token}`)) {
+      saveLookups += 1;
+    }
+  });
+
+  await page.goto(`/s/${token}`);
+  await expect(page.locator("#shared-loading")).toBeVisible();
+  await expect(page.locator(".page-scroll > footer")).toBeHidden();
+  article.resolve();
+
+  await expect(page.locator("#article > h1")).toBeVisible();
+  await expect(page.locator(".page-scroll > footer")).toBeVisible();
+  await expect(page.locator(".shared-save-actions").first()).toBeHidden();
+  expect(saveLookups).toBe(0);
+});
+
+for (const alreadySaved of [false, true]) {
+  test(`shared heading stays in place when ${alreadySaved ? "opening a saved copy" : "save becomes available"}`, async ({
+    page,
+  }) => {
+    await login(page);
+    const saveState = Promise.withResolvers();
+    await page.route(`**/api/saved-shares/${token}`, async (route) => {
+      await saveState.promise;
+      await route.fulfill({
+        json: { articleId: alreadySaved ? articleId : null },
+      });
+    });
+    await shared(page);
+    const heading = page.locator("#article > h1");
+    const actions = page.locator(".shared-save-actions");
+    await expect(actions.first()).toBeHidden();
+    const before = await heading.boundingBox();
+    saveState.resolve();
+
+    const selector = alreadySaved ? "[data-open-saved]" : "[data-save-shared]";
+    await expect(actions.first().locator(selector)).toBeVisible();
+    await expect(actions.last().locator(selector)).toBeVisible();
+    const after = await heading.boundingBox();
+    expect(after.y).toBeCloseTo(before.y, 0);
+  });
+}
+
 for (const reader of ["owner", "shared"]) {
   test(`${reader}: contents follows the visible section and clears above the article`, async ({
     page,
@@ -466,6 +519,27 @@ test("transcript no-results recovery restores content and keyboard focus (PR 39)
   await expect(page.locator("#transcript-search")).toHaveValue("");
   await expect(page.locator("#transcript-empty")).toBeHidden();
   await expect(page.locator("#transcript-segments")).toContainText("Meer rust");
+});
+
+test("transcript search keeps timestamp controls and highlights literal source text", async ({
+  page,
+}) => {
+  const job = articleFixture();
+  job.transcript[0].text = "Meer rust & aandacht <samen>.";
+  await owner(page, job);
+  const search = page.locator("#transcript-search");
+  const row = page.locator("#t-00001");
+  const timestamp = await row.locator("button").elementHandle();
+
+  await search.fill("SANNE");
+  await expect(row).toBeVisible();
+  await expect(row.locator("mark")).toHaveCount(0);
+  await search.fill("& aandacht <");
+  await expect(row.locator("mark")).toHaveText("& aandacht <");
+  expect(await timestamp.evaluate((button) => button.isConnected)).toBe(true);
+  await search.fill("");
+  await expect(row.locator("p")).toHaveText(job.transcript[0].text);
+  await expect(row.locator("mark")).toHaveCount(0);
 });
 
 test("overview sorts same-day read timestamps and collapses the read shelf (PRs 9, 10)", async ({

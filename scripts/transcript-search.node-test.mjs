@@ -1,123 +1,119 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
-import {
-  html,
-  escapeHtml,
-  formatTimestamp as time,
-} from "../public/article-format.ts";
 import { translate } from "../src/shared/i18n.ts";
 import { browserSource } from "./client-source.mjs";
 
 const app = browserSource("public/app.ts");
-const renderer = app.slice(
-  app.indexOf("function renderTranscript("),
+const filter = app.slice(
+  app.indexOf("function showTranscriptNoResults("),
   app.indexOf("\nfunction sourceClick("),
 );
-const fixture = [
-  { id: "t-1", start: 0, speaker: "Sanne", text: "Ruimte voor aandacht." },
-  { id: "t-2", start: 30, speaker: "Joris", text: "Rustig samenwerken." },
-];
+const clearHandler = app.slice(
+  app.indexOf(
+    'requiredElement("#clear-transcript-search", HTMLButtonElement).addEventListener',
+  ),
+  app.indexOf(
+    'requiredElement("#toggle-transcript", HTMLButtonElement).addEventListener',
+  ),
+);
+
 function setup(language = "nl") {
-  const elements = Object.fromEntries(
-    [
-      "transcript-segments",
-      "transcript-empty",
-      "transcript-search-status",
-      "transcript-search",
-    ].map((id) => [
-      `#${id}`,
-      {
-        innerHTML: "",
-        textContent: "",
-        hidden: false,
-        value: "",
-        focus() {
-          this.focused = true;
-        },
-      },
-    ]),
-  );
-  const context = {
-    $: (selector) => elements[selector],
-    requiredElement: (selector) => elements[selector],
-    HTMLInputElement: class {},
-    HTMLButtonElement: class {},
-    t: (key, values) => translate(language, key, values),
-    time,
-    escapeHtml,
-    html,
-  };
-  runInNewContext(renderer + "; this.render = renderTranscript;", context);
-  return { elements, context };
-}
-test("unmatched search explains the empty result and clearing restores all segments", () => {
-  const { elements, context } = setup();
-
-  context.render(fixture, "vakantie");
-
-  assert.equal(elements["#transcript-empty"].hidden, false);
-  assert.equal(
-    elements["#transcript-search-status"].textContent,
-    "Geen resultaten",
-  );
-  assert.equal(
-    (elements["#transcript-segments"].innerHTML.match(/ hidden/g) ?? []).length,
-    2,
-  );
-
-  context.render(fixture, "");
-
-  assert.equal(elements["#transcript-empty"].hidden, true);
-  assert.equal(elements["#transcript-search-status"].textContent, "");
-  assert.equal(
-    elements["#transcript-segments"].innerHTML.includes(" hidden"),
-    false,
-  );
-});
-test("speaker and text matching ignore case and surrounding whitespace", () => {
-  const { elements, context } = setup();
-
-  for (const query of [" SANNE ", "AANDACHT", "   "]) {
-    context.render(fixture, query);
-
-    assert.equal(elements["#transcript-empty"].hidden, true);
-  }
-});
-test("English empty state is localized and search markup stays escaped", () => {
-  const { elements, context } = setup("en");
-
-  context.render(fixture, '<img src=x onerror="alert(1)">');
-
-  assert.equal(elements["#transcript-search-status"].textContent, "No results");
-  assert.equal(
-    elements["#transcript-segments"].innerHTML.includes("<img"),
-    false,
-  );
-});
-test("the clear action empties the field, restores segments and returns focus to search", () => {
-  const { elements, context } = setup();
-  elements["#transcript-search"].value = "vakantie";
-  context.currentJob = { transcript: fixture };
-  let clear;
-  elements["#clear-transcript-search"] = {
-    addEventListener: (_event, callback) => {
-      clear = callback;
+  const transcriptRows = [
+    { text: "Ruimte voor aandacht.", speaker: "Sanne" },
+    { text: "Rustig samenwerken.", speaker: "Joris" },
+  ].map(({ text, speaker }) => ({
+    text,
+    searchableText: text.toLowerCase(),
+    searchableSpeaker: speaker.toLowerCase(),
+    element: { hidden: false },
+    paragraph: {
+      childElementCount: 0,
+      replaceChildren() {},
     },
+  }));
+  let clear;
+  const context = {
+    transcriptRows,
+    transcriptQuery: "",
+    transcriptEmpty: { hidden: true },
+    transcriptSearchStatus: { textContent: "" },
+    transcriptSearch: {
+      value: "",
+      focus() {
+        this.focused = true;
+      },
+    },
+    requiredElement: () => ({
+      addEventListener: (_event, callback) => {
+        clear = callback;
+      },
+    }),
+    HTMLButtonElement: class {},
+    document: {
+      createDocumentFragment: () => ({ append() {} }),
+      createElement: () => ({}),
+    },
+    t: (key) => translate(language, key),
   };
-  const handler = app.slice(
-    app.indexOf(
-      'requiredElement("#clear-transcript-search", HTMLButtonElement).addEventListener',
-    ),
-    app.indexOf(
-      'requiredElement("#toggle-transcript", HTMLButtonElement).addEventListener',
-    ),
-  );
-  runInNewContext(renderer + handler, context);
+  runInNewContext(filter + clearHandler, context);
+  return { ...context, clear };
+}
+
+test("unmatched search explains the empty result and clearing restores all segments", () => {
+  const {
+    filterTranscript,
+    transcriptEmpty,
+    transcriptRows,
+    transcriptSearchStatus,
+  } = setup();
+
+  filterTranscript("vakantie");
+
+  assert.equal(transcriptEmpty.hidden, false);
+  assert.equal(transcriptSearchStatus.textContent, "Geen resultaten");
+  assert.ok(transcriptRows.every(({ element }) => element.hidden));
+
+  filterTranscript("");
+
+  assert.equal(transcriptEmpty.hidden, true);
+  assert.equal(transcriptSearchStatus.textContent, "");
+  assert.ok(transcriptRows.every(({ element }) => !element.hidden));
+});
+
+test("speaker and text matching ignore case and surrounding whitespace", () => {
+  const { filterTranscript, transcriptRows } = setup();
+
+  for (const query of [" SANNE ", "AANDACHT"]) {
+    filterTranscript(query);
+
+    assert.deepEqual(
+      transcriptRows.map(({ element }) => element.hidden),
+      [false, true],
+    );
+  }
+  filterTranscript("   ");
+
+  assert.ok(transcriptRows.every(({ element }) => !element.hidden));
+});
+
+test("the empty state uses the reader's language", () => {
+  const { filterTranscript, transcriptSearchStatus } = setup("en");
+
+  filterTranscript("vacation");
+
+  assert.equal(transcriptSearchStatus.textContent, "No results");
+});
+
+test("the clear action empties the field, restores segments and returns focus to search", () => {
+  const { clear, filterTranscript, transcriptEmpty, transcriptSearch } =
+    setup();
+  transcriptSearch.value = "vakantie";
+  filterTranscript(transcriptSearch.value);
 
   clear();
 
-  assert.equal(elements["#transcript-search"].value, "");
-  assert.equal(elements["#transcript-search"].focused, true);
-  assert.equal(elements["#transcript-empty"].hidden, true);
+  assert.equal(transcriptSearch.value, "");
+  assert.equal(transcriptSearch.focused, true);
+  assert.equal(transcriptEmpty.hidden, true);
 });

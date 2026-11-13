@@ -78,6 +78,7 @@ function setupReadingController(
     HTMLElement: class {},
     HTMLButtonElement: class {},
     HTMLFormElement: class {},
+    HTMLInputElement: class {},
     Element: class {
       static [Symbol.hasInstance](value: unknown) {
         return Boolean(

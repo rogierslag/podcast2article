@@ -1105,6 +1105,21 @@ test("saving a shared article requires a session and validates the capability", 
   }
 });
 
+test("the share shell reserves space only for a valid session and keeps the saved link private", async () => {
+  const cookie = await loginAs("owner");
+  const signedIn = await fetch(`${origin}/s/${token}`, {
+    headers: { Cookie: cookie },
+  });
+  const anonymous = await fetch(`${origin}/s/${token}`);
+  const markup = await signedIn.text();
+
+  assert.equal(signedIn.headers.get("cache-control"), "private, no-store");
+  assert.match(signedIn.headers.get("vary"), /Cookie/i);
+  assert.match(markup, /data-shared-save="true"/);
+  assert.equal(markup.includes(articleId), false);
+  assert.match(await anonymous.text(), /data-shared-save="false"/);
+});
+
 test("saving creates one independent personal copy with only public content and working audio", async () => {
   const cookie = await loginAs("other");
   const headers = { Cookie: cookie };

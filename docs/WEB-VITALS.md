@@ -84,3 +84,15 @@ Owner hash navigation does not create a fresh measurement lifecycle, and the cur
 INP can therefore include interactions later in the same document while retaining its initial page category.
 Signed-in and anonymous shared readers are combined because collection does not inspect or report authentication state.
 Use targeted browser diagnostics to separate their layout behavior when investigating shared-page shifts.
+
+## Shared reader and transcript diagnostics
+
+While the shared article loads, its footer is hidden so it cannot shift out of view when the article replaces the loading message.
+The server reserves save-control space in the signed-in HTML before the browser fetches the saved-copy state.
+The anonymous reader has neither that space nor a saved-copy lookup.
+
+For a local comparison, record cold loads of the same permalink on desktop and mobile with separate signed-in and anonymous browser contexts.
+Delay the article response and the saved-copy lookup independently so both transitions appear in the layout-shift trace.
+For transcript search, use a long owner transcript and record keyboard interaction durations for the same query and CPU settings across builds.
+Search reuses transcript rows and defers rendering offscreen rows where the browser supports it.
+These diagnostics help explain changes in field p75, which requires real visits after deployment.
