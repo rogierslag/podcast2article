@@ -81,9 +81,11 @@ flowchart TD
     Budget -->|Yes| Save["Save retry count<br/>and writing stage"]
     Save --> Article["Use saved transcript<br/>in article slot"]
     Article --> Outcome
-    Queued --> Startup["Server startup loads stored jobs"]
+    Queued --> Startup["Server startup validates stored jobs"]
     Interrupted["Hard stop leaves a nonterminal stage"] --> Startup
-    Startup --> Recover{"Neither complete nor failed<br/>and not deleted?"}
+    Startup --> History{"Account job history readable<br/>and valid?"}
+    History -->|No| Pause["Keep valid jobs readable<br/>and pause paid processing"]
+    History -->|Yes| Recover{"Neither complete nor failed<br/>and not deleted?"}
     Recover -->|Yes| Full["Resume saved results<br/>with same ID"]
     Recover -->|No| Retain["Load without scheduling work"]
 ```
@@ -236,7 +238,9 @@ Pending responses keep their IDs and continue polling; only confirmed transient 
 ```mermaid
 flowchart TD
     Attempt["Next OpenAI request attempt"] --> Estimate["Estimate maximum request cost"]
-    Estimate --> Allowed{"Exempt or within<br/>verified allowance?"}
+    Estimate --> History{"Account job history readable<br/>and valid?"}
+    History -->|No| Pause["Block request<br/>with storage error"]
+    History -->|Yes| Allowed{"Exempt or within<br/>verified allowance?"}
     Allowed -->|No| Block["Block request<br/>with budget error"]
     Allowed -->|Yes| Persist["Save pending usage<br/>and reservation"]
     Persist --> Send["Send OpenAI request"]

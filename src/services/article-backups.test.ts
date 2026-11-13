@@ -34,7 +34,7 @@ const job: Job = {
   createdAt: "2026-09-19T10:00:00Z",
   updatedAt: "2026-09-19T11:00:00Z",
   completedAt: "2026-09-19T11:00:00Z",
-  shareToken: "secret",
+  shareToken: "a".repeat(43),
   shareAnalytics: { loads: 2, reads: 1, recentVisits: [] },
   readAt: "2026-09-19T12:00:00Z",
   episode: {
@@ -120,7 +120,7 @@ describe("article backup format", () => {
     "transcribing",
     "writing",
     "failed",
-  ])("excludes %s jobs even with stale article content", (stage) => {
+  ] as const)("excludes %s jobs even with stale article content", (stage) => {
     expect(createArticleBackup("owner", { ...job, stage })).toBeUndefined();
   });
 

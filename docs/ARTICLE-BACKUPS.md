@@ -59,7 +59,8 @@ The worker scans every 60 seconds, but the first upload failure stops the scan a
 Completion requests and timer scans cannot bypass that cooldown; another failure starts a new 15-minute pause.
 The cooldown is in memory, so restarting the server or starting a new backfill process retries immediately.
 Uploads run sequentially, with one SDK attempt per upload and a 30-second request deadline.
-Scan-level filesystem failures and failures to save an upload receipt also trigger the cooldown; malformed individual jobs are still skipped.
+A failure to list the users directory or save an upload receipt also triggers the cooldown.
+Unreadable account job directories and malformed job files are logged while the scan continues.
 A long queue or outage can delay backups; there is no zero-loss guarantee between local completion and successful upload.
 Failure never changes the completed job into a failed generation.
 Inspect `journalctl -u podcast2article` for `Article backup uploaded`, `Article backup ... failed`, and disabled-backup messages.
@@ -180,7 +181,8 @@ yarn run backup:articles restore owner aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee
 
 The command first fetches the `.json.gz` object and falls back to `.json` only when S3 returns `NoSuchKey`.
 Access, checksum and decoding errors fail visibly rather than restoring a potentially stale legacy copy.
-It fetches the current object, decompresses gzip when present (while accepting legacy plain JSON), validates schema version, owner and job ID, then atomically creates `data/users/owner/jobs/<job-id>.json` with mode `0600`.
+It fetches the current object, decompresses gzip when present (while accepting legacy plain JSON), validates schema version, owner and job ID, then atomically creates a versioned local job at `data/users/owner/jobs/<job-id>.json` with mode `0600`.
+A content-only restore cannot recover the original usage ledger or retry history.
 It refuses to overwrite an existing job or change ownership.
 For an older S3 version, retrieve the selected version using an operator tool and validate it with `restoreArticleBackup` before installation; the CLI restores only the current version.
 

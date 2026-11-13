@@ -115,6 +115,7 @@ Returning to the form restores the source, language, and length.
 A transient status-fetch failure offers a read-only status check that creates no new job.
 An ambiguous regeneration response also requires checking the saved job status before another paid retry is offered; the server may already have accepted the request.
 A missing job does not offer regeneration or imply that processing is still running.
+If stored job history is unreadable, existing readable articles stay available and paid processing pauses for the affected account until an operator restores its history.
 See [PR 48](https://github.com/rogierslag/podcast2article/pull/48).
 
 **Critical states and trust.**

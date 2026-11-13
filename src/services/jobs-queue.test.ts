@@ -80,6 +80,14 @@ vi.mock("./openai.js", () => ({
   writeArticle: state.writeArticle,
 }));
 vi.mock("../lib/logger.js", () => ({ jobLog: vi.fn(), jobError: vi.fn() }));
+const article = {
+  title: "An article",
+  dek: "Summary",
+  readingTimeMinutes: 3,
+  styleNote: "Clear",
+  sections: [],
+  takeaways: [],
+} satisfies NonNullable<Job["article"]>;
 const input = {
   sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   language: "auto",
@@ -98,9 +106,7 @@ beforeEach(() => {
       ),
     ).toBe(true);
   });
-  state.writeArticle
-    .mockReset()
-    .mockResolvedValue({ title: "An article", sections: [] });
+  state.writeArticle.mockReset().mockResolvedValue(article);
   state.download
     .mockReset()
     .mockImplementation(async (_source: string, target: string) => {
@@ -244,7 +250,7 @@ function resolveMetadata() {
     sourceName: "The Knowledge Project",
     title: "How to make better decisions",
     imageUrl: "https://example.com/cover.jpg",
-    mediaUrl: "",
+    mediaUrl: sourceUrl,
   }));
 }
 
@@ -733,6 +739,8 @@ describe("podcast jobs", () => {
       sourceUrl: episode.episode.sourceUrl,
       podcastEpisodeKey: episode.key,
       episode: episode.episode,
+      article,
+      transcript: [],
       stage: "complete",
       progress: 100,
       message: "Klaar",
@@ -772,6 +780,15 @@ it("counts unread and queued podcast jobs, excluding read, deleted, failed and o
       message: "Klaar",
       createdAt: "2026-09-01T10:00:00Z",
       updatedAt: "2026-09-01T10:00:00Z",
+      episode: {
+        sourceType: "youtube",
+        sourceUrl: input.sourceUrl,
+        sourceName: "Test channel",
+        title: "An episode",
+        mediaUrl: input.sourceUrl,
+      },
+      article,
+      transcript: [],
       ...flags,
     } satisfies Job;
     state.files.set(
@@ -812,6 +829,10 @@ it("excludes already articled or processing episode sources from quick links wit
       id: `00000000-0000-4000-8000-00000000079${index}`,
       sourceUrl: episode.episode.sourceUrl,
       episode: episode.episode,
+      article: stage === "complete" ? article : undefined,
+      transcript: [
+        { id: "t-00001", start: 0, end: 1, speaker: "Alice", text: "Hello" },
+      ],
       stage,
       progress: 100,
       message: "Test",
@@ -951,6 +972,8 @@ it("blocks manual jobs, subscriptions and article retries from restored deleted 
 
   // Deleted content must not refund the account, including after a restart.
   stored.stage = "complete";
+  stored.article = article;
+  stored.completedAt = stored.updatedAt;
   stored.deletedAt = new Date().toISOString();
   state.files.set(file, JSON.stringify(stored));
   await restarted.shutdownJobs();
@@ -1161,7 +1184,7 @@ it("resumes a complete transcript after shutdown without downloading or transcri
 
   await jobs.shutdownJobs();
   vi.resetModules();
-  state.writeArticle.mockResolvedValue({ title: "Recovered", sections: [] });
+  state.writeArticle.mockResolvedValue({ ...article, title: "Recovered" });
   state.download.mockClear();
   state.transcribe.mockClear();
   const restarted = await import("./jobs.js");
@@ -1214,4 +1237,119 @@ it("keeps one budget reservation while a background article moves from accepted 
   expect(job.apiUsage?.requests).toHaveLength(1);
   expect(job.apiUsage?.knownEstimatedCostUsd).toBe(0.1);
   expect(jobs.getAccountBudget("owner").reservedUsd).toBe(0);
+});
+
+it("keeps readable jobs and pauses all new paid work for the account with a corrupt ledger", async () => {
+  const { jobs, job } = await failedArticleJob();
+  await jobs.shutdownJobs();
+  const ownerDirectory = path.join(jobs.userDirectory("owner"), "jobs");
+  const otherDirectory = path.join(jobs.userDirectory("other"), "jobs");
+  const episode = job.episode;
+  if (!episode) {
+    throw new Error("Expected a resolved episode");
+  }
+  const copiedEpisode = { ...episode, playbackUrl: undefined };
+  const ownerArticle = {
+    ...job,
+    episode: copiedEpisode,
+    stage: "complete",
+    completedAt: job.updatedAt,
+    article,
+  };
+  const articleId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const corruptId = "bbbbbbbb-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const queuedId = "cccccccc-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const queued = {
+    ...job,
+    id: queuedId,
+    episode: copiedEpisode,
+    stage: "queued",
+    transcript: undefined,
+  };
+  const corruptFile = path.join(ownerDirectory, `${corruptId}.json`);
+  const corrupt = JSON.stringify({
+    ...job,
+    id: corruptId,
+    deletedAt: job.updatedAt,
+    apiUsage: { ...job.apiUsage, requests: "private damaged ledger" },
+  });
+  state.files.set(corruptFile, corrupt);
+  state.files.set(
+    path.join(ownerDirectory, `${articleId}.json`),
+    JSON.stringify({ ...ownerArticle, id: articleId }),
+  );
+  state.files.set(
+    path.join(otherDirectory, `${articleId}.json`),
+    JSON.stringify({ ...ownerArticle, id: articleId }),
+  );
+  state.files.set(
+    path.join(ownerDirectory, `${queuedId}.json`),
+    JSON.stringify(queued),
+  );
+  state.files.set(
+    path.join(otherDirectory, `${queuedId}.json`),
+    JSON.stringify(queued),
+  );
+  vi.stubEnv("SPENDING_LIMIT_EXEMPT_USERS", "owner");
+  const report = vi.spyOn(console, "error").mockImplementation(() => {});
+  state.writeArticle.mockClear();
+  state.transcribe.mockClear();
+  vi.resetModules();
+  const restarted = await import("./jobs.js");
+
+  try {
+    await restarted.resumeIncompleteJobs(["owner", "other"]);
+
+    expect(restarted.listReadyArticles("owner").map(({ id }) => id)).toEqual([
+      articleId,
+    ]);
+    expect(restarted.listReadyArticles("other").map(({ id }) => id)).toEqual([
+      articleId,
+    ]);
+    await expect(restarted.getJob("owner", corruptId)).rejects.toMatchObject({
+      code: "error.jobRecordInvalid",
+    });
+    await expect(restarted.getJob("other", corruptId)).resolves.toBeUndefined();
+    expect(() => restarted.getAccountBudget("owner")).toThrow(
+      "error.jobHistoryUnavailable",
+    );
+    await expect(
+      restarted.createJob("owner", {
+        ...input,
+        sourceUrl: "https://www.youtube.com/watch?v=abcdefghijk",
+      }),
+    ).rejects.toThrow("error.jobHistoryUnavailable");
+    await expect(restarted.retryArticle("owner", job.id)).rejects.toThrow(
+      "error.jobHistoryUnavailable",
+    );
+    await expect(
+      restarted.createPodcastJob(
+        "owner",
+        {
+          key: "new-podcast-episode",
+          episode: {
+            ...episode,
+            mediaUrl: "https://example.com/new-episode.mp3",
+          },
+        },
+        input,
+      ),
+    ).rejects.toThrow("error.jobHistoryUnavailable");
+    await vi.waitFor(() => expect(state.transcribe).toHaveBeenCalledTimes(1));
+    expect(state.transcribe.mock.calls[0]?.[0]).toEqual([
+      expect.stringContaining("/users/other/"),
+    ]);
+    expect(state.files.get(corruptFile)).toBe(corrupt);
+    expect(state.files.get(path.join(ownerDirectory, `${queuedId}.json`))).toBe(
+      JSON.stringify(queued),
+    );
+    expect(report).toHaveBeenCalledWith(
+      expect.stringContaining(`users/owner/jobs/${corruptId}.json`),
+    );
+    expect(report).not.toHaveBeenCalledWith(
+      expect.stringContaining("private damaged ledger"),
+    );
+  } finally {
+    report.mockRestore();
+  }
 });

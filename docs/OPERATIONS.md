@@ -893,7 +893,9 @@ A job stopped between stages retains its transcript when available, so the exist
 Subscription episodes that fail during processing retain the existing failure and retry behavior; they are not automatically retried when the budget recovers.
 
 Run only one server against a data directory: reservations coordinate concurrent requests within that process, not across replicas.
-Startup loads all account histories before resuming work and fails if a stored job cannot be read, because ignoring that history could grant an incorrect allowance.
+Startup validates each account's job history before resuming its work.
+An unreadable or invalid record pauses paid processing for that account, including exemptions, while healthy articles remain readable.
+Follow [stored job recovery](DEPLOYMENT-RECOVERY.md#stored-job-recovery) to restore the account's history.
 
 ### Viewing spending and exempting accounts
 

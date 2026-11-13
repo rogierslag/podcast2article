@@ -149,7 +149,8 @@ flowchart LR
 
 See the [service flow diagrams](docs/SERVICE-FLOWS.md) for request validation, processing stages, failure recovery, podcast subscriptions, budget enforcement, and the boundary between owner access and public permalinks.
 
-Jobs are stored per user as JSON in `data/users/<username>/jobs/`.
+Jobs are stored per user as versioned JSON in `data/users/<username>/jobs/`.
+See [stored job recovery](docs/DEPLOYMENT-RECOVERY.md#stored-job-recovery) if a job file cannot be read or validated.
 Compact playback audio is stored in `data/users/<username>/media/`; source files and chunks are removed after their replacement results are persisted.
 Users can access only their own jobs, articles, transcripts, and audio through owner routes.
 Public permalinks separately grant access to one completed article and its audio.

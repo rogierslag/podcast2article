@@ -453,6 +453,18 @@ export const messages: Record<string, Record<UiLanguage, string>> = {
     nl: "Ongeldige invoer",
     en: "Invalid input.",
   },
+  "error.jobRecordInvalid": {
+    nl: "Deze opgeslagen opdracht is beschadigd of heeft een onbekend formaat. Neem contact op met de beheerder.",
+    en: "This saved job is damaged or uses an unsupported format. Contact the administrator.",
+  },
+  "error.jobStorageUnavailable": {
+    nl: "Deze opgeslagen opdracht kan niet worden gelezen. Neem contact op met de beheerder.",
+    en: "This saved job could not be read. Contact the administrator.",
+  },
+  "error.jobHistoryUnavailable": {
+    nl: "Nieuwe verwerking is gepauzeerd omdat je opdrachtgeschiedenis niet volledig beschikbaar is. Neem contact op met de beheerder.",
+    en: "Processing is paused because your job history is incomplete. Contact the administrator.",
+  },
   "error.creationUnavailable": {
     nl: "Artikelen maken is nog niet ingesteld op de server.",
     en: "The server hasn’t been set up to create articles yet.",
