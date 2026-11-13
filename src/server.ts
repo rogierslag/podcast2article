@@ -1019,6 +1019,16 @@ app.use(
     if (response.headersSent) {
       return next(error);
     }
+    if (
+      error instanceof DomainError &&
+      (error.code === "error.jobRecordInvalid" ||
+        error.code === "error.jobStorageUnavailable" ||
+        error.code === "error.jobHistoryUnavailable")
+    ) {
+      return response
+        .status(domainErrorStatus(error, 503))
+        .json({ error: localizeError(response, error) });
+    }
     const invalidBody =
       typeof error === "object" &&
       error !== null &&

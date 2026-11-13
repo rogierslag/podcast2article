@@ -2,7 +2,6 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   copyFile,
   mkdir,
-  readFile,
   readdir,
   rename,
   rm,
@@ -14,8 +13,13 @@ import { processingProgress } from "../lib/processing-events.js";
 import { DomainError } from "../lib/errors.js";
 import {
   maxArticleRetries,
-  normalizeStoredJob,
-  type StoredJob,
+  isMissingFile,
+  jobIdSchema,
+  readStoredJob,
+  serializeStoredJob,
+  shareTokenSchema,
+  StoredJobError,
+  usernameSchema,
 } from "./stored-jobs.js";
 import { requestArticleBackup } from "./article-backups.js";
 import { recordShareEvent } from "./share-analytics.js";
@@ -58,6 +62,7 @@ import type {
 
 const root = path.resolve("data");
 const memory = new Map<string, Job>();
+const accountsWithStorageErrors = new Set<string>();
 const pendingWrites = new Map<string, Promise<void>>();
 const activeRuns = new Map<
   string,
@@ -90,7 +95,7 @@ export class DuplicateJobError extends DomainError {
 }
 
 export function userDirectory(username: string): string {
-  if (!/^[a-z][a-z0-9_-]{1,31}$/.test(username)) {
+  if (!usernameSchema.safeParse(username).success) {
     throw new DomainError("error.usernameInvalid");
   }
   return path.join(root, "users", path.basename(username));
@@ -119,9 +124,7 @@ export function playbackFileForJob(
   username: string,
   id: string,
 ): string | undefined {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-    id,
-  )
+  return jobIdSchema.safeParse(id).success
     ? path.join(userDirectory(username), "media", `${path.basename(id)}.mp3`)
     : undefined;
 }
@@ -139,7 +142,7 @@ async function persist(username: string, job: Job): Promise<void> {
       job.updatedAt = new Date().toISOString();
       const destination = path.join(jobDirectory, `${job.id}.json`);
       const temporary = `${destination}.tmp`;
-      await writeFile(temporary, JSON.stringify(job, null, 2));
+      await writeFile(temporary, serializeStoredJob(username, job));
       await rename(temporary, destination);
       memory.set(key, job);
       if (job.stage === "complete") {
@@ -162,7 +165,14 @@ function accountJobs(username: string): Job[] {
     .map(([, job]) => job);
 }
 
+function assertAccountHistory(username: string): void {
+  if (accountsWithStorageErrors.has(username)) {
+    throw new DomainError("error.jobHistoryUnavailable");
+  }
+}
+
 export function getAccountBudget(username: string): AccountBudget {
+  assertAccountHistory(username);
   return summarizeAccountBudget(
     accountJobs(username),
     spendingLimitExempt(username),
@@ -170,6 +180,7 @@ export function getAccountBudget(username: string): AccountBudget {
 }
 
 function checkAccountBudget(username: string, reservation = 0): void {
+  assertAccountHistory(username);
   if (!spendingLimitExempt(username)) {
     assertAccountBudget(accountJobs(username), reservation);
   }
@@ -181,6 +192,7 @@ async function recordApiUsage(
   request: ApiRequestUsage,
 ): Promise<void> {
   if (request.status === "pending") {
+    assertAccountHistory(username);
     if (request.reservedCostUsd === undefined) {
       if (!spendingLimitExempt(username)) {
         throw new AccountBudgetError();
@@ -433,34 +445,54 @@ export function unscheduledPodcastEpisodes(
   );
 }
 
+function reportStorageProblem(
+  username: string,
+  file: string,
+  reason: string,
+): void {
+  accountsWithStorageErrors.add(username);
+  console.error(
+    `${new Date().toISOString()} ERROR Job storage: users/${username}/jobs${file} (${reason}). Paid processing paused for this account. See docs/DEPLOYMENT-RECOVERY.md#stored-job-recovery.`,
+  );
+}
+
+async function loadJob(username: string, id: string): Promise<Job | undefined> {
+  const directory = path.join(userDirectory(username), "jobs");
+  try {
+    return await readStoredJob(directory, username, id);
+  } catch (error) {
+    if (error instanceof StoredJobError) {
+      reportStorageProblem(username, `/${id}.json`, error.reason);
+    }
+    throw error;
+  }
+}
+
 async function getStoredJob(
   username: string,
   id: string,
 ): Promise<Job | undefined> {
-  const key = jobKey(username, id);
-  if (memory.has(key)) {
-    return memory.get(key);
-  }
   if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    !jobIdSchema.safeParse(id).success ||
+    !usernameSchema.safeParse(username).success
   ) {
     return undefined;
   }
-  try {
-    const jobDirectory = path.join(userDirectory(username), "jobs");
-    const job = normalizeStoredJob(
-      JSON.parse(
-        await readFile(
-          path.join(jobDirectory, `${path.basename(id)}.json`),
-          "utf8",
-        ),
-      ) as StoredJob,
-    );
-    memory.set(key, job);
-    return job;
-  } catch {
-    return undefined;
+  const key = jobKey(username, id);
+  const cached = memory.get(key);
+  if (cached) {
+    return cached;
   }
+  const stored = await loadJob(username, id);
+  // Another request may have loaded or updated the job while this read was in flight.
+  const current = memory.get(key);
+  if (current) {
+    return current;
+  }
+  if (stored) {
+    memory.set(key, stored);
+  }
+  return stored;
 }
 
 export async function getJob(
@@ -615,10 +647,6 @@ export async function setArticleReadingPosition(
   return readingPosition;
 }
 
-function isShareToken(value: string): boolean {
-  return /^[A-Za-z0-9_-]{43}$/.test(value);
-}
-
 export async function createArticleShare(
   username: string,
   id: string,
@@ -635,7 +663,7 @@ export async function createArticleShare(
   ) {
     throw new DomainError("error.articleShareNotReady");
   }
-  if (!job.shareToken || !isShareToken(job.shareToken)) {
+  if (!job.shareToken || !shareTokenSchema.safeParse(job.shareToken).success) {
     const shareToken = randomBytes(32).toString("base64url");
     await update(username, job, { shareToken });
     return shareToken;
@@ -646,7 +674,7 @@ export async function createArticleShare(
 export function getSharedArticle(
   token: string,
 ): { username: string; job: ArticleJob } | undefined {
-  if (!isShareToken(token)) {
+  if (!shareTokenSchema.safeParse(token).success) {
     return undefined;
   }
   for (const [key, job] of memory.entries()) {
@@ -857,61 +885,101 @@ export async function retryArticle(username: string, id: string): Promise<Job> {
 }
 
 export async function resumeIncompleteJobs(usernames: string[]): Promise<void> {
-  const recovered: Array<{ username: string; job: Job }> = [];
   for (const username of usernames) {
     const jobDirectory = path.join(userDirectory(username), "jobs");
-    await mkdir(jobDirectory, { recursive: true });
-    const files = (await readdir(jobDirectory)).filter((name) =>
-      /^[0-9a-f-]{36}\.json$/i.test(name),
-    );
+    let files: string[];
+    try {
+      files = await readdir(jobDirectory);
+    } catch (error) {
+      if (!isMissingFile(error)) {
+        reportStorageProblem(username, "", "directory listing failed");
+      }
+      continue;
+    }
+
+    const recovered: Job[] = [];
     for (const file of files) {
+      if (!file.endsWith(".json")) {
+        continue;
+      }
+      const id = file.slice(0, -5);
+      if (!jobIdSchema.safeParse(id).success) {
+        // Quote unexpected filenames so they cannot inject log lines.
+        reportStorageProblem(
+          username,
+          "",
+          "invalid job filename " + JSON.stringify(file),
+        );
+        continue;
+      }
+      const key = jobKey(username, id);
+      if (activeRuns.has(key) || pendingJobIds.has(key)) {
+        continue;
+      }
+      let job: Job | undefined;
       try {
-        const job = normalizeStoredJob(
-          JSON.parse(
-            await readFile(path.join(jobDirectory, file), "utf8"),
-          ) as StoredJob,
-        );
-        if (job.id !== path.basename(file, ".json")) {
-          throw new Error("Stored job identity does not match its filename");
-        }
-        const key = jobKey(username, job.id);
-        if (activeRuns.has(key) || pendingJobIds.has(key)) {
-          continue;
-        }
-        memory.set(key, job);
-        if (
-          job.deletedAt ||
-          job.stage === "complete" ||
-          job.stage === "failed"
-        ) {
-          continue;
-        }
-        const previousStage = job.stage;
-        await update(username, job, {
-          stage: "queued",
-          progress: 2,
-          message: "job.resuming",
-          error: undefined,
-        });
-        jobLog(job.id, "queued", "Onvoltooide opdracht na serverstart hervat", {
-          previousStage,
-        });
-        recovered.push({ username, job });
+        job = await loadJob(username, id);
       } catch (error) {
-        console.error(
-          `${new Date().toISOString()} ERROR Kon opgeslagen jobbestand niet herstellen · file=${JSON.stringify(file)}`,
-          error,
+        if (!(error instanceof StoredJobError)) {
+          throw error;
+        }
+        continue;
+      }
+      if (!job) {
+        reportStorageProblem(
+          username,
+          `/${id}.json`,
+          "file disappeared during startup",
         );
-        throw error;
+        continue;
+      }
+      memory.set(key, job);
+      if (
+        !job.deletedAt &&
+        job.stage !== "complete" &&
+        job.stage !== "failed"
+      ) {
+        recovered.push(job);
       }
     }
-  }
-  for (const { username, job } of recovered) {
-    enqueueJob(
-      username,
-      job,
-      job.transcript?.length && job.episode ? "article" : "full",
-    );
+
+    if (accountsWithStorageErrors.has(username)) {
+      continue;
+    }
+    const ready: Job[] = [];
+    for (const job of recovered) {
+      const queued: Job = {
+        ...job,
+        stage: "queued",
+        progress: 2,
+        message: "job.resuming",
+        messageValues: undefined,
+        error: undefined,
+      };
+      try {
+        await persist(username, queued);
+      } catch {
+        reportStorageProblem(
+          username,
+          `/${job.id}.json`,
+          "could not persist recovery state",
+        );
+        break;
+      }
+      jobLog(job.id, "queued", "Onvoltooide opdracht na serverstart hervat", {
+        previousStage: job.stage,
+      });
+      ready.push(queued);
+    }
+    if (!accountsWithStorageErrors.has(username)) {
+      for (const job of ready) {
+        enqueueJob(
+          username,
+          job,
+          job.transcript?.length && job.episode ? "article" : "full",
+        );
+      }
+    }
   }
 }
 

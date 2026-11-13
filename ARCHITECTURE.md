@@ -169,14 +169,14 @@ Up to three jobs actively prepare or transcribe audio at once; interrupted and f
 Slot waits are abortable and slots are released on both success and failure.
 
 The persisted job record is updated at important boundaries.
-Job files are written as formatted JSON under `data/users/<username>/jobs/<uuid>.json`.
+Job files are written as versioned JSON under `data/users/<username>/jobs/<uuid>.json`.
 Series configuration, seen episode keys, and pending selections are stored separately in `data/users/<username>/subscriptions.json`.
 
 On startup:
 
-1. every stored job is loaded into memory;
-2. completed, failed, and deleted jobs are not scheduled;
-3. incomplete jobs are reset to `queued`;
+1. valid stored jobs are loaded into memory;
+2. accounts with an incomplete storage scan or invalid job remain readable and are paused for paid processing;
+3. incomplete jobs from healthy accounts are reset to `queued`;
 4. resumable jobs enter the processing pipeline;
 5. saved complete transcripts bypass media preparation and transcription;
 6. otherwise, saved media and chunk responses are reused using their original manifest settings;
@@ -328,8 +328,8 @@ This keeps mutable data outside immutable application releases.
 
 `src/services/stored-jobs.ts` normalizes older job files at the storage boundary.
 It maps Spotify-only source fields to the generic source model and removes the aliases from loaded jobs.
-New jobs and subsequent writes use only the generic fields.
-Completion timestamps and paid-retry allowances are recovered where older records lack them; article content and user reading state are preserved.
+New jobs and subsequent writes include a storage schema version and the account owner alongside the generic fields.
+The loader derives missing legacy completion timestamps and retry counts and preserves article content, transcripts, reading state, share tokens, and recorded usage.
 Backup extraction also accepts older files directly, so an offline backup does not require rewriting the library first.
 
 New processing messages store semantic translation keys and separate `messageValues` for progress counts and waiting times.
@@ -408,10 +408,12 @@ Article output is capped at 16,384 tokens.
 Confirmed usage replaces reservations; unknown outcomes retain them until they age out.
 
 The synchronous check and reservation update prevent concurrent jobs in the same process from reusing budget.
-Startup loads all histories before resuming work and fails closed on unreadable job files.
+Startup validates each account's history before resuming its work.
+An incomplete history blocks new paid requests for that account, including spending-limit exemptions.
 Multiple servers sharing data are unsupported.
 
 `GET /api/account-budget` requires authentication, uses only the session account, sets `Cache-Control: no-store`, and returns `windowDays`, `spentUsd`, `historicalSpendUsd`, `countedSpendUsd`, `reservedUsd`, `unknownCostRequests`, `limitUsd` and `remainingUsd`.
+An incomplete history returns `503`.
 It exposes no job IDs or provider request details.
 `public/account-budget.ts` refreshes this summary every 30 seconds and on focus.
 

@@ -26,7 +26,7 @@ const jobSchema = z.object({
         z.object({ status: z.string(), errorCode: z.string().optional() }),
       ),
     })
-    .optional(),
+    .nullish(),
 });
 const subscriptionsSchema = z.array(
   z.object({

@@ -238,9 +238,11 @@ export class SubscriptionStore {
         } catch (error) {
           subscription.error =
             error instanceof DomainError &&
-            ["error.creationUnavailable", "error.accountBudget"].includes(
-              error.code,
-            )
+            [
+              "error.creationUnavailable",
+              "error.accountBudget",
+              "error.jobHistoryUnavailable",
+            ].includes(error.code)
               ? error.code
               : "series.errorCheck";
           await this.save(username, items);

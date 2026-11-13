@@ -52,7 +52,7 @@ const sourceType = z.enum([
   "youtube",
   "fathom",
 ]);
-const stage = z.enum([
+export const jobStageSchema = z.enum([
   "queued",
   "resolving",
   "downloading",
@@ -76,7 +76,7 @@ export const articleSchema = z.object({
   ),
   takeaways: z.array(paragraph),
 }) satisfies z.ZodMiniType<Article>;
-const episodeSchema = z.object({
+export const episodeSchema = z.object({
   sourceType,
   sourceUrl: z.string(),
   sourceName: z.string(),
@@ -89,7 +89,7 @@ const episodeSchema = z.object({
   durationSeconds: z.optional(z.number()),
   publishedAt: z.optional(z.string()),
 }) satisfies z.ZodMiniType<Episode>;
-const transcriptSchema = z.array(
+export const transcriptSchema = z.array(
   z.object({
     id: z.string(),
     start: z.number(),
@@ -109,7 +109,7 @@ export const jobSchema = z.object({
   sourceUrl: z.optional(z.string()),
   language: z.optional(z.string()),
   articleLength: z.optional(z.enum(["compact", "standard", "long"])),
-  stage,
+  stage: jobStageSchema,
   episode: z.optional(episodeSchema),
   article: z.optional(articleSchema),
   transcript: z.optional(transcriptSchema),
@@ -172,7 +172,7 @@ export const budgetSchema = z.object({
 export const errorSchema = z.object({
   error: z.optional(z.string()),
   existingJobId: z.optional(z.string()),
-  existingStage: z.optional(stage),
+  existingStage: z.optional(jobStageSchema),
 });
 export const savedArticleSchema = z.object({
   articleId: z.nullable(z.string()),

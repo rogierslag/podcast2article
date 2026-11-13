@@ -18,7 +18,7 @@ vi.mock("node:fs/promises", async (importOriginal) => ({
   readFile: vi.fn(async (file: string) => {
     const content = storage.files.get(file);
     if (content === undefined) {
-      throw new Error("ENOENT");
+      throw Object.assign(new Error("File does not exist"), { code: "ENOENT" });
     }
     return content;
   }),

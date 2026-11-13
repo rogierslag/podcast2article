@@ -20,6 +20,9 @@ import { translate } from "../src/shared/i18n.ts";
 
 const articleId = "00000000-0000-4000-8000-000000000917";
 const exhaustedArticleId = "00000000-0000-4000-8000-000000000919";
+const corruptJobId = "00000000-0000-4000-8000-000000000921";
+const missingJobId = "00000000-0000-4000-8000-000000000922";
+const corruptJobContent = '{"private-billing-details":';
 const token = "a".repeat(43);
 const otherToken = "b".repeat(43);
 const exampleToken = "_eUKVjs2CsydDZ7nEseiXUNRYc64L1Pp2EPQ8LLIGng";
@@ -212,6 +215,56 @@ test("other pages, APIs, audio and query variants remain non-indexable", async (
   }
 });
 
+test("damaged storage keeps healthy articles available and returns a safe owner error", async () => {
+  const cookie = await loginAs("example");
+  const headers = { Cookie: cookie, "Accept-Language": "en" };
+
+  const library = await fetch(`${origin}/api/articles`, { headers });
+  const shared = await fetch(`${origin}/api/shared/${exampleToken}`);
+  const damaged = await fetch(`${origin}/api/jobs/${corruptJobId}`, {
+    headers,
+  });
+  const missing = await fetch(`${origin}/api/jobs/${missingJobId}`, {
+    headers,
+  });
+  const budget = await fetch(`${origin}/api/account-budget`, { headers });
+  const other = await loginAs("other");
+  const inaccessible = await fetch(`${origin}/api/jobs/${corruptJobId}`, {
+    headers: { Cookie: other },
+  });
+
+  assert.equal(library.status, 200);
+  assert.deepEqual(
+    (await library.json()).map(({ title }) => title),
+    ["Public example article"],
+  );
+  assert.equal(shared.status, 200);
+  assert.equal(damaged.status, 503);
+  assert.deepEqual(await damaged.json(), {
+    error: translate("en", "error.jobRecordInvalid"),
+  });
+  assert.equal(missing.status, 404);
+  assert.equal(inaccessible.status, 404);
+  assert.equal(budget.status, 503);
+  assert.deepEqual(await budget.json(), {
+    error: translate("en", "error.jobHistoryUnavailable"),
+  });
+  assert.equal(
+    await readFile(
+      path.join(
+        directory,
+        "data",
+        "users",
+        "example",
+        "jobs",
+        `${corruptJobId}.json`,
+      ),
+      "utf8",
+    ),
+    corruptJobContent,
+  );
+});
+
 test("a deleted example remains a non-indexable public 404", async () => {
   const cookie = await loginAs("example");
   const deleted = await fetch(
@@ -312,7 +365,21 @@ function fixture(id, shareToken, title) {
     apiUsage: {
       trackingStartedAt: "2026-09-06T10:00:00Z",
       coverage: "complete",
-      requests: [{ requestId: "private-billing-request" }],
+      requests: [
+        {
+          id: "first-attempt",
+          operationId: "initial-article",
+          attempt: 1,
+          stage: "article",
+          requestedModel: "test-model",
+          requestedServiceTier: "default",
+          endpointRegion: "global",
+          startedAt: "2026-09-06T10:00:00Z",
+          status: "succeeded",
+          requestId: "private-billing-request",
+          cost: { currency: "USD", amount: 0.42 },
+        },
+      ],
       knownEstimatedCostUsd: 0.42,
       unknownCostRequests: 0,
     },
@@ -452,6 +519,17 @@ before(async () => {
       articleRetryAttempts: 2,
       error: "Article generation failed",
     }),
+  );
+  await writeFile(
+    path.join(
+      directory,
+      "data",
+      "users",
+      "example",
+      "jobs",
+      `${corruptJobId}.json`,
+    ),
+    corruptJobContent,
   );
   portReservation.listen(0, "127.0.0.1");
   await once(portReservation, "listening");

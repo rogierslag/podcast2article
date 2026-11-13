@@ -18,15 +18,21 @@ import {
 } from "@aws-sdk/client-s3";
 import { z } from "zod";
 import type { Job } from "../types.js";
+import { hasArticleContent } from "../lib/job-content.js";
+import {
+  isMissingFile,
+  jobIdSchema,
+  parseStoredJob,
+  readStoredJob,
+  serializeStoredJob,
+  StoredJobError,
+  usernameSchema,
+} from "./stored-jobs.js";
 
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
 const BACKUP_RETRY_DELAY_MS = 15 * 60_000;
 
-const usernameSchema = z.string().regex(/^[a-z][a-z0-9_-]{1,31}$/);
-const idSchema = z
-  .string()
-  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const timestamp = z
   .string()
   .refine((value) => Number.isFinite(Date.parse(value)));
@@ -40,7 +46,7 @@ const paragraphSchema = z.object({
 export const articleBackupSchema = z.object({
   schemaVersion: z.literal(1),
   owner: usernameSchema,
-  jobId: idSchema,
+  jobId: jobIdSchema,
   language: z.string(),
   articleLength: z.enum(["compact", "standard", "long"]),
   createdAt: timestamp,
@@ -70,51 +76,27 @@ export function createArticleBackup(
   owner: string,
   input: unknown,
 ): ArticleBackup | undefined {
-  const job = z.object({ stage: z.string() }).parse(input);
-  if (job.stage !== "complete") {
+  const { id } = z.object({ id: jobIdSchema }).parse(input);
+  return backupFromJob(
+    usernameSchema.parse(owner),
+    parseStoredJob(input, owner, id),
+  );
+}
+
+function backupFromJob(owner: string, job: Job): ArticleBackup | undefined {
+  if (job.stage !== "complete" || !hasArticleContent(job)) {
     return undefined;
   }
-  const stored = z
-    .object({
-      id: idSchema,
-      language: z.string(),
-      articleLength: z.string(),
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      completedAt: timestamp.optional(),
-      sourceUrl: z.string().optional(),
-      spotifyUrl: z.string().optional(),
-      episode: z.object({
-        sourceType: z.string().optional(),
-        sourceName: z.string().optional(),
-        podcast: z.string().optional(),
-        title: z.string(),
-        imageUrl: z.string().optional(),
-        publishedAt: z.string().optional(),
-      }),
-      article: z.unknown(),
-    })
-    .parse(input);
   return articleBackupSchema.parse({
     schemaVersion: 1,
     owner,
-    jobId: stored.id,
-    language: stored.language,
-    articleLength: stored.articleLength,
-    createdAt: stored.createdAt,
-    completedAt: stored.completedAt ?? stored.updatedAt,
-    source: {
-      sourceUrl: stored.sourceUrl ?? stored.spotifyUrl,
-      sourceType: stored.episode.sourceType ?? "spotify",
-      sourceName:
-        stored.episode.sourceName ??
-        stored.episode.podcast ??
-        "Unknown podcast",
-      title: stored.episode.title,
-      imageUrl: stored.episode.imageUrl,
-      publishedAt: stored.episode.publishedAt,
-    },
-    article: stored.article,
+    jobId: job.id,
+    language: job.language,
+    articleLength: job.articleLength,
+    createdAt: job.createdAt,
+    completedAt: job.completedAt,
+    source: { ...job.episode, sourceUrl: job.sourceUrl },
+    article: job.article,
   });
 }
 
@@ -156,7 +138,7 @@ export function backupKey(
   id: string,
 ): string {
   usernameSchema.parse(owner);
-  idSchema.parse(id);
+  jobIdSchema.parse(id);
   return [config.prefix, "v1", "users", owner, `${id}.json.gz`]
     .filter(Boolean)
     .join("/");
@@ -306,7 +288,7 @@ export class ArticleBackupWorker {
     const usersRoot = path.join(this.root, "users");
     const users = await readdir(usersRoot, { withFileTypes: true }).catch(
       (error: unknown) => {
-        if (isMissing(error)) {
+        if (isMissingFile(error)) {
           return [];
         }
         throw error;
@@ -317,32 +299,38 @@ export class ArticleBackupWorker {
         continue;
       }
       const directory = path.join(usersRoot, user.name, "jobs");
-      const files = await readdir(directory).catch((error: unknown) => {
-        if (isMissing(error)) {
-          return [];
+      let files: string[];
+      try {
+        files = await readdir(directory);
+      } catch (error) {
+        if (!isMissingFile(error)) {
+          failures++;
+          failure(
+            `${user.name}/jobs could not be listed`,
+            "filesystem read failed",
+          );
         }
-        throw error;
-      });
+        continue;
+      }
       for (const file of files) {
         if (this.stopped) {
           return failures;
         }
         if (
           !file.endsWith(".json") ||
-          !idSchema.safeParse(file.slice(0, -5)).success
+          !jobIdSchema.safeParse(file.slice(0, -5)).success
         ) {
           continue;
         }
         try {
-          const payload = createArticleBackup(
+          const job = await readStoredJob(
+            directory,
             user.name,
-            JSON.parse(await readFile(path.join(directory, file), "utf8")),
+            file.slice(0, -5),
           );
+          const payload = job && backupFromJob(user.name, job);
           if (!payload) {
             continue;
-          }
-          if (`${payload.jobId}.json` !== file) {
-            throw new Error("Job identity mismatch");
           }
           const key = backupKey(this.config, user.name, payload.jobId);
           const body = JSON.stringify(payload);
@@ -362,7 +350,7 @@ export class ArticleBackupWorker {
           );
           const previous = await readFile(receipt, "utf8").catch(
             (error: unknown) => {
-              if (isMissing(error)) {
+              if (isMissingFile(error)) {
                 return undefined;
               }
               throw error;
@@ -392,17 +380,13 @@ export class ArticleBackupWorker {
           failures++;
           failure(
             `${user.name}/${file} failed; retained locally for retry`,
-            error,
+            error instanceof StoredJobError ? error.reason : error,
           );
         }
       }
     }
     return failures;
   }
-}
-
-function isMissing(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
 export async function restoreArticleBackup(
@@ -414,7 +398,7 @@ export async function restoreArticleBackup(
   const backup = articleBackupSchema.parse(input);
   if (
     backup.owner !== usernameSchema.parse(owner) ||
-    backup.jobId !== idSchema.parse(id)
+    backup.jobId !== jobIdSchema.parse(id)
   ) {
     throw new Error(
       "Backup owner or job ID does not match the requested destination",
@@ -441,7 +425,7 @@ export async function restoreArticleBackup(
   const destination = path.join(directory, `${backup.jobId}.json`);
   const temporary = path.join(directory, `${randomUUID()}.restore-tmp`);
   try {
-    await writeFile(temporary, JSON.stringify(job, null, 2), {
+    await writeFile(temporary, serializeStoredJob(owner, job), {
       flag: "wx",
       mode: 0o600,
     });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeStoredJob, type StoredJob } from "./stored-jobs.js";
+import { parseStoredJob, serializeStoredJob } from "./stored-jobs.js";
 import {
   compareArticleSummaries,
   findDuplicateJob,
@@ -37,8 +37,6 @@ describe("stored job compatibility", () => {
       expected: 0,
     },
     { operations: [], counter: 2, expected: 2 },
-    { operations: [], counter: -1, expected: 2 },
-    { operations: [], counter: 0.5, expected: 2 },
   ])(
     "retains the paid retry allowance when loading $operations and counter $counter",
     ({ operations, counter, expected, coverage }) => {
@@ -77,7 +75,9 @@ describe("stored job compatibility", () => {
         },
       };
 
-      expect(normalizeStoredJob(job).articleRetryAttempts).toBe(expected);
+      expect(parseStoredJob(job, "owner", job.id).articleRetryAttempts).toBe(
+        expected,
+      );
     },
   );
 
@@ -85,10 +85,45 @@ describe("stored job compatibility", () => {
     const legacy = {
       id: "11111111-1111-1111-1111-111111111111",
       spotifyUrl: "https://open.spotify.com/episode/abc123",
+      article: {
+        title: "Een artikel",
+        dek: "Introductie",
+        readingTimeMinutes: 4,
+        styleNote: "Helder",
+        sections: [],
+        takeaways: [],
+      },
       language: "nl",
       articleLength: "standard",
       stage: "complete",
       progress: 100,
+      transcript: [
+        { id: "t-1", start: 0, end: 9, speaker: "A", text: "Een gesprek" },
+      ],
+      readAt: "2026-01-02T00:00:00.000Z",
+      shareToken: "a".repeat(43),
+      articleRetryAttempts: 1,
+      apiUsage: {
+        trackingStartedAt: "2026-01-01T00:00:00.000Z",
+        coverage: "partial",
+        requests: [
+          {
+            id: "legacy-request",
+            operationId: "initial-generation",
+            attempt: 1,
+            stage: "article",
+            requestedModel: "legacy-model",
+            requestedServiceTier: "default",
+            endpointRegion: "global",
+            startedAt: "2026-01-01T00:00:00.000Z",
+            status: "succeeded",
+            usage: { input_tokens_details: { cached_tokens: 100 } },
+            cost: { currency: "USD", amount: 0.2 },
+          },
+        ],
+        knownEstimatedCostUsd: 0.2,
+        unknownCostRequests: 0,
+      },
       message: "Klaar",
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
@@ -98,9 +133,9 @@ describe("stored job compatibility", () => {
         podcast: "Een podcast",
         audioUrl: "https://cdn.example.com/episode.mp3",
       },
-    } satisfies StoredJob;
+    };
 
-    const job = normalizeStoredJob(legacy);
+    const job = parseStoredJob(legacy, "owner", legacy.id);
 
     expect(job.sourceUrl).toBe(legacy.spotifyUrl);
     expect(job.completedAt).toBe(legacy.updatedAt);
@@ -108,7 +143,17 @@ describe("stored job compatibility", () => {
     expect(job.episode).not.toHaveProperty("spotifyUrl");
     expect(job.episode).not.toHaveProperty("podcast");
     expect(job.episode).not.toHaveProperty("audioUrl");
-    expect(normalizeStoredJob(job)).toEqual(job);
+    expect(job).toMatchObject({
+      article: legacy.article,
+      transcript: legacy.transcript,
+      readAt: legacy.readAt,
+      shareToken: legacy.shareToken,
+      articleRetryAttempts: legacy.articleRetryAttempts,
+      apiUsage: legacy.apiUsage,
+    });
+    const written: unknown = JSON.parse(serializeStoredJob("owner", job));
+    expect(written).toMatchObject({ schemaVersion: 1, owner: "owner" });
+    expect(parseStoredJob(written, "owner", job.id)).toEqual(job);
     expect(job.episode).toMatchObject({
       sourceType: "spotify",
       sourceUrl: legacy.spotifyUrl,
@@ -126,6 +171,14 @@ describe("stored job compatibility", () => {
       articleLength: "standard",
       stage: "complete",
       progress: 100,
+      transcript: [],
+      episode: {
+        sourceType: "youtube",
+        sourceUrl: "https://youtube.com/watch?v=abc123",
+        sourceName: "Test channel",
+        title: "Een aflevering",
+        mediaUrl: "https://youtube.com/watch?v=abc123",
+      },
       message: "Klaar",
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
@@ -146,7 +199,7 @@ describe("stored job compatibility", () => {
       },
     } satisfies Job;
 
-    expect(normalizeStoredJob(job).readingPosition).toEqual({
+    expect(parseStoredJob(job, "owner", job.id).readingPosition).toEqual({
       sectionIndex: 1,
       updatedAt: "2026-01-02T00:00:00.000Z",
     });
@@ -160,6 +213,14 @@ describe("stored job compatibility", () => {
       articleLength: "standard",
       stage: "complete",
       progress: 100,
+      transcript: [],
+      episode: {
+        sourceType: "youtube",
+        sourceUrl: "https://youtube.com/watch?v=abc123",
+        sourceName: "Test channel",
+        title: "Een aflevering",
+        mediaUrl: "https://youtube.com/watch?v=abc123",
+      },
       message: "Klaar",
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
@@ -177,7 +238,9 @@ describe("stored job compatibility", () => {
       },
     } satisfies Job;
 
-    expect(normalizeStoredJob(job).readingPosition).toBeUndefined();
+    expect(
+      parseStoredJob(job, "owner", job.id).readingPosition,
+    ).toBeUndefined();
   });
 });
 
@@ -526,9 +589,9 @@ it("discards retired listening progress without changing reading state", () => {
     updatedAt: "2026-10-03T10:00:00Z",
     readAt: "2026-10-03T10:01:00Z",
     listeningPosition: { version: 1, passageIndex: 2 },
-  } satisfies StoredJob;
+  };
 
-  const job = normalizeStoredJob(stored);
+  const job = parseStoredJob(stored, "owner", stored.id);
 
   expect(job).not.toHaveProperty("listeningPosition");
   expect(job.readAt).toBe(stored.readAt);

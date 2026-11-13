@@ -98,3 +98,31 @@ A host crash, disk failure, or interruption before a received response is durabl
 An ambiguous article submission can also lack a saved provider ID.
 Unknown costs remain unknown, and the implementation does not guarantee exactly-once billing.
 All automated recovery tests use mocked paid APIs.
+
+## Stored job recovery
+
+The server validates the job records in each account's `jobs` directory before it queues that account's unfinished work.
+An invalid or unreadable record stays in place.
+Other readable articles remain available, including those in the affected account.
+An account with an incomplete storage scan or an invalid record cannot start paid processing, including manual requests, series jobs, and retries.
+This also applies to accounts exempt from the spending limit.
+Budget requests return `503` while the account's history is incomplete.
+Direct requests for a damaged or unreadable job return `503` with a localized message, while a missing job returns `404`.
+
+1. Find the `Job storage` entry in the service journal with `journalctl -u podcast2article.service`.
+   It gives the account, job filename when available, and failure category without logging job contents.
+2. Stop the service before editing or replacing files.
+   Preserve a copy of the original job file and its workspace outside the live `jobs` directory.
+3. For a filesystem error, check directory traversal and read permissions for the service user and check whether the filesystem is healthy.
+   For an unsupported version, use a release that can read that version.
+   For a damaged record, restore a verified full copy for the same account and job ID, including its usage ledger and accepted retry count.
+   Preserve any newer known spend, reservations, and accepted retries when reconciling the copy.
+   The S3 article backup contains article content only and cannot establish spending or retry history.
+4. Restart the service after restoring the history and check that the journal reports no storage errors for the account.
+   Verify that the affected article and account budget are available.
+   If the history cannot be established, leave the record in place and keep paid processing paused for that account.
+
+Job files written by the application carry `schemaVersion: 1` and an `owner` matching the account directory.
+Older unversioned files use the account directory for ownership and are normalized in memory.
+A subsequent successful write stores the current version atomically.
+The local job version is independent of the chunk manifest and S3 article backup versions.

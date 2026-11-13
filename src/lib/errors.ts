@@ -44,6 +44,9 @@ const diagnostics = {
   "error.transcriptMissing": "OpenAI gaf geen transcripttekst terug.",
   "error.articleMissing": "OpenAI gaf geen artikel terug.",
   "error.usernameInvalid": "Ongeldige gebruikersnaam.",
+  "error.jobRecordInvalid": "error.jobRecordInvalid",
+  "error.jobStorageUnavailable": "error.jobStorageUnavailable",
+  "error.jobHistoryUnavailable": "error.jobHistoryUnavailable",
   "error.jobNotFound": "Opdracht niet gevonden.",
   "error.articleDeleteNotReady":
     "Dit artikel is nog niet klaar om te verwijderen.",
@@ -132,6 +135,9 @@ export function domainErrorStatus(error: unknown, fallback: number): number {
       return 404;
     case "error.accountBudget":
       return 429;
+    case "error.jobRecordInvalid":
+    case "error.jobStorageUnavailable":
+    case "error.jobHistoryUnavailable":
     case "error.creationUnavailable":
       return 503;
     case "error.articleDeleteNotReady":
