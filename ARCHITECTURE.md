@@ -189,7 +189,7 @@ On shutdown:
 
 1. the HTTP server stops accepting work;
 2. active OpenAI requests receive an `AbortSignal`;
-3. interrupted work returns to a resumable queued state;
+3. workers save a resumable queued state and wait for pending job writes;
 4. unfinished transcription artifacts remain available for recovery;
 5. the application forces exit after 15 seconds; systemd's 20-second stop timeout is the outer limit.
 
@@ -385,6 +385,8 @@ The ledger stores numeric usage counters, reported audio duration, requested and
 It excludes prompts, generated response text, credentials, and full error bodies.
 Terminal background error codes and messages are retained for owner-only diagnosis.
 Job writes are serialized to prevent progress updates from overwriting accounting records.
+Processing updates become visible after the job file is replaced successfully.
+Failed progress writes are logged, and failed reservation or checkpoint writes stop dependent paid work.
 Article retries and restart recovery preserve the ledger.
 A hard stop leaves pending attempts with unknown cost.
 
@@ -451,8 +453,8 @@ queued
   -> writing
   -> complete
 
-Any non-shutdown error -> failed
-Graceful shutdown      -> queued for restart
+Processing failure -> failed, when the status can be saved
+Graceful shutdown  -> queued for restart, when the status can be saved
 ```
 
 Detailed flow:

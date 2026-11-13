@@ -95,6 +95,13 @@ Use the updater for a drained deployment.
 Aborting an article polling connection does not cancel its remote background response.
 
 A host crash, disk failure, or interruption before a received response is durably published can still lose paid work.
+Transcription progress and article waiting updates are best-effort.
+The worker logs a failed progress write with the job ID, stage, and available filesystem error code, then continues from the last saved state.
+Budget reservations, processing checkpoints, and completion still require successful writes.
+A failed required write stops the run and the worker tries to save a failed status, or a paused status during shutdown.
+If that write also fails, the last saved state remains visible and startup can recover it after storage is restored.
+If startup can read a job but cannot save its recovery status, it logs the failure and pauses paid processing for that account.
+Shutdown waits for queued writes within the same deadline.
 An ambiguous article submission can also lack a saved provider ID.
 Unknown costs remain unknown, and the implementation does not guarantee exactly-once billing.
 All automated recovery tests use mocked paid APIs.

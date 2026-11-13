@@ -71,8 +71,9 @@ An explicit owner retry starts a new article generation.
 flowchart TD
     Run["Full processing or article retry"] --> Outcome{"Run outcome"}
     Outcome -->|Success| Complete["complete"]
-    Outcome -->|Processing error| Failed["failed<br/>Persist error and last progress"]
-    Outcome -->|Shutdown abort| Queued["queued<br/>Persist as resumable"]
+    Outcome -->|Processing error, status saved| Failed["failed<br/>Persist error and last progress"]
+    Outcome -->|Shutdown abort, status saved| Queued["queued<br/>Persist as resumable"]
+    Outcome -->|Status write fails| Interrupted
     Failed --> Retry["Owner requests<br/>article retry"]
     Retry --> Eligible{"Eligible for<br/>article retry?"}
     Eligible -->|No| Reject["Reject retry"]
@@ -82,7 +83,7 @@ flowchart TD
     Save --> Article["Use saved transcript<br/>in article slot"]
     Article --> Outcome
     Queued --> Startup["Server startup validates stored jobs"]
-    Interrupted["Hard stop leaves a nonterminal stage"] --> Startup
+    Interrupted["Last saved nonterminal stage"] --> Startup
     Startup --> History{"Account job history readable<br/>and valid?"}
     History -->|No| Pause["Keep valid jobs readable<br/>and pause paid processing"]
     History -->|Yes| Recover{"Neither complete nor failed<br/>and not deleted?"}
@@ -94,7 +95,8 @@ Retry eligibility requires a failed, inactive job with episode metadata and a co
 The retry count is saved before paid work starts, and failed attempts count towards the two-retry limit.
 Automatic API retries within an operation are separate from this owner-triggered allowance.
 Deployments first pause admission and drain active transcription requests and article submissions through persistence.
-Shutdown aborts the remaining HTTP connections; saved chunks and background article response IDs survive restart.
+Shutdown aborts the remaining HTTP connections and waits for pending job writes within its deadline.
+Saved chunks and background article response IDs survive restart.
 A hard stop can still leave pending usage records with unknown costs.
 See [deployment recovery](DEPLOYMENT-RECOVERY.md) for the file handshake and rollout requirements.
 

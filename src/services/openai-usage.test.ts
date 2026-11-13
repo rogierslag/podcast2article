@@ -86,6 +86,41 @@ it("captures each chunk's actual duration, counters and request ID through the S
   });
 });
 
+it("stops before sending the next paid chunk when the first result cannot be stored", async () => {
+  const fetchMock = vi.fn(
+    async () =>
+      new Response(JSON.stringify({ text: "Hello" }), {
+        headers: { "content-type": "application/json" },
+      }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  const { chunkCheckpoint } = await import("./processing-artifacts.js");
+  const checkpoint = chunkCheckpoint(path.join(audio, "unwritable"), {
+    version: 1,
+    chunkSeconds: 300,
+    model: "gpt-4o-transcribe-diarize",
+    language: "en",
+    files: ["chunk-000.mp3", "chunk-001.mp3"],
+  });
+  // Let the initial lookup succeed so the filesystem fails while saving the response.
+  vi.spyOn(checkpoint, "load").mockResolvedValue(undefined);
+
+  await expect(
+    transcribeChunks(
+      [audio, audio],
+      "auto",
+      () => {},
+      undefined,
+      undefined,
+      record,
+      checkpoint,
+    ),
+  ).rejects.toThrow("Could not persist processing checkpoint (ENOTDIR)");
+
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(records).toMatchObject([{ chunkNumber: 1, status: "pending" }]);
+});
+
 it("saves article usage before rejecting invalid generated JSON", async () => {
   vi.stubGlobal(
     "fetch",
