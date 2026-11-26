@@ -41,6 +41,29 @@ export function articleSnapshot(
 }
 
 const listeners = new Map<string, Set<() => void>>();
+const defaultQueueTimeoutMs = 60 * 60_000;
+
+function queueTimeoutMs(): number {
+  const configured = Number(process.env.OPENAI_ARTICLE_QUEUE_TIMEOUT_MS);
+  return Number.isSafeInteger(configured) && configured > 0
+    ? configured
+    : defaultQueueTimeoutMs;
+}
+
+function retryableResponseRequest(error: unknown): boolean {
+  if (error instanceof OpenAI.APIConnectionError) {
+    return true;
+  }
+  if (!(error instanceof OpenAI.APIError)) {
+    return false;
+  }
+  const code: unknown = error.code;
+  const status: unknown = error.status;
+  return retryableHttpRequest({
+    httpStatus: typeof status === "number" ? status : undefined,
+    errorCode: typeof code === "string" ? code : undefined,
+  });
+}
 
 /** Webhooks only shorten the wait; startup and periodic retrieval remain authoritative. */
 export function notifyArticleResponse(responseId: string): void {
@@ -90,6 +113,9 @@ export async function retrieveArticleAnswer(
       "The saved article response belongs to a different OpenAI endpoint",
     );
   }
+  const requestOptions = { signal, timeout: 30_000, maxRetries: 0 };
+  const queueTimeout = queueTimeoutMs();
+  let cancellationError: unknown;
   while (state.status === "queued" || state.status === "in_progress") {
     signal?.throwIfAborted();
     let response: OpenAI.Responses.Response;
@@ -98,30 +124,60 @@ export async function retrieveArticleAnswer(
       response = await openai.responses.retrieve(
         state.responseId,
         {},
-        {
-          signal,
-          timeout: 30_000,
-          maxRetries: 0,
-        },
+        requestOptions,
       );
     } catch (error) {
       signal?.throwIfAborted();
-      if (
-        !(error instanceof OpenAI.APIConnectionError) &&
-        !(
-          error instanceof OpenAI.APIError &&
-          retryableHttpRequest({
-            httpStatus:
-              typeof error.status === "number" ? error.status : undefined,
-            errorCode: typeof error.code === "string" ? error.code : undefined,
-          })
-        )
-      ) {
+      if (!retryableResponseRequest(error)) {
         throw error;
       }
       await waitForResponse(state.responseId, signal);
       continue;
     }
+    if (response.id !== state.responseId) {
+      throw new Error("OpenAI returned a different article response ID");
+    }
+    const createdAt =
+      response.created_at > 0
+        ? response.created_at * 1000
+        : Date.parse(state.request.startedAt);
+    if (
+      response.status === "queued" &&
+      (state.queueCancellationRequested ||
+        Date.now() - createdAt >= queueTimeout)
+    ) {
+      if (
+        cancellationError !== undefined &&
+        !retryableResponseRequest(cancellationError)
+      ) {
+        throw cancellationError;
+      }
+      if (!state.queueCancellationRequested) {
+        state = { ...state, queueCancellationRequested: true };
+        await checkpoint?.save(state);
+      }
+      try {
+        response = await openai.responses.cancel(
+          state.responseId,
+          requestOptions,
+        );
+      } catch (error) {
+        signal?.throwIfAborted();
+        // A lost reply or state transition can race cancellation. Retrieve before deciding what to do.
+        cancellationError = error;
+        await waitForResponse(state.responseId, signal);
+        continue;
+      }
+      if (response.id !== state.responseId) {
+        throw new Error("OpenAI returned a different cancelled response ID");
+      }
+      if (response.status === "completed") {
+        // Retrieve the completed answer through the SDK path that populates output_text.
+        continue;
+      }
+    }
+    const queueTimeoutCancelled =
+      response.status === "cancelled" && state.queueCancellationRequested;
     const request = structuredClone(state.request);
     request.responseStatus = response.status;
     if (response.status !== "queued" && response.status !== "in_progress") {
@@ -130,12 +186,19 @@ export async function retrieveArticleAnswer(
       request.elapsedMs = Date.now() - Date.parse(request.startedAt);
       request.actualModel = response.model;
       request.actualServiceTier = response.service_tier ?? undefined;
-      request.errorCode = response.error?.code;
-      request.errorMessage = response.error?.message;
+      request.errorCode = queueTimeoutCancelled
+        ? "background_queue_timeout"
+        : response.error?.code;
+      request.errorMessage = queueTimeoutCancelled
+        ? "OpenAI response cancelled after exceeding the article queue timeout"
+        : response.error?.message;
       request.usage = usageMetrics(response.usage);
       request.cost = estimateApiCost(request);
     }
-    state = articleSnapshot(response, request, openai.baseURL);
+    state = {
+      ...articleSnapshot(response, request, openai.baseURL),
+      queueCancellationRequested: state.queueCancellationRequested,
+    };
     await checkpoint?.save(state);
     if (state.status === "queued" || state.status === "in_progress") {
       await waitForResponse(state.responseId, signal);
@@ -153,22 +216,26 @@ class BackgroundArticleError extends Error {
   constructor(readonly state: BackgroundArticle) {
     const detail = state.error
       ? `: ${state.error.code}: ${state.error.message}`
-      : state.incompleteReason
-        ? `: ${state.incompleteReason}`
-        : "";
+      : state.status === "cancelled" && state.queueCancellationRequested
+        ? ": article queue timeout"
+        : state.incompleteReason
+          ? `: ${state.incompleteReason}`
+          : "";
     super(`Background article ended with status ${state.status}${detail}`);
   }
 
   get retryable(): boolean {
     return (
-      this.state.status === "failed" &&
-      [
-        "server_error",
-        "server_is_overloaded",
-        "rate_limit_exceeded",
-        "slow_down",
-        "flex_unavailable",
-      ].includes(this.state.error?.code ?? "")
+      (this.state.status === "cancelled" &&
+        this.state.queueCancellationRequested === true) ||
+      (this.state.status === "failed" &&
+        [
+          "server_error",
+          "server_is_overloaded",
+          "rate_limit_exceeded",
+          "slow_down",
+          "flex_unavailable",
+        ].includes(this.state.error?.code ?? ""))
     );
   }
 }
@@ -181,7 +248,7 @@ interface BackgroundRequestOptions {
   checkpoint?: ArticleCheckpoint;
 }
 
-/** Only a confirmed transient terminal failure can replace a saved provider response. */
+/** Replace saved responses only after a retryable terminal outcome. */
 export async function requestBackgroundArticle(
   openai: OpenAI,
   payload: OpenAI.Responses.ResponseCreateParamsNonStreaming,

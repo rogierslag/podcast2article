@@ -927,16 +927,17 @@ Change that setting to `ARTICLE_MODEL=gpt-6.1-sol` in `/etc/podcast2article.env`
 Keep saved response checkpoints: generation and quote repair already submitted to an older model resume their original response IDs and accounting instead of submitting replacements.
 After three transient Flex failures, the same operation switches to `service_tier: "default"` for up to three standard attempts.
 Capacity errors, connection failures, timeouts and other retryable HTTP failures use the existing backoff and retry-header rules.
-HTTP failures and recognized transient background failures share the attempt limit for article generation and quote repair.
+HTTP failures, recognized transient background failures, and confirmed queue-timeout cancellations share the attempt limit for article generation and quote repair.
 Failed background responses retain provider error codes and messages in their owner-only checkpoints and request ledger.
-Only `server_error`, `server_is_overloaded`, `rate_limit_exceeded`, `slow_down`, and `flex_unavailable` trigger background resubmission; missing or unknown codes stop for investigation.
-Incomplete and cancelled responses stop without automatic resubmission.
-Cancellation and permanent errors stop without fallback.
+Failed background responses trigger resubmission for `server_error`, `server_is_overloaded`, `rate_limit_exceeded`, `slow_down`, and `flex_unavailable`.
+Missing or unknown error codes, incomplete responses, permanent errors, and cancellations from outside the queue timeout stop processing.
 
 `OPENAI_ARTICLE_TIMEOUT_MS` applies separately to each background submission attempt (default 600000 ms), not to the lifetime of remote generation.
 Six submission timeouts can therefore take roughly an hour, plus backoff, during normal processing.
 During deployment, retries wait for admission to resume; the drain still stops waiting after 15 minutes.
 Retrieval calls use a separate 30-second timeout and poll every five seconds while waiting for completion.
+`OPENAI_ARTICLE_QUEUE_TIMEOUT_MS` defaults to 3600000 ms (one hour) and applies when OpenAI still reports a response as queued at that age.
+The app records confirmed queue-timeout cancellations as `background_queue_timeout` in the request ledger and retries using the stored transcript while the attempt and spending budgets allow it.
 Budget checks run before each attempt; unknown outcomes retain their reservations and can block fallback.
 Requested and actual tiers are saved per attempt, and prices follow the actual reported tier.
 Existing estimates are not repriced.

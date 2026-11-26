@@ -103,6 +103,7 @@ const backgroundArticle = z.object({
   responseId: nonempty,
   baseURL: httpUrl,
   status: nonempty,
+  queueCancellationRequested: z.boolean().optional(),
   error: z.object({ code: z.string(), message: z.string() }).optional(),
   incompleteReason: z.string().optional(),
   answer: z.string().optional(),

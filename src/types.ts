@@ -119,6 +119,8 @@ export interface BackgroundArticle {
   responseId: string;
   baseURL: string;
   status: string;
+  /** Saved before requesting cancellation so a restart can reconcile its outcome. */
+  queueCancellationRequested?: boolean;
   error?: { code: string; message: string };
   incompleteReason?: string;
   answer?: string;

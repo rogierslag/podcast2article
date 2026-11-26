@@ -233,9 +233,8 @@ Each transcription or article API attempt must persist its own reservation befor
 This also applies to automatic API retries.
 Article requests default to Flex, with three attempts before switching to explicit standard processing for up to three more attempts.
 Both tiers share one operation ID.
-Only transient failures are retried; cancellation and permanent errors stop immediately.
-HTTP failures and recognized transient terminal background failures count toward the same limit for both article generation and quote repair.
-Pending responses keep their IDs and continue polling; only confirmed transient failures can start another submission.
+HTTP failures, recognized transient background failures, and confirmed queue-timeout cancellations count toward the same limit for article generation and quote repair.
+If OpenAI still reports a response as queued at the configured age, the application uses its existing ID to cancel it and waits for confirmation before submitting a replacement.
 `ARTICLE_SERVICE_TIER=default` skips Flex and keeps three standard attempts.
 
 ```mermaid
