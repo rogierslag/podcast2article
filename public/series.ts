@@ -6,6 +6,7 @@ import {
   subscriptionSummarySchema,
   seriesEpisodeListSchema,
 } from "../src/shared/api.js";
+import { subscriptionLimit } from "../src/shared/subscription-limit.js";
 import { requiredElement } from "./dom.js";
 import {
   t,
@@ -323,6 +324,10 @@ async function refresh() {
   }
   subscriptionList.replaceChildren(
     ...subscriptions.map((subscription) => {
+      const remainingCapacity = Math.max(
+        0,
+        subscriptionLimit - subscription.outstanding,
+      );
       const row = element("article", "", "series-item");
       row.dataset.subscriptionId = subscription.id;
       row.id = `subscription-${subscription.id}`;
@@ -359,8 +364,7 @@ async function refresh() {
       }
       if (
         subscription.pendingCount > 0 &&
-        (subscription.paused ||
-          subscription.pendingCount > Math.max(0, 8 - subscription.outstanding))
+        (subscription.paused || subscription.pendingCount > remainingCapacity)
       ) {
         const warning = element("div", "", "series-backlog");
         warning.append(
@@ -433,7 +437,7 @@ async function refresh() {
       );
       button.type = "button";
       button.dataset.limitDisabled = String(
-        subscription.paused && subscription.outstanding >= 8,
+        subscription.paused && remainingCapacity === 0,
       );
       button.disabled = button.dataset.limitDisabled === "true";
       button.setAttribute(
@@ -469,7 +473,7 @@ async function refresh() {
           Math.min(
             3,
             subscription.archiveCount,
-            8 - (subscription.outstanding || 0) - subscription.pendingCount,
+            remainingCapacity - subscription.pendingCount,
           ),
         );
         const more = element(

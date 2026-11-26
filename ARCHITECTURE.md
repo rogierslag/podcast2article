@@ -354,7 +354,7 @@ Following defaults to future episodes only; explicit catch-up is limited to the 
 Polling excludes dated episodes published before following.
 Undated entries must precede a previously seen or saved pending episode in feed order to qualify as new.
 
-Five unread, queued, or processing jobs pause a series.
+Ten unread, queued, or processing jobs pause a series.
 Read, deleted, and failed jobs free capacity; limit-paused series resume automatically on the next check, while manual pauses require explicit resuming.
 Limit-paused checks save newly discovered episodes without scheduling jobs and preserve existing pending selections when entries leave the feed.
 Newly discovered episodes are scheduled oldest first, and series management warns when the saved backlog exceeds available capacity.

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DomainError } from "../lib/errors.js";
+import { subscriptionLimit } from "../shared/subscription-limit.js";
 import type {
   Backfill,
   Job,
@@ -10,7 +11,6 @@ import type {
   PodcastSubscription,
 } from "../types.js";
 
-export const subscriptionLimit = 8;
 export const subscriptionIntervalMs = 60 * 60 * 1000;
 export function backfillEpisodes(
   feed: PodcastFeed,

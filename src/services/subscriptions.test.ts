@@ -114,7 +114,7 @@ describe("podcast subscriptions", () => {
   });
   it("rejects episode scheduling beyond capacity, unavailable keys and disabled processing", async () => {
     const subscription = await store.follow("alice", feed(3), "three", options);
-    outstanding.mockReturnValue(8);
+    outstanding.mockReturnValue(10);
     await expect(
       store.scheduleEpisode("alice", subscription.id, "episode-2", options),
     ).rejects.toThrow("series.errorLimit");
@@ -251,7 +251,7 @@ describe("podcast subscriptions", () => {
 describe("subscription limits", () => {
   it("uses saved pending episodes to recognize new undated entries while limit-paused", async () => {
     await store.follow("alice", feed(1), "none", options);
-    outstanding.mockReturnValue(8);
+    outstanding.mockReturnValue(10);
     fetchFeed.mockResolvedValue(feed(3));
     await store.check("alice");
     const shortenedFeed = feed(4);
@@ -286,14 +286,14 @@ describe("subscription limits", () => {
         (_username, ids: string[]) => ids.filter((id) => !read.has(id)).length,
       );
       await store.follow("alice", feed(1), "none", options);
-      fetchFeed.mockResolvedValue(missedFeed(9));
+      fetchFeed.mockResolvedValue(missedFeed(11));
       await store.check("alice");
       expect(store.list("alice")[0]?.pauseReason).toBe("limit");
 
-      fetchFeed.mockResolvedValue(missedFeed(19));
+      fetchFeed.mockResolvedValue(missedFeed(21));
       await store.check("alice");
       await store.check("alice");
-      expect(enqueue).toHaveBeenCalledTimes(8);
+      expect(enqueue).toHaveBeenCalledTimes(10);
       expect(store.list("alice")[0]?.pending).toHaveLength(10);
       expect(store.list("alice")[0]?.checkedAt).toBeDefined();
       fetchFeed.mockRejectedValueOnce(new Error("Feed offline"));
@@ -307,35 +307,33 @@ describe("subscription limits", () => {
       await store.check("alice");
 
       expect(enqueue.mock.calls.map((call) => call[1].key)).toEqual([
-        "episode-10",
-        "episode-11",
         "episode-12",
         "episode-13",
         "episode-14",
         "episode-15",
         "episode-16",
         "episode-17",
+        "episode-18",
+        "episode-19",
       ]);
       expect(
         store.list("alice")[0]?.pending.map((episode) => episode.key),
-      ).toEqual(["episode-18", "episode-19"]);
+      ).toEqual(["episode-20", "episode-21"]);
       expect(store.list("alice")[0]?.pauseReason).toBe("limit");
 
       const restarted = createStore();
       await restarted.load(["alice"]);
       // The saved backlog remains available even when the publisher removes it from RSS.
-      const shortenedFeed = missedFeed(20);
+      const shortenedFeed = missedFeed(22);
       shortenedFeed.episodes = shortenedFeed.episodes.slice(0, 1);
       shortenedFeed.episodes.push(...feed(1).episodes);
       fetchFeed.mockResolvedValue(shortenedFeed);
-      for (let episode = 10; episode <= 17; episode += 1) {
+      for (let episode = 12; episode <= 19; episode += 1) {
         read.add(`episode-${episode}`);
       }
       await restarted.check("alice");
 
       expect(enqueue.mock.calls.map((call) => call[1].key)).toEqual([
-        "episode-10",
-        "episode-11",
         "episode-12",
         "episode-13",
         "episode-14",
@@ -345,13 +343,15 @@ describe("subscription limits", () => {
         "episode-18",
         "episode-19",
         "episode-20",
+        "episode-21",
+        "episode-22",
       ]);
       expect(restarted.list("alice")[0]?.pending).toEqual([]);
       expect(restarted.list("alice")[0]?.paused).toBe(false);
       await restarted.stop();
     },
   );
-  it("automatically fills freed capacity after a limit pause without exceeding eight", async () => {
+  it("automatically fills freed capacity after a limit pause without exceeding ten", async () => {
     const read = new Set<string>();
     outstanding.mockImplementation(
       (_username, ids: string[]) => ids.filter((id) => !read.has(id)).length,
@@ -363,11 +363,11 @@ describe("subscription limits", () => {
       options,
     );
     await store.check("alice");
-    fetchFeed.mockResolvedValue(feed(19));
+    fetchFeed.mockResolvedValue(feed(21));
 
     await Promise.all([store.check("alice"), store.check("alice")]);
 
-    expect(enqueue).toHaveBeenCalledTimes(8);
+    expect(enqueue).toHaveBeenCalledTimes(10);
     expect(store.list("alice")[0]).toMatchObject({
       paused: true,
       pauseReason: "limit",
@@ -377,7 +377,7 @@ describe("subscription limits", () => {
     );
     read.add("episode-12");
     await Promise.all([store.check("alice"), store.check("alice")]);
-    expect(enqueue).toHaveBeenCalledTimes(9);
+    expect(enqueue).toHaveBeenCalledTimes(11);
     const restarted = createStore();
     await restarted.load(["alice"]);
     expect(restarted.list("alice")[0]?.pauseReason).toBe("limit");
@@ -386,7 +386,7 @@ describe("subscription limits", () => {
 
     await restarted.check("alice");
 
-    expect(enqueue).toHaveBeenCalledTimes(10);
+    expect(enqueue).toHaveBeenCalledTimes(12);
     expect(restarted.list("alice")[0]?.paused).toBe(false);
     expect(restarted.list("alice")[0]?.pauseReason).toBeUndefined();
     const persisted = createStore();
@@ -399,7 +399,7 @@ describe("subscription limits", () => {
     const subscription = await store.follow("alice", feed(12), "none", options);
     await store.pause("alice", subscription.id, true);
     outstanding.mockImplementation(
-      (_username, ids: string[]) => 7 + ids.length,
+      (_username, ids: string[]) => 9 + ids.length,
     );
 
     await store.backfill("alice", subscription.id);
@@ -417,11 +417,11 @@ describe("subscription limits", () => {
   it("resumes only the account with capacity and retains pending work when processing is unavailable", async () => {
     await store.follow("alice", feed(12), "three", options);
     await store.follow("bob", feed(12), "three", options);
-    outstanding.mockReturnValue(8);
+    outstanding.mockReturnValue(10);
     await store.check("alice");
     await store.check("bob");
-    outstanding.mockImplementation((username: string) =>
-      username === "alice" ? 0 : 8,
+    outstanding.mockImplementation((username: string, ids: string[]) =>
+      username === "alice" ? 8 + ids.length : 10,
     );
     enabled = false;
 
@@ -441,8 +441,10 @@ describe("subscription limits", () => {
     enabled = true;
     await store.check("alice");
 
-    expect(enqueue).toHaveBeenCalledTimes(3);
+    expect(enqueue).toHaveBeenCalledTimes(2);
     expect(enqueue.mock.calls.every((call) => call[0] === "alice")).toBe(true);
+    expect(store.list("alice")[0]?.pending).toHaveLength(1);
+    expect(store.list("alice")[0]?.pauseReason).toBe("limit");
     expect(store.list("alice")[0]?.error).toBeUndefined();
   });
   it("offers only the latest three, never successive older batches", async () => {
@@ -474,11 +476,11 @@ describe("subscription limits", () => {
   it("respects remaining capacity and manual pause for the latest-three offer", async () => {
     const subscription = await store.follow("alice", feed(12), "none", options);
     await store.pause("alice", subscription.id, true);
-    outstanding.mockReturnValue(7);
+    outstanding.mockReturnValue(9);
 
     expect(await store.backfill("alice", subscription.id)).toBe(1);
     expect(store.list("alice")[0]?.paused).toBe(true);
-    outstanding.mockReturnValue(8);
+    outstanding.mockReturnValue(10);
     await expect(store.backfill("alice", subscription.id)).rejects.toThrow(
       "series.errorLimit",
     );
