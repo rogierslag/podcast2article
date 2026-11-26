@@ -30,9 +30,9 @@ for (const language of ["nl", "en"]) {
             title: "The Science of Everyday Life",
             paused: true,
             pauseReason: "limit",
-            complete: 8,
+            complete: 10,
             processing: 0,
-            outstanding: 8,
+            outstanding: 10,
             pendingCount: 2,
             archiveCount: 0,
             failed: [],
@@ -152,9 +152,9 @@ for (const language of ["nl", "en"]) {
       title: "The Science of Everyday Life",
       paused: true,
       pauseReason: "limit",
-      complete: 8,
+      complete: 10,
       processing: 0,
-      outstanding: 8,
+      outstanding: 10,
       pendingCount: 10,
       archiveCount: 0,
       checkedAt: "2026-10-13T12:00:00Z",
@@ -211,7 +211,7 @@ for (const language of ["nl", "en"]) {
     await expect(warning).toContainText(
       language === "nl" ? "handmatig gepauzeerd" : "manually paused",
     );
-    subscription = { ...subscription, paused: false, outstanding: 7 };
+    subscription = { ...subscription, paused: false, outstanding: 9 };
     await page.reload();
     await expect(warning).toHaveCount(0);
     subscription = { ...subscription, pendingCount: 2 };
@@ -231,10 +231,10 @@ test.beforeEach(async ({ page }) => {
   });
 });
 for (const language of ["nl", "en"]) {
-  test(`series: controls allow seven outstanding episodes and stop at eight in ${language}`, async ({
+  test(`series: controls allow nine outstanding episodes and stop at ten in ${language}`, async ({
     page,
   }) => {
-    let outstanding = 5;
+    let outstanding = 8;
     await page.route("**/api/subscriptions", (route) =>
       route.fulfill({
         json: [
@@ -258,16 +258,16 @@ for (const language of ["nl", "en"]) {
     await expect(controls.nth(0)).toBeEnabled();
     await expect(controls.nth(1)).toBeEnabled();
 
-    outstanding = 7;
+    outstanding = 9;
     await page.reload();
     await expect(controls.nth(0)).toBeEnabled();
     await expect(controls.nth(1)).toBeEnabled();
     await expect(controls.nth(1)).toContainText("1");
     await expect(page.locator(".series-item")).toContainText(
-      language === "nl" ? "7 van maximaal 8" : "7 of at most 8",
+      language === "nl" ? "9 van maximaal 10" : "9 of at most 10",
     );
 
-    outstanding = 8;
+    outstanding = 10;
     await page.reload();
     await expect(controls.nth(0)).toBeDisabled();
     await expect(controls.nth(1)).toBeDisabled();
@@ -352,7 +352,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
   let followed = false;
   let paused = false;
   let submitted;
-  let outstanding = 8;
+  let outstanding = 10;
   await page.route("**/api/subscriptions**", async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
@@ -365,7 +365,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
       return route.fulfill({ json: preview });
     }
     if (pathname.endsWith("/backfill")) {
-      outstanding = 8;
+      outstanding = 10;
       paused = true;
       return route.fulfill({ status: 202, json: { count: 3 } });
     }
@@ -443,7 +443,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
     articleLength: "standard",
   });
   await expect(page.locator(".series-limit-note")).toContainText(
-    "Automatisch gepauzeerd bij 8",
+    "Automatisch gepauzeerd bij 10",
   );
   await expect(
     page.getByRole("button", { name: `Hervat: ${preview.title}`, exact: true }),
@@ -453,7 +453,7 @@ test("series: preview, backlog confirmation and pause/resume remain usable on de
     contentType: "image/png",
   });
   // Simulate reading three articles through the existing reader, then refresh the list.
-  outstanding = 5;
+  outstanding = 7;
   await page.reload();
   await page
     .getByRole("button", { name: `Hervat: ${preview.title}`, exact: true })
@@ -691,7 +691,7 @@ for (const language of ["nl", "en"]) {
             pauseReason: "limit",
             complete: 7,
             processing: 3,
-            outstanding: 8,
+            outstanding: 10,
             archiveCount: 3,
             pendingCount: 0,
             failed: [],
