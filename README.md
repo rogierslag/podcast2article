@@ -166,10 +166,12 @@ The same model and effort apply to new quote-repair requests.
 `ARTICLE_MODEL` overrides the default; other models retain their existing reasoning behavior.
 Existing deployments that pin a model must update their environment setting to select 6.1 Sol.
 Transient failures (including capacity errors and timeouts) receive up to three Flex attempts, then up to three standard-processing attempts with `service_tier: "default"`.
-HTTP failures and recognized transient background failures share this attempt limit, including quote repairs.
-Background retries require a confirmed `failed` response with a server, overload, capacity, or rate-limit error code; unknown errors, cancellations, and incomplete output stop without a new submission.
+HTTP failures, recognized transient background failures, and confirmed queue-timeout cancellations share this attempt limit, including quote repairs.
+An OpenAI response still queued after `OPENAI_ARTICLE_QUEUE_TIMEOUT_MS` (one hour by default) is cancelled and retried with the saved transcript once OpenAI confirms cancellation.
+Responses that have started generating continue to be polled for completion.
+Unknown errors, other cancellations, and incomplete output stop processing.
 Retries use exponential backoff and respect provider retry headers.
-Cancellation and permanent errors stop immediately, including HTTP 429 responses that identify exhausted credits or spend/usage limits.
+Permanent errors stop immediately, including HTTP 429 responses that identify exhausted credits or spend/usage limits.
 Set `ARTICLE_SERVICE_TIER=default` to use standard processing from the first attempt.
 Transcription retains its existing three-attempt policy.
 Each article submission uses `OPENAI_ARTICLE_TIMEOUT_MS` (10 minutes by default); background generation continues independently and is polled until a terminal status is received.
@@ -281,6 +283,7 @@ Refresh the page after changing the browser language.
 | `AUDIO_CHUNK_SECONDS`             | `300`                       | Audio chunk length (5 minutes; allowed range: 60–1200)                                                      |
 | `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | `600000`                    | Timeout per transcription chunk (10 minutes)                                                                |
 | `OPENAI_ARTICLE_TIMEOUT_MS`       | `600000`                    | Background article submission timeout (10 minutes)                                                          |
+| `OPENAI_ARTICLE_QUEUE_TIMEOUT_MS` | `3600000`                   | Age at which to cancel a response that is still queued (one hour)                                           |
 | `LOG_STACKS`                      | `false`                     | Show full error stacks in the CLI                                                                           |
 
 Download limits are independent: `MAX_AUDIO_MB` applies to Spotify/RSS, `MAX_YOUTUBE_MB` to YouTube, and `MAX_RECORDING_MB` to Drive and Fathom.

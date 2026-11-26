@@ -53,13 +53,18 @@ Changing `ARTICLE_MODEL` applies to new submissions; saved generation and quote-
 The original response endpoint must match the configured endpoint; an endpoint change requires operator investigation.
 
 The application retrieves outstanding responses immediately on recovery and polls every five seconds while waiting.
-Transient retrieval failures retry without submitting another generation.
+Transient retrieval failures retry using the saved response ID.
+If OpenAI still reports the response as queued one hour after creation, the application saves its intent to cancel and then requests cancellation of that response.
+Set `OPENAI_ARTICLE_QUEUE_TIMEOUT_MS` to a positive integer in milliseconds to change the limit.
+The timeout applies while the provider reports `queued`; responses reported as `in_progress` continue to be polled.
+On restart or after a failed cancellation call, the application retrieves the same response before deciding whether to cancel again, save a completed answer, or retry generation from the saved transcript.
+A replacement for a timed-out response requires confirmed cancellation of that response.
 A confirmed terminal `failed` response with `server_error`, `server_is_overloaded`, `rate_limit_exceeded`, `slow_down`, or `flex_unavailable` may start a replacement submission after backoff.
-HTTP failures and terminal background failures share three Flex attempts followed by up to three standard attempts, or three attempts when configured for standard processing.
+HTTP failures, transient background failures, and queue-timeout cancellations share three Flex attempts followed by up to three standard attempts, or three attempts when configured for standard processing.
 Saved responses retain their operation ID, attempt number, original model, initial tier, and provider error details; recovery continues that retry position rather than resetting it.
 Recovery also checks ledger attempts recorded after the last saved failed response; an ambiguous replacement submission without a saved response ID stops for operator investigation.
 Each replacement reacquires deployment admission and budget approval; polling and backoff hold no admission reservation.
-Cancelled, incomplete, permanent, unknown, and legacy failures without an error code stop visibly.
+Other cancellations, incomplete responses, permanent or unknown errors, and legacy failures without an error code stop visibly.
 The same rules apply to quote-repair responses.
 Completed answers and usage are persisted before JSON parsing and source validation.
 Recovery can reconcile accounting from that saved response if the process stopped between saving the answer and updating the usage ledger.

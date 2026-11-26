@@ -370,9 +370,11 @@ Each new job has an `apiUsage` ledger.
 The OpenAI boundary persists a pending attempt before sending and its usage immediately after receiving a response, before article parsing and validation.
 Each automatic retry is a separate attempt under the same operation ID; SDK retries are disabled to avoid invisible attempts.
 Article generation defaults to explicit `flex`: three attempts on transient failures, followed by up to three explicit `default` attempts.
-HTTP submission failures and recognized transient terminal background failures share this limit and operation ID.
+HTTP submission failures, recognized transient background failures, and queue-timeout cancellations share this limit and operation ID.
 Article generation and quote repair use the same background request helper, which retains the original model and tier policy when resuming a saved response.
-A new response replaces only a confirmed transient `failed` response; pending responses continue polling, and incomplete, cancelled, permanent, or unknown failures stop.
+A response still queued after the configured timeout is cancelled using its saved ID.
+A replacement requires a confirmed queue-timeout cancellation or a recognized transient failure.
+The application persists the cancellation intent before sending it so recovery can reconcile the original response before submitting a replacement.
 Saved response checkpoints retain the attempt number, initial tier, provider error code/message, and incomplete-output reason.
 Polling and backoff do not hold deployment admission; every replacement submission reacquires it and checks the budget.
 `ARTICLE_SERVICE_TIER=default` disables Flex and permits three standard attempts.
@@ -567,6 +569,7 @@ Values must never be committed or copied into this document.
 | `AUDIO_CHUNK_SECONDS`             | Transcript chunk duration                                                                                 |
 | `OPENAI_TRANSCRIPTION_TIMEOUT_MS` | Per-chunk API timeout                                                                                     |
 | `OPENAI_ARTICLE_TIMEOUT_MS`       | Background article submission timeout                                                                     |
+| `OPENAI_ARTICLE_QUEUE_TIMEOUT_MS` | Age at which to cancel a response that is still queued                                                    |
 | `OPENAI_WEBHOOK_SECRET`           | Optional background article webhook signing secret; polling works without it                              |
 | `LOG_STACKS`                      | Enable full stack traces in logs                                                                          |
 

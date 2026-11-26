@@ -713,7 +713,7 @@ it("retrieves a saved background response after restart without another generati
       expect(body.background).toBe(true);
       expect(body.store).toBe(true);
       return new Response(
-        JSON.stringify({ id: "resp-persisted", status: "queued", output: [] }),
+        JSON.stringify({ id: "resp-flex-test", status: "queued", output: [] }),
         { headers: { "content-type": "application/json" } },
       );
     }

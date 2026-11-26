@@ -20,6 +20,7 @@ beforeEach(() => {
   saved = undefined;
   records = [];
   tiers = [];
+  vi.stubEnv("OPENAI_ARTICLE_QUEUE_TIMEOUT_MS", undefined);
   vi.spyOn(apiUsage, "retryDelay").mockReturnValue(0);
   vi.stubGlobal(
     "fetch",
@@ -33,13 +34,20 @@ afterEach(() => {
   paidRequestDrain.resume();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
-function response(status: string, code?: string, id = "resp-test") {
+function response(
+  status: string,
+  code?: string,
+  id = "resp-test",
+  createdAt?: number,
+) {
   return new Response(
     JSON.stringify({
       id,
       object: "response",
+      created_at: createdAt,
       status,
       model: payload.model,
       service_tier: tiers.at(-1) ?? "flex",
@@ -69,7 +77,11 @@ function response(status: string, code?: string, id = "resp-test") {
   );
 }
 
-function run(signal?: AbortSignal, serviceTier: "flex" | "default" = "flex") {
+function run(
+  signal?: AbortSignal,
+  serviceTier: "flex" | "default" = "flex",
+  onSave?: (state: BackgroundArticle) => void,
+) {
   return requestBackgroundArticle(
     new OpenAI({ apiKey: "test-only" }),
     payload,
@@ -85,6 +97,7 @@ function run(signal?: AbortSignal, serviceTier: "flex" | "default" = "flex") {
         requests: records,
         save: async (state) => {
           saved = structuredClone(state);
+          onSave?.(state);
         },
       },
     },
@@ -237,6 +250,141 @@ it("persists polled errors before retrying and reacquires deployment admission",
   expect(fetchMock).toHaveBeenCalledTimes(3);
   expect(paidRequestDrain.pending).toBe(0);
 });
+
+it("cancels an overdue queued response and retries the same input", async () => {
+  const submitted = Math.floor(Date.now() / 1000) - 3601;
+  const requests: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const path = new URL(url).pathname;
+      requests.push(`${init?.method} ${path}`);
+      if (path.endsWith("/cancel")) {
+        expect(saved?.queueCancellationRequested).toBe(true);
+        return response("cancelled");
+      }
+      if (init?.method === "GET") {
+        return response("queued", undefined, "resp-test", submitted);
+      }
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        input: payload.input,
+      });
+      return requests.length === 1
+        ? response("queued")
+        : response("completed", undefined, "resp-replacement");
+    }),
+  );
+
+  await expect(run()).resolves.toBe("Article answer");
+
+  expect(requests).toEqual([
+    "POST /v1/responses",
+    "GET /v1/responses/resp-test",
+    "POST /v1/responses/resp-test/cancel",
+    "POST /v1/responses",
+  ]);
+  expect(records.filter((entry) => entry.status !== "pending")).toMatchObject([
+    {
+      attempt: 1,
+      responseStatus: "cancelled",
+      errorCode: "background_queue_timeout",
+    },
+    { attempt: 2, responseStatus: "completed" },
+  ]);
+});
+
+it("recovers a queue cancellation after losing its reply during shutdown", async () => {
+  const controller = new AbortController();
+  const submitted = Math.floor(Date.now() / 1000) - 3601;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/cancel")) {
+        controller.abort();
+        throw new Error("Cancellation reply lost");
+      }
+      return init?.method === "GET"
+        ? response("queued", undefined, "resp-test", submitted)
+        : response("queued");
+    }),
+  );
+
+  await expect(run(controller.signal)).rejects.toThrow();
+  expect(saved).toMatchObject({
+    status: "queued",
+    queueCancellationRequested: true,
+  });
+
+  const recovery = vi.fn(async (_url: string, init?: RequestInit) => {
+    return init?.method === "GET"
+      ? response("cancelled")
+      : response("completed", undefined, "resp-replacement");
+  });
+  vi.stubGlobal("fetch", recovery);
+  await expect(run()).resolves.toBe("Article answer");
+
+  expect(recovery.mock.calls.map(([, init]) => init?.method)).toEqual([
+    "GET",
+    "POST",
+  ]);
+  expect(saved?.request.attempt).toBe(2);
+});
+
+it("keeps the answer if completion races queue cancellation", async () => {
+  const submitted = Math.floor(Date.now() / 1000) - 3601;
+  let completed = false;
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.endsWith("/cancel")) {
+      completed = true;
+      return response("completed");
+    }
+    if (completed) {
+      expect(init?.method).toBe("GET");
+      return response("completed");
+    }
+    return init?.method === "GET"
+      ? response("queued", undefined, "resp-test", submitted)
+      : response("queued");
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await expect(run()).resolves.toBe("Article answer");
+
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+  expect(saved?.request.attempt).toBe(1);
+});
+
+it.each([
+  ["queued", 1800],
+  ["in_progress", 3601],
+])(
+  "keeps polling a %s response aged %i seconds without cancelling it",
+  async (status, age) => {
+    const controller = new AbortController();
+    const submitted = Math.floor(Date.now() / 1000) - age;
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      return init?.method === "GET"
+        ? response(status, undefined, "resp-test", submitted)
+        : response("queued");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      run(controller.signal, "flex", () => {
+        if (fetchMock.mock.calls.length >= 2) {
+          controller.abort();
+        }
+      }),
+    ).rejects.toThrow();
+
+    expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual([
+      "POST",
+      "GET",
+    ]);
+    expect(saved?.status).toBe(status);
+    expect(saved?.queueCancellationRequested).toBeUndefined();
+  },
+);
 
 it("does not submit again when a recovered response has exhausted its budget", async () => {
   vi.stubGlobal(
